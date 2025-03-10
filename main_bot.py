@@ -200,7 +200,7 @@ async def post_weekly_scores():
             
         await channel.send(message)
 
-@tasks.loop(time=datetime.time(hour=0, minute=1, second=0, tzinfo=cet_timezone))
+@tasks.loop(time=datetime.time(hour=0, minute=1, second=0, tzinfo=CET_TIMEZONE))
 async def check_monthly_scores():
     now = datetime.datetime.now(cet_timezone)
     if now.day == 1:
