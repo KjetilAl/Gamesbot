@@ -7,9 +7,9 @@ from typing import Dict, List, Tuple, Optional, Any
 
 # Import custom modules
 import database
-import score-parser
-import game-config
-import role-manager
+import score_parser
+import game_config
+import role_manager
 from config import TOKEN
 
 # Get the CET time zone
@@ -199,6 +199,33 @@ async def post_weekly_scores():
             message += f"{i}. {player}: {score} points\n"
             
         await channel.send(message)
+
+@tasks.loop(time=datetime.time(hour=0, minute=1, second=0, tzinfo=cet_timezone))
+async def check_monthly_scores():
+    now = datetime.datetime.now(cet_timezone)
+    if now.day == 1:
+        await post_monthly_scores()
+        print("Monthly scores posted.")
+    else:
+        print("Not the first of the month, skipping monthly scores.")
+        
+async def post_monthly_scores():
+    wordle_scores, connections_scores = get_monthly_scores()
+    wordle_channel = discord.utils.get(bot.get_all_channels(), name="wordle")
+    connections_channel = discord.utils.get(bot.get_all_channels(), name="connections")
+
+    if wordle_channel:
+        message = "**📅 Monthly Wordle Scores**\n"
+        for i, (player, score) in enumerate(wordle_scores, 1):
+            message += f"{i}. {player}: {score} points\n"
+        await wordle_channel.send(message)
+
+    if connections_channel:
+        message = "**📅 Monthly Connections Scores**\n"
+        for i, (player, score) in enumerate(connections_scores, 1):
+            message += f"{i}. {player}: {score} points\n"
+        await connections_channel.send(message)
+
 
 if __name__ == "__main__":
     bot.run(TOKEN)
