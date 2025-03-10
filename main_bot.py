@@ -189,49 +189,95 @@ async def check_weekly_scores():
     else:
         print("Not Sunday, skipping weekly scores.")
 
-async def post_weekly_scores():
-    """Post the weekly scores to the game channels."""
-    wordle_scores, connections_scores = database.get_weekly_scores()
-    
-    for game_key, config in game_config.GAME_CONFIGS.items():
-        channel = discord.utils.get(bot.get_all_channels(), name=config["score_channel_name"])
-        if not channel:
-            continue
-            
-        scores = wordle_scores if game_key == "wordle" else connections_scores
-        
-        message = f"**📅 Weekly {config['name']} Scores**\n"
-        for i, (player, score) in enumerate(scores, 1):
-            message += f"{i}. {player}: {score} points\n"
-            
-        await channel.send(message)
-
 @tasks.loop(time=datetime.time(hour=0, minute=1, second=0, tzinfo=CET_TIMEZONE))
 async def check_monthly_scores():
-    now = datetime.datetime.now(cet_timezone)
-    if now.day == 1:
+    """Check if we need to post monthly scores."""
+    now = datetime.datetime.now(CET_TIMEZONE)
+    if now.day == 1:  # First day of the month
         await post_monthly_scores()
         print("Monthly scores posted.")
     else:
         print("Not the first of the month, skipping monthly scores.")
+
+async def post_weekly_scores():
+    """Post the weekly scores to all game score channels."""
+    wordle_scores, connections_scores = database.get_weekly_scores()
+    
+    # Create a mapping of game keys to their scores
+    scores_by_game = {
+        "wordle": wordle_scores,
+        "connections": connections_scores
+        # Any new games would be added here automatically when database.get_weekly_scores() is updated
+    }
+    
+    # Iterate through all game configurations
+    for game_key, config in game_config.GAME_CONFIGS.items():
+        # Skip any games that don't have scores available
+        if game_key not in scores_by_game or not scores_by_game[game_key]:
+            continue
+            
+        # Get the score channel for this game
+        channel = discord.utils.get(bot.get_all_channels(), name=config["score_channel_name"])
+        if not channel:
+            print(f"Warning: Could not find channel {config['score_channel_name']} for {config['name']} weekly scores")
+            continue
+            
+        # Format and send the message
+        scores = scores_by_game[game_key]
         
+        if not scores:
+            print(f"No weekly scores for {config['name']}")
+            continue
+            
+        message = f"**📅 Weekly {config['name']} Scores**\n"
+        for i, (player, score) in enumerate(scores, 1):
+            message += f"{i}. {player}: {score} points\n"
+            
+        try:
+            await channel.send(message)
+            print(f"Weekly scores for {config['name']} posted to {channel.name}")
+        except Exception as e:
+            print(f"Error posting weekly scores for {config['name']}: {e}")
+
 async def post_monthly_scores():
-    wordle_scores, connections_scores = get_monthly_scores()
-    wordle_channel = discord.utils.get(bot.get_all_channels(), name="wordle")
-    connections_channel = discord.utils.get(bot.get_all_channels(), name="connections")
-
-    if wordle_channel:
-        message = "**📅 Monthly Wordle Scores**\n"
-        for i, (player, score) in enumerate(wordle_scores, 1):
+    """Post the monthly scores to all game score channels."""
+    wordle_scores, connections_scores = database.get_monthly_scores()
+    
+    # Create a mapping of game keys to their scores
+    scores_by_game = {
+        "wordle": wordle_scores,
+        "connections": connections_scores
+        # Any new games would be added here automatically when database.get_monthly_scores() is updated
+    }
+    
+    # Iterate through all game configurations
+    for game_key, config in game_config.GAME_CONFIGS.items():
+        # Skip any games that don't have scores available
+        if game_key not in scores_by_game or not scores_by_game[game_key]:
+            continue
+            
+        # Get the score channel for this game
+        channel = discord.utils.get(bot.get_all_channels(), name=config["score_channel_name"])
+        if not channel:
+            print(f"Warning: Could not find channel {config['score_channel_name']} for {config['name']} monthly scores")
+            continue
+            
+        # Format and send the message
+        scores = scores_by_game[game_key]
+        
+        if not scores:
+            print(f"No monthly scores for {config['name']}")
+            continue
+            
+        message = f"**📅 Monthly {config['name']} Scores**\n"
+        for i, (player, score) in enumerate(scores, 1):
             message += f"{i}. {player}: {score} points\n"
-        await wordle_channel.send(message)
-
-    if connections_channel:
-        message = "**📅 Monthly Connections Scores**\n"
-        for i, (player, score) in enumerate(connections_scores, 1):
-            message += f"{i}. {player}: {score} points\n"
-        await connections_channel.send(message)
-
+            
+        try:
+            await channel.send(message)
+            print(f"Monthly scores for {config['name']} posted to {channel.name}")
+        except Exception as e:
+            print(f"Error posting monthly scores for {config['name']}: {e}")
 
 if __name__ == "__main__":
     bot.run(TOKEN)
