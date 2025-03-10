@@ -117,8 +117,14 @@ async def handle_game_message(message, game_key, game_config):
         # Update the latest game number in the database
         game_config["update_latest_game_number_function"](game_config["name"], current_game_number)
         
-        # Handle role assignment
-        success = await role_manager.handle_game_role_assignment(guild, member, game_config)
+        # Handle role assignment - FIXED: Pass the current_game_number and latest_game_number arguments
+        success = await role_manager.handle_game_role_assignment(
+            guild, 
+            member, 
+            game_config,
+            current_game_number,
+            latest_game_number
+        )
         
         if success:
             # Append role and channel info to the response message
@@ -135,7 +141,7 @@ async def handle_game_message(message, game_key, game_config):
     
     # Send the response message
     await message.channel.send(response)
-
+    
 @bot.command()
 async def myscore(ctx):
     """Show the user's last 5 Wordle scores."""
