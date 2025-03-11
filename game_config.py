@@ -57,7 +57,7 @@ GAME_CONFIGS = {
     "is_game_message": score_parser.is_gisnep_message,
     "save_score_function": database.save_gisnep_score,
     "get_leaderboard_function": database.get_gisnep_leaderboard,
-    "get_latest_game_number_function": database.get_latest_game_number_in_db,
+    "get_latest_game_number_function": database.get_latest_game_number_from_db,
     "update_latest_game_number_function": database.update_latest_game_number_in_db,
     "create_acknowledgement": score_parser.create_gisnep_acknowledgement,
     "create_introduction": score_parser.create_gisnep_introduction
@@ -71,7 +71,7 @@ GAME_CONFIGS = {
     "is_game_message": score_parser.is_bandle_message,
     "save_score_function": database.save_bandle_score,
     "get_leaderboard_function": database.get_bandle_leaderboard,
-    "get_latest_game_number_function": database.get_latest_game_number_in_db,
+    "get_latest_game_number_function": database.get_latest_game_number_from_db,
     "update_latest_game_number_function": database.update_latest_game_number_in_db,
     "create_acknowledgement": score_parser.create_bandle_acknowledgement,
     "create_introduction": score_parser.create_bandle_introduction
