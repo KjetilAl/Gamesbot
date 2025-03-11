@@ -64,7 +64,7 @@ async def on_message(message):
 
 async def handle_game_message(message, game_key, game_config):
     """
-    Handle a game message (Wordle or Connections).
+    Handle a game message (Wordle, Connections, Framed, Gisnep, Bandle).
     
     Args:
         message: The Discord message
@@ -85,62 +85,50 @@ async def handle_game_message(message, game_key, game_config):
     
     # Save the score based on the game type
     if game_key == "wordle":
-        game_config["save_score_function"](
-            user_id, 
-            display_name, 
-            game_info["game_number"],
-            game_info["attempts"],
-            game_info["skill"],
-            game_info["luck"]
-        )
+        game_config["save_score_function"](user_id, display_name, game_info["game_number"],
+                                           game_info["attempts"], game_info["skill"], game_info["luck"])
+    
     elif game_key == "connections":
-        game_config["save_score_function"](
-            user_id, 
-            display_name, 
-            game_info["puzzle_number"],
-            game_info["total_score"],
-            game_info["num_guesses"],
-            game_info["solved_purple_first"],
-            game_info["solved_blue_first"]
-        )
+        game_config["save_score_function"](user_id, display_name, game_info["puzzle_number"],
+                                           game_info["total_score"], game_info["num_guesses"],
+                                           game_info["solved_purple_first"], game_info["solved_blue_first"])
+
+    elif game_key == "framed":
+        game_config["save_score_function"](user_id, display_name, game_info["game_number"],
+                                           game_info["attempts"], game_info["total_score"])
+
+    elif game_key == "gisnep":
+        game_config["save_score_function"](user_id, display_name, game_info["game_number"],
+                                           game_info["completion_time"])
+
+    elif game_key == "bandle":
+        game_config["save_score_function"](user_id, display_name, game_info["game_number"],
+                                           game_info["attempts"], game_info["total_score"],
+                                           game_info["bonus_completed"], game_info["bonus_total"])
     
     # Create the acknowledgement message
     response = game_config["create_acknowledgement"](display_name, game_info)
     
     # Get the latest game number from the database
-    game_number_key = "game_number" if game_key == "wordle" else "puzzle_number"
+    game_number_key = "game_number" if game_key != "connections" else "puzzle_number"
     latest_game_number = game_config["get_latest_game_number_function"](game_config["name"])
     current_game_number = game_info[game_number_key]
     
     # If this is the latest game, update roles and notify
     if current_game_number >= latest_game_number:
-        # Update the latest game number in the database
         game_config["update_latest_game_number_function"](game_config["name"], current_game_number)
         
-        # Handle role assignment - FIXED: Pass the current_game_number and latest_game_number arguments
-        success = await role_manager.handle_game_role_assignment(
-            guild, 
-            member, 
-            game_config,
-            current_game_number,
-            latest_game_number
-        )
+        # Handle role assignment
+        success = await role_manager.handle_game_role_assignment(guild, member, game_config)
         
         if success:
-            # Append role and channel info to the response message
             chat_channel_name = game_config["chat_channel_name"]
             response += f"\n\n{member.mention} You now have access to the {chat_channel_name} channel!"
-            
-            # Introduce player in game chat channel
-            await role_manager.introduce_player_in_game_channel(
-                guild, 
-                display_name, 
-                game_config,
-                game_info
-            )
+            await role_manager.introduce_player_in_game_channel(guild, display_name, game_config, game_info)
     
     # Send the response message
     await message.channel.send(response)
+
     
 @bot.command()
 async def myscore(ctx):
