@@ -295,3 +295,61 @@ def create_connections_introduction(display_name: str, game_info: Dict[str, Any]
     message += f"Guesses: {guesses}"
     
     return message
+
+def create_framed_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create acknowledgement message for Framed scores."""
+    game_number = game_info.get("game_number", "?")
+    attempts = game_info.get("attempts", "?")
+    total_score = game_info.get("total_score", "?")
+
+    return f"🎥 @{display_name} just posted in ⁠framed-chat⁠\nFramed #{game_number} ({attempts} guesses)\nScore: {total_score} points"
+
+def create_framed_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create introduction message for Framed players."""
+    game_number = game_info.get("game_number", "?")
+    attempts = game_info.get("attempts", "?")
+
+    return f"👋 **{display_name}** just played Framed #{game_number} and solved it in {attempts} guesses!"
+
+def create_gisnep_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create acknowledgement message for Gisnep scores."""
+    game_number = game_info.get("game_number", "?")
+    completion_time = game_info.get("completion_time", "?")
+
+    return f"🎬 @{display_name} just posted in ⁠gisnep-chat⁠\nGisnep #{game_number} solved in {completion_time} seconds!"
+
+def create_gisnep_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create introduction message for Gisnep players."""
+    game_number = game_info.get("game_number", "?")
+    completion_time = game_info.get("completion_time", "?")
+
+    return f"🎬 **{display_name}** just completed Gisnep #{game_number} in {completion_time} seconds!"
+
+def create_bandle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create acknowledgement message for Bandle scores."""
+    game_number = game_info.get("game_number", "?")
+    attempts = game_info.get("attempts", "?")
+    total_score = game_info.get("total_score", "?")
+    bonus_completed = game_info.get("bonus_completed", "?")
+    bonus_total = game_info.get("bonus_total", "?")
+
+    message = f"🎵 @{display_name} just posted in ⁠bandle-chat⁠\nBandle #{game_number} ({attempts} guesses)\nScore: {total_score} points"
+    
+    if bonus_total > 0:
+        message += f"\nBonus Rounds: {bonus_completed}/{bonus_total} ✅"
+
+    return message
+
+def create_bandle_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create introduction message for Bandle players."""
+    game_number = game_info.get("game_number", "?")
+    attempts = game_info.get("attempts", "?")
+    bonus_completed = game_info.get("bonus_completed", "?")
+    bonus_total = game_info.get("bonus_total", "?")
+
+    message = f"🎵 **{display_name}** just played Bandle #{game_number} and solved it in {attempts} guesses!"
+    
+    if bonus_total > 0:
+        message += f"\nThey also completed {bonus_completed}/{bonus_total} bonus rounds!"
+
+    return message
