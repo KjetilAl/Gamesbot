@@ -1,5 +1,5 @@
 Roadmap
-1. Clean up code
-2. Make roles function work properly
-3. Add more games
+1. Create a "score dump" channel
+2. Add more games
+3. Expand and refine weekly and monthly posts 
 4. Invite people
