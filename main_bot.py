@@ -119,7 +119,13 @@ async def handle_game_message(message, game_key, game_config):
         game_config["update_latest_game_number_function"](game_config["name"], current_game_number)
         
         # Handle role assignment
-        success = await role_manager.handle_game_role_assignment(guild, member, game_config)
+        success = await role_manager.handle_game_role_assignment(
+             guild, 
+             member, 
+             game_config, 
+             current_game_number,  # Add this argument
+             latest_game_number    # Add this argument
+)
         
         if success:
             chat_channel_name = game_config["chat_channel_name"]
