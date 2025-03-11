@@ -47,7 +47,7 @@ GAME_CONFIGS = {
     "update_latest_game_number_function": database.update_latest_game_number_in_db,
     "create_acknowledgement": score_parser.create_framed_acknowledgement,
     "create_introduction": score_parser.create_framed_introduction
-},
+    },
 "gisnep": {
     "name": "Gisnep",
     "score_channel_name": "gisnep-score",
@@ -61,7 +61,7 @@ GAME_CONFIGS = {
     "update_latest_game_number_function": database.update_latest_game_number_in_db,
     "create_acknowledgement": score_parser.create_gisnep_acknowledgement,
     "create_introduction": score_parser.create_gisnep_introduction
-},
+    },
 "bandle": {
     "name": "Bandle",
     "score_channel_name": "bandle-score",
@@ -75,5 +75,6 @@ GAME_CONFIGS = {
     "update_latest_game_number_function": database.update_latest_game_number_in_db,
     "create_acknowledgement": score_parser.create_bandle_acknowledgement,
     "create_introduction": score_parser.create_bandle_introduction
+    }
 }
 
