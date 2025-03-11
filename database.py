@@ -76,6 +76,10 @@ def save_wordle_score(user_id, display_name, game_number, attempts, skill, luck)
     else:
         attempt_score = 0
 
+    # Ensure skill and luck are not None
+    skill = skill if skill is not None else 0
+    luck = luck if luck is not None else 0
+    
     total_score = skill + attempt_score - luck  # Luck subtracted here
 
     conn = sqlite3.connect(DB_NAME)
