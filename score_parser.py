@@ -147,8 +147,28 @@ def is_wordle_message(message_content: str) -> bool:
 def is_connections_message(message_content: str) -> bool:
     """Check if a message contains Connections results."""
     return "connections" in message_content.lower() and CONNECTIONS_PATTERN.search(message_content) is not None
-
+    
 def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create acknowledgement message for Wordle scores."""
+    game_number = game_info.get("game_number", "?")
+    attempts = game_info.get("attempts", "?")
+    skill = game_info.get("skill", "?")
+    luck = game_info.get("luck", "?")
+    
+    message = f"📊 {display_name}'s Wordle {game_number} recorded!\n"
+    message += f"Attempts: {attempts}/6\n"
+    
+    if skill != "?" and luck != "?":
+        message += f"Skill: {skill}/99 | Luck: {luck}/99"
+    
+    return message
+
+def create_connections_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create acknowledgement message for Connections scores."""
+    puzzle_number = game_info.get("puzzle_number", "?")
+    return f"🟨🟩🟦🟪 {display_name}'s Connections Puzzle #{puzzle_number} recorded!"
+    
+def create_wordle_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create a compact acknowledgement message for Wordle scores."""
     
     game_number = game_info.get("game_number", "?")
@@ -157,14 +177,14 @@ def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) 
     luck = game_info.get("luck", "?")
     grid = game_info.get("grid", "⬜⬜⬜⬜⬜")  # Placeholder if no grid available
 
-    message = f"@{display_name} just posted a Wordle score⁠\n"
+    message = f"@{display_name} just posted a Wordle score\n"
     message += f"{grid} Wordle {game_number} {attempts}/6*\n"
     message += f"Skill {skill}/99\n"
     message += f"Luck {luck}/99"
 
     return message
 
-def create_connections_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
+def create_connections_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create a compact acknowledgement message for Connections scores."""
     
     puzzle_number = game_info.get("puzzle_number", "?")
@@ -182,15 +202,3 @@ def create_connections_acknowledgement(display_name: str, game_info: Dict[str, A
     message += f"Guesses: {guesses}"
     
     return message
-
-def create_wordle_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create introduction message for Wordle players."""
-    game_number = game_info.get("game_number", "?")
-    attempts = game_info.get("attempts", "?")
-    return f"👋 **{display_name}** just completed Wordle #{game_number} in {attempts}/6 attempts!"
-
-def create_connections_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create introduction message for Connections players."""
-    puzzle_number = game_info.get("puzzle_number", "?")
-    total_score = game_info.get("total_score", "?")
-    return f"👋 **{display_name}** just solved Connections Puzzle #{puzzle_number} with a score of {total_score}!"
