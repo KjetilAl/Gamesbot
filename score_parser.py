@@ -149,24 +149,39 @@ def is_connections_message(message_content: str) -> bool:
     return "connections" in message_content.lower() and CONNECTIONS_PATTERN.search(message_content) is not None
 
 def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create acknowledgement message for Wordle scores."""
+    """Create a compact acknowledgement message for Wordle scores."""
+    
     game_number = game_info.get("game_number", "?")
     attempts = game_info.get("attempts", "?")
     skill = game_info.get("skill", "?")
     luck = game_info.get("luck", "?")
-    
-    message = f"📊 {display_name}'s Wordle {game_number} recorded!\n"
-    message += f"Attempts: {attempts}/6\n"
-    
-    if skill != "?" and luck != "?":
-        message += f"Skill: {skill}/99 | Luck: {luck}/99"
-    
+    grid = game_info.get("grid", "⬜⬜⬜⬜⬜")  # Placeholder if no grid available
+
+    message = f"@{display_name} just posted a Wordle score⁠\n"
+    message += f"{grid} Wordle {game_number} {attempts}/6*\n"
+    message += f"Skill {skill}/99\n"
+    message += f"Luck {luck}/99"
+
     return message
 
 def create_connections_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create acknowledgement message for Connections scores."""
+    """Create a compact acknowledgement message for Connections scores."""
+    
     puzzle_number = game_info.get("puzzle_number", "?")
-    return f"🟨🟩🟦🟪 {display_name}'s Connections Puzzle #{puzzle_number} recorded!"
+    total_score = game_info.get("total_score", "?")
+    guesses = game_info.get("num_guesses", "?")
+    solved_purple_first = game_info.get("solved_purple_first", False)
+    solved_blue_first = game_info.get("solved_blue_first", False)
+    
+    # Construct difficulty sequence
+    difficulty_text = "🟪" if solved_purple_first else "🟦" if solved_blue_first else "🟨🟩"
+    
+    message = f"@{display_name} just posted a Connections score⁠\n"
+    message += f"{difficulty_text} Connections Puzzle #{puzzle_number}\n"
+    message += f"Total Score: {total_score}\n"
+    message += f"Guesses: {guesses}"
+    
+    return message
 
 def create_wordle_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create introduction message for Wordle players."""
