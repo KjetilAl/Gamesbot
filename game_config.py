@@ -34,4 +34,46 @@ GAME_CONFIGS = {
         "create_acknowledgement": score_parser.create_connections_acknowledgement,
         "create_introduction": score_parser.create_connections_introduction
     }
+"framed": {
+    "name": "Framed",
+    "score_channel_name": "framed-score",
+    "chat_channel_name": "framed-chat",
+    "player_role_name": "framed-player",
+    "parse_function": score_parser.parse_framed_score,
+    "is_game_message": score_parser.is_framed_message,
+    "save_score_function": database.save_framed_score,
+    "get_leaderboard_function": database.get_framed_leaderboard,
+    "get_latest_game_number_function": database.get_latest_game_number_from_db,
+    "update_latest_game_number_function": database.update_latest_game_number_in_db,
+    "create_acknowledgement": score_parser.create_framed_acknowledgement,
+    "create_introduction": score_parser.create_framed_introduction
+},
+"gisnep": {
+    "name": "Gisnep",
+    "score_channel_name": "gisnep-score",
+    "chat_channel_name": "gisnep-chat",
+    "player_role_name": "gisnep-player",
+    "parse_function": score_parser.parse_gisnep_score,
+    "is_game_message": score_parser.is_gisnep_message,
+    "save_score_function": database.save_gisnep_score,
+    "get_leaderboard_function": database.get_gisnep_leaderboard,
+    "get_latest_game_number_function": database.get_latest_game_number_in_db,
+    "update_latest_game_number_function": database.update_latest_game_number_in_db,
+    "create_acknowledgement": score_parser.create_gisnep_acknowledgement,
+    "create_introduction": score_parser.create_gisnep_introduction
+},
+"bandle": {
+    "name": "Bandle",
+    "score_channel_name": "bandle-score",
+    "chat_channel_name": "bandle-chat",
+    "player_role_name": "bandle-player",
+    "parse_function": score_parser.parse_bandle_score,
+    "is_game_message": score_parser.is_bandle_message,
+    "save_score_function": database.save_bandle_score,
+    "get_leaderboard_function": database.get_bandle_leaderboard,
+    "get_latest_game_number_function": database.get_latest_game_number_in_db,
+    "update_latest_game_number_function": database.update_latest_game_number_in_db,
+    "create_acknowledgement": score_parser.create_bandle_acknowledgement,
+    "create_introduction": score_parser.create_bandle_introduction
 }
+
