@@ -57,6 +57,46 @@ def initialize_db():
     cursor.execute("INSERT OR IGNORE INTO latest_wordle (id, game_number) VALUES (1, 0)")
     cursor.execute("INSERT OR IGNORE INTO latest_connections (id, puzzle_number) VALUES (1, 0)")
     
+    # Framed Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS framed_scores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            display_name TEXT,
+            game_number INTEGER,
+            attempts INTEGER,
+            total_score INTEGER,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Gisnep Table (Stores time instead of points)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS gisnep_scores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            display_name TEXT,
+            game_number INTEGER,
+            completion_time INTEGER, -- Time in seconds
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Bandle Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bandle_scores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            display_name TEXT,
+            game_number INTEGER,
+            attempts INTEGER,
+            total_score INTEGER,
+            bonus_completed INTEGER,
+            bonus_total INTEGER,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -136,6 +176,39 @@ def create_connections_scores_table():
     conn.commit()
     conn.close()
 
+def save_framed_score(user_id, display_name, game_number, attempts, total_score):
+    """Save a new Framed score."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO framed_scores (user_id, display_name, game_number, attempts, total_score)
+        VALUES (?, ?, ?, ?, ?)
+    """, (user_id, display_name, game_number, attempts, total_score))
+    conn.commit()
+    conn.close()
+
+def save_gisnep_score(user_id, display_name, game_number, completion_time):
+    """Save a new Gisnep score (only stores time)."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO gisnep_scores (user_id, display_name, game_number, completion_time)
+        VALUES (?, ?, ?, ?)
+    """, (user_id, display_name, game_number, completion_time))
+    conn.commit()
+    conn.close()
+
+def save_bandle_score(user_id, display_name, game_number, attempts, total_score, bonus_completed, bonus_total):
+    """Save a new Bandle score, including bonus rounds separately."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO bandle_scores (user_id, display_name, game_number, attempts, total_score, bonus_completed, bonus_total)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (user_id, display_name, game_number, attempts, total_score, bonus_completed, bonus_total))
+    conn.commit()
+    conn.close()
+
 def get_wordle_leaderboard():
     """Fetch the top players for Wordle leaderboard."""
     conn = sqlite3.connect(DB_NAME)
@@ -158,6 +231,51 @@ def get_connections_leaderboard():
     cursor.execute("""
         SELECT display_name, SUM(total_score) AS total_score
         FROM connections_scores
+        GROUP BY display_name
+        ORDER BY total_score DESC
+        LIMIT 10
+    """)
+    leaderboard = cursor.fetchall()
+    conn.close()
+    return leaderboard
+
+def get_framed_leaderboard():
+    """Fetch top players for Framed based on highest scores."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT display_name, MAX(total_score) AS best_score
+        FROM framed_scores
+        GROUP BY display_name
+        ORDER BY best_score DESC
+        LIMIT 10
+    """)
+    leaderboard = cursor.fetchall()
+    conn.close()
+    return leaderboard
+
+def get_gisnep_leaderboard():
+    """Fetch top players for Gisnep, ranking by shortest average time."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT display_name, AVG(completion_time) AS avg_time, COUNT(*) AS games_played
+        FROM gisnep_scores
+        GROUP BY display_name
+        ORDER BY avg_time ASC, games_played DESC
+        LIMIT 10
+    """)
+    leaderboard = cursor.fetchall()
+    conn.close()
+    return leaderboard
+
+def get_bandle_leaderboard():
+    """Fetch top players for Bandle based on highest total scores."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT display_name, SUM(total_score) AS total_score
+        FROM bandle_scores
         GROUP BY display_name
         ORDER BY total_score DESC
         LIMIT 10
