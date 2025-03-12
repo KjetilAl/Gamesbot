@@ -59,7 +59,6 @@ def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
 def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
     """
     Extract puzzle number and all guesses from a Connections result.
-
     Args:
         message_content: The content of the message to parse
 
@@ -68,18 +67,24 @@ def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
     """
     lines = message_content.split("\n")
 
+    print(f"Connections - Input lines: {lines}")  # Print the lines
+
     if not (lines[0].strip() == "Connections" and "Puzzle #" in lines[1]):
+        print("Connections - Not a valid Connections result (header mismatch)")
         return None
 
     puzzle_match = re.search(r"Puzzle #(\d+)", lines[1])
     if not puzzle_match:
+        print("Connections - Not a valid Connections result (puzzle number not found)")
         return None
 
     puzzle_number = int(puzzle_match.group(1))
+    print(f"Connections - Puzzle number: {puzzle_number}")  # Print puzzle number
 
-    guesses = []
+    guesses =
     for line in lines[2:]:
         line = line.strip()
+        print(f"Connections - Processing line: '{line}'")  # Print each line being processed
         if len(line) == 4:
             colors = set(line)
             if len(colors) == 1:
@@ -89,8 +94,11 @@ def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
         elif len(line) > 0:  # Handles if the line is not 4 characters long
             guesses.append("X")
 
+    print(f"Connections - Guesses: {guesses}")  # Print the extracted guesses
+
     # Calculate the score details
     score_details = calculate_connections_score(guesses)
+    print(f"Connections - Score details: {score_details}")  # Print score details
 
     return {
         "puzzle_number": puzzle_number,
