@@ -482,25 +482,20 @@ def get_overall_recent_connections_puzzle_number(limit=5):
     finally:
         conn.close()
         
-def get_latest_game_number_from_db(game_type):
-    """Fetches the latest game/puzzle number from the database."""
-    conn = sqlite3.connect(DB_NAME)  # Use your existing DB_NAME variable
+def get_latest_game_number_from_db(game_name):
+    """Fetches the latest game number from the database."""
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    if game_type == "Wordle":
-        cursor.execute("SELECT game_number FROM latest_wordle WHERE id = 1")
-    else:  # Connections
-        cursor.execute("SELECT puzzle_number FROM latest_connections WHERE id = 1")
+    cursor.execute("SELECT latest_number FROM latest_game_numbers WHERE game_name = ?", (game_name,))
     result = cursor.fetchone()
     conn.close()
-    return result[0] if result else 0  # Return 0 if no records exist
-    
-def update_latest_game_number_in_db(game_type, new_game_number):
-    """Updates the latest game/puzzle number in the database."""
-    conn = sqlite3.connect(DB_NAME)  # Use your existing DB_NAME variable
+    return result[0] if result else 0
+
+def update_latest_game_number_in_db(game_name, latest_number):
+    """Updates the latest game number in the database."""
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    if game_type == "Wordle":
-        cursor.execute("UPDATE latest_wordle SET game_number = ? WHERE id = 1", (new_game_number,))
-    else:  # Connections
-        cursor.execute("UPDATE latest_connections SET puzzle_number = ? WHERE id = 1", (new_game_number,))
+    cursor.execute("INSERT OR REPLACE INTO latest_game_numbers (game_name, latest_number) VALUES (?, ?)", (game_name, latest_number,))
     conn.commit()
     conn.close()
+    
