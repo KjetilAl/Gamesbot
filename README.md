@@ -1,6 +1,5 @@
 Roadmap
-1. Create a "score dump" channel
-2. Refine chat channel introduction with scores
-3. Add more games
-4. Expand and refine weekly and monthly posts 
-5. Invite people
+1. Expand and refine weekly and monthly posts
+2. Clean up bot messages (acknowledgements and introductions)
+3. Parse Bandle bonus scores in a better way 
+4. Invite people
