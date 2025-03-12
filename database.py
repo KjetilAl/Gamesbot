@@ -38,25 +38,19 @@ def initialize_db():
         )
     """)
 
-    # Add these new tables for tracking latest game numbers
+    # New generic table for tracking latest game numbers
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS latest_wordle (
-            id INTEGER PRIMARY KEY,
-            game_number INTEGER
+        CREATE TABLE IF NOT EXISTS latest_game_numbers (
+            game_name TEXT PRIMARY KEY,
+            latest_number INTEGER
         )
     """)
-    
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS latest_connections (
-            id INTEGER PRIMARY KEY,
-            puzzle_number INTEGER
-        )
-    """)
-    
+
     # Initialize with 0 if empty
-    cursor.execute("INSERT OR IGNORE INTO latest_wordle (id, game_number) VALUES (1, 0)")
-    cursor.execute("INSERT OR IGNORE INTO latest_connections (id, puzzle_number) VALUES (1, 0)")
-    
+    games = ["Wordle", "Connections", "Framed", "Gisnep", "Bandle"]
+    for game in games:
+        cursor.execute("INSERT OR IGNORE INTO latest_game_numbers (game_name, latest_number) VALUES (?, 0)", (game,))
+
     # Framed Table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS framed_scores (
@@ -119,7 +113,7 @@ def save_wordle_score(user_id, display_name, game_number, attempts, skill, luck)
     # Ensure skill and luck are not None
     skill = skill if skill is not None else 0
     luck = luck if luck is not None else 0
-    
+
     total_score = skill + attempt_score - luck  # Luck subtracted here
 
     conn = sqlite3.connect(DB_NAME)
@@ -371,7 +365,7 @@ def get_weekly_scores():
     except sqlite3.Error as e:
         print(f"Database error: {e}")
         conn.close()
-        return [], []
+        return,
 
 def get_monthly_scores():
     """Fetch total Wordle and Connections scores for the past month."""
@@ -404,109 +398,7 @@ def get_monthly_scores():
     except sqlite3.Error as e:
         print(f"Database error: {e}")
         conn.close()
-        return [], []
-        
+        return,
+
 # Database functions for tracking roles (add these to your database.py file)
-def save_user_role(user_id, role_name, game_number, expires_at):
-    """Save information about a role granted to a user."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT OR REPLACE INTO user_roles 
-        (user_id, role_name, game_number, expires_at) 
-        VALUES (?, ?, ?, ?)
-    ''', (user_id, role_name, game_number, expires_at))
-    conn.commit()
-    conn.close()
-
-def get_expired_roles():
-    """Get all expired roles that need to be removed."""
-    now = datetime.datetime.now(cet_timezone).strftime("%Y-%m-%d %H:%M:%S")
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT user_id, role_name FROM user_roles
-        WHERE expires_at < ?
-    ''', (now,))
-    expired_roles = cursor.fetchall()
-    conn.close()
-    return expired_roles
-
-def delete_expired_roles():
-    """Delete records of expired roles from the database."""
-    now = datetime.datetime.now(cet_timezone).strftime("%Y-%m-%d %H:%M:%S")
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('''
-        DELETE FROM user_roles WHERE expires_at < ?
-    ''', (now,))
-    conn.commit()
-    conn.close()
-
-def get_overall_recent_wordle_scores(limit=5):
-    """
-    Fetches the most recent Wordle scores from all users, ordered by timestamp descending,
-    limited to the specified number.
-    """
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    try:
-        cursor.execute("""
-            SELECT game_number, attempts, skill, luck, timestamp
-            FROM wordle_scores
-            ORDER BY timestamp DESC
-            LIMIT ?
-        """, (limit,))
-        scores = cursor.fetchall()
-        return scores
-    except sqlite3.Error as e:
-        print(f"Database error in get_overall_recent_wordle_scores: {e}")
-        return [] # Return empty list in case of error
-    finally:
-        conn.close()
-
-def get_overall_recent_connections_puzzle_number(limit=5):
-    """
-    Fetches the most recent Connections puzzle numbers from all users,
-    ordered by timestamp descending, limited to the specified number.
-    Returns a list of tuples, each containing (puzzle_number, timestamp).
-    """
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    try:
-        cursor.execute("""
-            SELECT puzzle_number, timestamp
-            FROM connections_scores
-            ORDER BY timestamp DESC
-            LIMIT ?
-        """, (limit,))
-        puzzles = cursor.fetchall()
-        return puzzles
-    except sqlite3.Error as e:
-        print(f"Database error in get_overall_recent_connections_puzzle_number: {e}")
-        return [] # Return empty list in case of error
-    finally:
-        conn.close()
-        
-def get_latest_game_number_from_db(game_type):
-    """Fetches the latest game/puzzle number from the database."""
-    conn = sqlite3.connect(DB_NAME)  # Use your existing DB_NAME variable
-    cursor = conn.cursor()
-    if game_type == "Wordle":
-        cursor.execute("SELECT game_number FROM latest_wordle WHERE id = 1")
-    else:  # Connections
-        cursor.execute("SELECT puzzle_number FROM latest_connections WHERE id = 1")
-    result = cursor.fetchone()
-    conn.close()
-    return result[0] if result else 0  # Return 0 if no records exist
-    
-def update_latest_game_number_in_db(game_type, new_game_number):
-    """Updates the latest game/puzzle number in the database."""
-    conn = sqlite3.connect(DB_NAME)  # Use your existing DB_NAME variable
-    cursor = conn.cursor()
-    if game_type == "Wordle":
-        cursor.execute("UPDATE latest_wordle SET game_number = ? WHERE id = 1", (new_game_number,))
-    else:  # Connections
-        cursor.execute("UPDATE latest_connections SET puzzle_number = ? WHERE id = 1", (new_game_number,))
-    conn.commit()
-    conn.close()
+def
