@@ -14,7 +14,7 @@ BONUS_PATTERN = re.compile(r'Bonus Rounds: (\d+)/(\d+)', re.IGNORECASE)
 def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
     """
     Parse a Wordle score from a message.
-    
+
     Args:
         message_content: The content of the message to parse
         
@@ -26,7 +26,7 @@ def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
     
     if not wordle_match:
         return None
-        
+    
     # Extract game number and attempts
     game_number_str = wordle_match.group(1).replace(",", "")
     game_number = int(game_number_str)
@@ -39,11 +39,21 @@ def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
         skill = int(skill_luck_match.group(1))
         luck = int(skill_luck_match.group(2))
     
+    # Extract the grid
+    grid_lines =
+    lines = message_content.split('\n')
+    for line in lines:
+        # Check if the line consists only of Wordle grid characters
+        if all(char in "🟩🟨⬜" for char in line):
+            grid_lines.append(line)
+    grid = '\n'.join(grid_lines)
+
     return {
         "game_number": game_number,
         "attempts": attempts,
         "skill": skill,
-        "luck": luck
+        "luck": luck,
+        "grid": grid  # Add the grid to the result
     }
 
 def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
