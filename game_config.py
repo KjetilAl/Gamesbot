@@ -8,7 +8,6 @@ import database
 GAME_CONFIGS = {
     "wordle": {
         "name": "Wordle",
-        "score_channel_name": "wordle-score",
         "chat_channel_name": "wordle-chat",
         "player_role_name": "wordle-player",
         "parse_function": score_parser.parse_wordle_score,
@@ -22,7 +21,6 @@ GAME_CONFIGS = {
     },
     "connections": {
         "name": "Connections",
-        "score_channel_name": "connections-score",
         "chat_channel_name": "connections-chat",
         "player_role_name": "connections-player",
         "parse_function": score_parser.parse_connections_result,
@@ -36,7 +34,6 @@ GAME_CONFIGS = {
     }
 "framed": {
     "name": "Framed",
-    "score_channel_name": "framed-score",
     "chat_channel_name": "framed-chat",
     "player_role_name": "framed-player",
     "parse_function": score_parser.parse_framed_score,
@@ -50,7 +47,6 @@ GAME_CONFIGS = {
     },
 "gisnep": {
     "name": "Gisnep",
-    "score_channel_name": "gisnep-score",
     "chat_channel_name": "gisnep-chat",
     "player_role_name": "gisnep-player",
     "parse_function": score_parser.parse_gisnep_score,
@@ -64,7 +60,6 @@ GAME_CONFIGS = {
     },
 "bandle": {
     "name": "Bandle",
-    "score_channel_name": "bandle-score",
     "chat_channel_name": "bandle-chat",
     "player_role_name": "bandle-player",
     "parse_function": score_parser.parse_bandle_score,
