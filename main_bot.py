@@ -110,11 +110,11 @@ async def handle_game_message(message, game_key, game_config):
     # Create the acknowledgement message
     response = game_config["create_acknowledgement"](display_name, game_info)
     
-    # Get the latest game number from the database
-    game_number_key = "game_number" if game_key != "connections" else "puzzle_number"
+  # Get the latest game number from the database
+    game_number_key = game_config["game_number_key"]  # Use game_number_key from config
     latest_game_number = game_config["get_latest_game_number_function"](game_config["name"])
     current_game_number = game_info[game_number_key]
-    
+
     # If this is the latest game, update roles and notify
     if current_game_number >= latest_game_number:
         game_config["update_latest_game_number_function"](game_config["name"], current_game_number)
