@@ -309,7 +309,7 @@ def create_framed_introduction(display_name: str, game_info: Dict[str, Any]) -> 
     game_number = game_info.get("game_number", "?")
     attempts = game_info.get("attempts", "?")
 
-    return f"👋 **{display_name}** just played Framed #{game_number} and solved it in {attempts} guesses!"
+    return f"🎥 **{display_name}** just played Framed #{game_number} and solved it in {attempts} guess{'es' if attempts != 1 else ''}!"
 
 def create_gisnep_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create acknowledgement message for Gisnep scores."""
