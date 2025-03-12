@@ -32,7 +32,7 @@ GAME_CONFIGS = {
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
         "create_acknowledgement": score_parser.create_connections_acknowledgement,
         "create_introduction": score_parser.create_connections_introduction,
-        "game_number_key": "game_number"  # Key for game number
+        "game_number_key": "puzzle_number"  # Key for game number
     },
 "framed": {
     "name": "Framed",
