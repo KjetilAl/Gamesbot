@@ -31,7 +31,7 @@ GAME_CONFIGS = {
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
         "create_acknowledgement": score_parser.create_connections_acknowledgement,
         "create_introduction": score_parser.create_connections_introduction
-    }
+    },
 "framed": {
     "name": "Framed",
     "chat_channel_name": "framed-chat",
