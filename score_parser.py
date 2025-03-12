@@ -150,15 +150,22 @@ def parse_framed_score(message_content: str) -> Optional[Dict[str, Any]]:
     match = FRAMED_PATTERN.search(message_content)
     if not match:
         return None
-    
+
     game_number = int(match.group(1))
     guess_sequence = re.findall(r'[🟥🟩⬛]', message_content)
-    attempts = len(guess_sequence)
-    solved = "🟩" in guess_sequence
+    
+    # Determine attempts based on the position of the green square
+    try:
+        attempts = guess_sequence.index("🟩") + 1
+        solved = True
+    except ValueError:
+        # Green square not found, meaning the puzzle was not solved
+        attempts = len(guess_sequence)
+        solved = False
 
     # Assign points based on number of attempts
     score = {1: 100, 2: 80, 3: 60, 4: 40, 5: 20, 6: 10}.get(attempts, 0) if solved else 0
-    
+
     return {
         "game_number": game_number,
         "attempts": attempts,
