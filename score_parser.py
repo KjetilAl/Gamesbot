@@ -59,26 +59,24 @@ def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
 def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
     """
     Extract puzzle number and all guesses from a Connections result.
-    
+
     Args:
         message_content: The content of the message to parse
-        
+
     Returns:
         Dictionary with puzzle number and guesses or None if not a valid Connections result
     """
     lines = message_content.split("\n")
-    
+
     if not (lines[0].strip() == "Connections" and "Puzzle #" in lines[1]):
         return None
-    
+
     puzzle_match = re.search(r"Puzzle #(\d+)", lines[1])
-    puzzle_number = puzzle_match.group(1) if puzzle_match else "Unknown"
-    
-    try:
-        puzzle_number = int(puzzle_number)
-    except ValueError:
+    if not puzzle_match:
         return None
-    
+
+    puzzle_number = int(puzzle_match.group(1))
+
     guesses = []
     for line in lines[2:]:
         line = line.strip()
@@ -90,10 +88,10 @@ def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
                 guesses.append("X")
         elif len(line) > 0:  # Handles if the line is not 4 characters long
             guesses.append("X")
-    
+
     # Calculate the score details
     score_details = calculate_connections_score(guesses)
-    
+
     return {
         "puzzle_number": puzzle_number,
         "guesses": guesses,
@@ -103,48 +101,48 @@ def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
 def calculate_connections_score(guesses: List[str]) -> Dict[str, Any]:
     """
     Calculate the Connections score based on guesses.
-    
+
     Args:
         guesses: List of guesses (🟪, 🟦, 🟩, 🟨, or X for mistakes)
-        
+
     Returns:
         Dictionary with score details
     """
     base_points = {"🟪": 4, "🟦": 3, "🟩": 2, "🟨": 1}
-    
+
     total_score = 0
     solved_purple_first = False
     solved_blue_first = False
-    first_group = None
+    first_group = ""
     correct_guesses = 0
     mistake_count = 0
-    
+
     for guess in guesses:
         if guess in base_points:
-            if first_group is None:
+            if not first_group:
                 first_group = guess
             correct_guesses += 1
         elif guess == "X":
             mistake_count += 1
-    
+
     if first_group == "🟪":
         solved_purple_first = True
         total_score += 2
     elif first_group == "🟦":
         solved_blue_first = True
         total_score += 1
-    
+
     for guess in guesses:
         if guess in base_points:
             total_score += base_points[guess]
-    
+
     if correct_guesses == 4 and mistake_count == 0:
         total_score += 5
     else:
         total_score -= mistake_count
-    
+
     finished_game = correct_guesses == 4
-    
+
     return {
         "total_score": total_score,
         "num_guesses": len(guesses),
