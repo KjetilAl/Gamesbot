@@ -50,14 +50,15 @@ async def on_message(message):
     content = message.content
     processed = False
 
-    # Check each game configuration
-    for game_key, config in game_config.GAME_CONFIGS.items():
-        # Check if the message is related to this game
-        if config["is_game_message"](content):
-            print(f"Detected {config['name']} message from {message.author.display_name}")
-            await handle_game_message(message, game_key, config)
-            processed = True
-            break
+    # Check if the message is in the 'scores' channel
+    if message.channel.name == "scores":
+        # Check each game configuration
+        for game_key, config in game_config.GAME_CONFIGS.items():
+            if config["is_game_message"](content):
+                print(f"Detected {config['name']} message from {message.author.display_name}")
+                await handle_game_message(message, game_key, config)
+                processed = True
+                break
 
     if not processed:
         await bot.process_commands(message)  # Process commands if not a game message
@@ -123,8 +124,8 @@ async def handle_game_message(message, game_key, game_config):
              guild, 
              member, 
              game_config, 
-             current_game_number,  # Add this argument
-             latest_game_number    # Add this argument
+             current_game_number,
+             latest_game_number
 )
         
         if success:
