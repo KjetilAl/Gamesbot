@@ -325,7 +325,7 @@ def create_framed_acknowledgement(display_name: str, game_info: Dict[str, Any]) 
     attempts = game_info.get("attempts", "?")
     total_score = game_info.get("total_score", "?")
 
-    return f"🎥 @{display_name} just posted in ⁠framed-chat⁠\nFramed #{game_number} ({attempts} guesses)\nScore: {total_score} points"
+    return f"🎥 @{display_name} just posted a Framed score!⁠\nFramed #{game_number} ({attempts} guesses)\nScore: {total_score} points"
 
 def create_framed_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create introduction message for Framed players."""
@@ -339,7 +339,7 @@ def create_gisnep_acknowledgement(display_name: str, game_info: Dict[str, Any]) 
     game_number = game_info.get("game_number", "?")
     completion_time = game_info.get("completion_time", "?")
 
-    return f"🎬 @{display_name} just posted in ⁠gisnep-chat⁠\nGisnep #{game_number} solved in {completion_time} seconds!"
+    return f"🎬 @{display_name} just posted a Gisnep score.⁠\nGisnep #{game_number} solved in {completion_time} seconds!"
 
 def create_gisnep_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create introduction message for Gisnep players."""
@@ -356,7 +356,7 @@ def create_bandle_acknowledgement(display_name: str, game_info: Dict[str, Any]) 
     bonus_completed = game_info.get("bonus_completed", "?")
     bonus_total = game_info.get("bonus_total", "?")
 
-    message = f"🎵 @{display_name} just posted in ⁠bandle-chat⁠\nBandle #{game_number} ({attempts} guesses)\nScore: {total_score} points"
+    message = f"🎵 @{display_name} just posted a Bandle score!⁠\nBandle #{game_number} ({attempts} guesses)\nScore: {total_score} points"
     
     if bonus_total > 0:
         message += f"\nBonus Rounds: {bonus_completed}/{bonus_total} ✅"
