@@ -86,7 +86,7 @@ async def handle_game_message(message, game_key, game_config):
     
     # Save the score based on the game type
     if game_key == "wordle":
-    game_config["save_score_function"](
+        game_config["save_score_function"](
         user_id, display_name, 
         game_info["game_number"],
         game_info["attempts"], 
