@@ -227,6 +227,8 @@ def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
     bonus_completed = int(bonus_match.group(1)) if bonus_match else 0
     bonus_total = int(bonus_match.group(2)) if bonus_match else 0
 
+    print(f"Bandle: Extracted game_number = {game_number}")  # Debug logging
+    
     return {
         "game_number": game_number,
         "attempts": attempts,
