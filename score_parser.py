@@ -2,7 +2,7 @@ import re
 from typing import Dict, List, Tuple, Optional, Any, Union
 
 # Regular expressions for game patterns
-WORDLE_PATTERN = re.compile(r'Wordle\s+(?:#?\s*)(\d+(?:,\d+)?)\s+(\d)/6', re.IGNORECASE)
+WORDLE_PATTERN = re.compile(r'Wordle\s+(?:#?\s*)(\d+(?:,\d+)?)\s+([0-6X])/6(\*?)', re.IGNORECASE)
 SKILL_LUCK_PATTERN = re.compile(r'Skill\s+(\d+)/99\s+Luck\s+(\d+)/99', re.MULTILINE | re.IGNORECASE)
 CONNECTIONS_PATTERN = re.compile(r'Connections\nPuzzle #(\d+)')
 FRAMED_PATTERN = re.compile(r'Framed\s+#?(\d+)', re.IGNORECASE)
@@ -30,9 +30,15 @@ def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
     # Extract game number and attempts
     game_number_str = wordle_match.group(1).replace(",", "")
     game_number = int(game_number_str)
-    attempts = int(wordle_match.group(2))
     
-    # Extract skill and luck if available
+    # Handle attempts (could be 'X' or a digit)
+    attempts_str = wordle_match.group(2)
+    attempts = 7 if attempts_str == 'X' else int(attempts_str)  # Use 7 to represent failure (beyond the 6 allowed attempts)
+    
+    # Check for hard mode
+    hard_mode = wordle_match.group(3) == '*'
+    
+    # Extract skill and luck if available (optional)
     skill = None
     luck = None
     if skill_luck_match:
@@ -40,17 +46,19 @@ def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
         luck = int(skill_luck_match.group(2))
     
     # Extract the grid
-    grid_lines =
+    grid_lines = []
     lines = message_content.split('\n')
     for line in lines:
         # Check if the line consists only of Wordle grid characters
-        if all(char in "🟩🟨⬜" for char in line):
+        if line and all(char in "🟩🟨⬜" for char in line):
             grid_lines.append(line)
     grid = '\n'.join(grid_lines)
 
     return {
         "game_number": game_number,
         "attempts": attempts,
+        "solved": attempts <= 6,  # Add a solved flag for clarity
+        "hard_mode": hard_mode,  # Add hard_mode flag
         "skill": skill,
         "luck": luck,
         "grid": grid  # Add the grid to the result
