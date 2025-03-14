@@ -77,7 +77,7 @@ def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
 
     puzzle_number = int(puzzle_match.group(1))
 
-    guesses =
+    guesses = []
     for line in lines[2:]:
         line = line.strip()
         if len(line) == 4:
