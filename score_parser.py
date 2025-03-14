@@ -12,15 +12,6 @@ BANDLE_PATTERN = re.compile(r'Bandle\s+#?(\d+)\s+(\d|X)/(\d)', re.IGNORECASE)
 BONUS_PATTERN = re.compile(r'Bonus Rounds: (\d+)/(\d+)', re.IGNORECASE)
 
 def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
-    """
-    Parse a Wordle score from a message.
-
-    Args:
-        message_content: The content of the message to parse
-        
-    Returns:
-        Dictionary with parsed information or None if not a valid Wordle score
-    """
     wordle_match = WORDLE_PATTERN.search(message_content)
     skill_luck_match = SKILL_LUCK_PATTERN.search(message_content)
     
