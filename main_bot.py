@@ -86,8 +86,14 @@ async def handle_game_message(message, game_key, game_config):
     
     # Save the score based on the game type
     if game_key == "wordle":
-        game_config["save_score_function"](user_id, display_name, game_info["game_number"],
-                                           game_info["attempts"], game_info["skill"], game_info["luck"])
+    game_config["save_score_function"](
+        user_id, display_name, 
+        game_info["game_number"],
+        game_info["attempts"], 
+        game_info.get("skill"),  # Use .get() to handle None values
+        game_info.get("luck"),
+        game_info.get("hard_mode", False)
+    )
     
     elif game_key == "connections":
         game_config["save_score_function"](user_id, display_name, game_info["puzzle_number"],
