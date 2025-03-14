@@ -8,7 +8,7 @@ def initialize_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    # Wordle table (unchanged)
+    # Wordle. Added hard_mode column and made skill/luck nullable
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS wordle_scores (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -16,8 +16,9 @@ def initialize_db():
             display_name TEXT,
             game_number TEXT,
             attempts INTEGER,
-            skill INTEGER,
-            luck INTEGER,
+            skill INTEGER NULL,
+            luck INTEGER NULL,
+            hard_mode BOOLEAN,
             total_score INTEGER,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -94,9 +95,8 @@ def initialize_db():
     conn.commit()
     conn.close()
 
-def save_wordle_score(user_id, display_name, game_number, attempts, skill, luck):
-    """Save a new Wordle score with tiered attempt scoring."""
-
+def save_wordle_score(user_id, display_name, game_number, attempts, skill=None, luck=None, hard_mode=False):
+    """Save a new Wordle score with optional skill, luck, and hard mode flag."""
     if attempts == 1:
         attempt_score = 100
     elif attempts == 2:
@@ -110,21 +110,17 @@ def save_wordle_score(user_id, display_name, game_number, attempts, skill, luck)
     else:
         attempt_score = 0
 
-    # Ensure skill and luck are not None
-    skill = skill if skill is not None else 0
-    luck = luck if luck is not None else 0
-
-    total_score = skill + attempt_score - luck  # Luck subtracted here
+    total_score = (skill or 0) + attempt_score - (luck or 0)
 
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT OR REPLACE INTO wordle_scores (user_id, display_name, game_number, attempts, skill, luck, total_score)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (user_id, display_name, game_number, attempts, skill, luck, total_score))
+        INSERT INTO wordle_scores (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score))
     conn.commit()
     conn.close()
-
+    
 def get_recent_scores(user_id, limit=5):
     """Retrieve the last `limit` games played by a user."""
     conn = sqlite3.connect(DB_NAME)
