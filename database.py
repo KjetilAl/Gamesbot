@@ -486,6 +486,7 @@ def get_latest_game_number_from_db(game_name):
     result = cursor.fetchone()
     conn.close()
     return result[0] if result else 0
+    print(f"DB: Retrieved latest_number for {game_name} = {latest_number}")  # DEBUGGING
 
 def update_latest_game_number_in_db(game_name, latest_number):
     """Updates the latest game number in the database."""
@@ -494,4 +495,4 @@ def update_latest_game_number_in_db(game_name, latest_number):
     cursor.execute("INSERT OR REPLACE INTO latest_game_numbers (game_name, latest_number) VALUES (?, ?)", (game_name, latest_number,))
     conn.commit()
     conn.close()
-    
+    print(f"DB: Updated latest_number for {game_name} to {latest_number}")  # DEBUGGING
