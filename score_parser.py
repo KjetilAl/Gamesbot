@@ -275,23 +275,12 @@ def is_connections_message(message_content: str) -> bool:
 def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create acknowledgement message for Wordle scores."""
     game_number = game_info.get("game_number", "?")
-    attempts = game_info.get("attempts", "?")
-    skill = game_info.get("skill", "?")
-    luck = game_info.get("luck", "?")
-    
-    message = f"📊 {display_name}'s Wordle {game_number} recorded!\n"
-    message += f"Attempts: {attempts}/6\n"
-    
-    if skill != "?" and luck != "?":
-        message += f"Skill: {skill}/99 | Luck: {luck}/99"
-    
-    return message
+    hard_mode = game_info.get("hard_mode", False)
 
-def create_connections_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create acknowledgement message for Connections scores."""
-    puzzle_number = game_info.get("puzzle_number", "?")
-    return f"🟨🟩🟦🟪 {display_name}'s Connections Puzzle #{puzzle_number} recorded!"
-    
+    # Add hard mode indicator
+    hard_mode_text = " (Hard Mode)" if hard_mode else ""
+    return f"📊 {display_name}'s Wordle {game_number}{hard_mode_text} recorded!\n"
+  
 def create_wordle_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create a compact acknowledgement message for Wordle scores."""
     
@@ -300,13 +289,26 @@ def create_wordle_introduction(display_name: str, game_info: Dict[str, Any]) -> 
     skill = game_info.get("skill", "?")
     luck = game_info.get("luck", "?")
     grid = game_info.get("grid", "⬜⬜⬜⬜⬜")  # Placeholder if no grid available
+    hard_mode = game_info.get("hard_mode", False)
+    
+    # Add hard mode indicator
+    hard_mode_text = " (Hard Mode)" if hard_mode else ""
 
-    message = f"@{display_name} just posted a Wordle score\n"
-    message += f"{grid} Wordle {game_number} {attempts}/6*\n"
-    message += f"Skill {skill}/99\n"
-    message += f"Luck {luck}/99"
+    # Handle missing skill and luck
+    skill_text = f"Skill: {skill}/99" if skill is not None else "Skill: N/A"
+    luck_text = f"Luck: {luck}/99" if luck is not None else "Luck: N/A"
+
+    # Build the message
+    message = f"@{display_name} just posted Wordle {game_number} {attempts}/6{hard_mode_text}\n"
+    message += f"{grid}\n"
+    message += f"{skill_text} | {luck_text}"
 
     return message
+
+def create_connections_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create acknowledgement message for Connections scores."""
+    puzzle_number = game_info.get("puzzle_number", "?")
+    return f"🟪 {display_name}'s Connections Puzzle #{puzzle_number} recorded!"
 
 def create_connections_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create a compact acknowledgement message for Connections scores."""
@@ -320,8 +322,7 @@ def create_connections_introduction(display_name: str, game_info: Dict[str, Any]
     # Construct difficulty sequence
     difficulty_text = "🟪" if solved_purple_first else "🟦" if solved_blue_first else "🟨🟩"
     
-    message = f"@{display_name} just posted a Connections score⁠\n"
-    message += f"{difficulty_text} Connections Puzzle #{puzzle_number}\n"
+    message = f"{difficulty_text} @{display_name} just posted Connections Puzzle #{puzzle_number}\n"
     message += f"Total Score: {total_score}\n"
     message += f"Guesses: {guesses}"
     
@@ -333,7 +334,7 @@ def create_framed_acknowledgement(display_name: str, game_info: Dict[str, Any]) 
     attempts = game_info.get("attempts", "?")
     total_score = game_info.get("total_score", "?")
 
-    return f"🎥 @{display_name} just posted a Framed score!⁠\nFramed #{game_number} ({attempts} guesses)\nScore: {total_score} points"
+    return f"🎥 @{display_name} just posted a Framed score!⁠"
 
 def create_framed_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create introduction message for Framed players."""
@@ -347,7 +348,7 @@ def create_gisnep_acknowledgement(display_name: str, game_info: Dict[str, Any]) 
     game_number = game_info.get("game_number", "?")
     completion_time = game_info.get("completion_time", "?")
 
-    return f"🎬 @{display_name} just posted a Gisnep score.⁠\nGisnep #{game_number} solved in {completion_time} seconds!"
+    return f"🎬 @{display_name} just posted a Gisnep score!"
 
 def create_gisnep_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create introduction message for Gisnep players."""
@@ -364,10 +365,7 @@ def create_bandle_acknowledgement(display_name: str, game_info: Dict[str, Any]) 
     bonus_completed = game_info.get("bonus_completed", "?")
     bonus_total = game_info.get("bonus_total", "?")
 
-    message = f"🎵 @{display_name} just posted a Bandle score!⁠\nBandle #{game_number} ({attempts} guesses)\nScore: {total_score} points"
-    
-    if bonus_total > 0:
-        message += f"\nBonus Rounds: {bonus_completed}/{bonus_total} ✅"
+    message = f"🎵 @{display_name} just posted a Bandle score!⁠"
 
     return message
 
@@ -378,9 +376,9 @@ def create_bandle_introduction(display_name: str, game_info: Dict[str, Any]) -> 
     bonus_completed = game_info.get("bonus_completed", "?")
     bonus_total = game_info.get("bonus_total", "?")
 
-    message = f"🎵 **{display_name}** just played Bandle #{game_number} and solved it in {attempts} guesses!"
+    message = f"🎵 **{display_name}** just played Bandle #{game_number} and got it in {attempts}!"
     
     if bonus_total > 0:
-        message += f"\nThey also completed {bonus_completed}/{bonus_total} bonus rounds!"
+        message += f"\nBonus score: {bonus_completed}/{bonus_total}"
 
     return message
