@@ -146,14 +146,14 @@ async def handle_game_message(message, game_key, game_config):
          latest_game_number,
     )
 
-         if success:
-                chat_channel_name = config["chat_channel_name"]
-                response += (
-                     f"\n\n{member.mention} You now have access to the"
-                     f" {chat_channel_name} channel!"
-          )
-                  await role_manager.introduce_player_in_game_channel(
-                  guild, display_name, config, game_info
+          if success:
+              chat_channel_name = config["chat_channel_name"]
+               response += (
+                  f"\n\n{member.mention} You now have access to the"
+                  f" {chat_channel_name} channel!"
+         )
+               await role_manager.introduce_player_in_game_channel(
+               guild, display_name, config, game_info
          )
     
     # Send the response message
