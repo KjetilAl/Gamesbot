@@ -120,7 +120,7 @@ async def handle_game_message(message, game_key, game_config):
     game_number_key = game_config["game_number_key"]  # Use game_number_key from config
     latest_game_number = game_config["get_latest_game_number_function"](game_config["name"])
     print(  # DEBUGGING
-                        f"{config['name']}: Retrieved latest_game_number ="
+                        f"{game_config['name']}: Retrieved latest_game_number ="
                         f" {latest_game_number}"
                     )
     current_game_number = game_info[game_number_key]
@@ -129,7 +129,7 @@ async def handle_game_message(message, game_key, game_config):
     if current_game_number >= latest_game_number:
         game_config["update_latest_game_number_function"](game_config["name"], current_game_number)
         print(  # DEBUGGING
-                        f"{config['name']}: Updated latest_game_number to"
+                        f"{game_config['name']}: Updated latest_game_number to"
                         f" {game_number}"
                     )
         
