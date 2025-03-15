@@ -50,54 +50,54 @@ async def on_message(message):
     content = message.content
     processed = False
 
-# Check if the message is in the 'scores' channel
-if message.channel.name == "scores":
-    # Check each game configuration
-    for game_key, config in game_config.GAME_CONFIGS.items():
-        if config["is_game_message"](content):
-            print(
-                f"Detected {config['name']} message from"
-                f" {message.author.display_name}"
-            )
-            await handle_game_message(message, game_key, config)
-            processed = True
-
-            # Get the latest game number from the database
-            game_number_key = config["game_number_key"]  # Use game_number_key from config
-            latest_game_number = config["get_latest_game_number_function"](
-                config["name"]
-            )
-            print(  # DEBUGGING
-                f"{config['name']}: Retrieved latest_game_number ="
-                f" {latest_game_number}"
-            )
-            current_game_number = game_info[game_number_key]
-
-            # If this is the latest game, update roles and notify
-            if current_game_number >= latest_game_number:
-                config["update_latest_game_number_function"](
-                    config["name"], current_game_number
+    # Check if the message is in the 'scores' channel
+    if message.channel.name == "scores":
+        # Check each game configuration
+        for game_key, config in game_config.GAME_CONFIGS.items():
+            if config["is_game_message"](content):
+                print(
+                    f"Detected {config['name']} message from"
+                    f" {message.author.display_name}"
                 )
+                await handle_game_message(message, game_key, config)
+                processed = True
 
-                # Handle role assignment
-                success = await role_manager.handle_game_role_assignment(
-                    message.guild,
-                    message.author,
-                    config,
-                    current_game_number,
-                    latest_game_number,
+                # Get the latest game number from the database
+                game_number_key = config["game_number_key"]  # Use game_number_key from config
+                latest_game_number = config["get_latest_game_number_function"](
+                    config["name"]
                 )
+                print(  # DEBUGGING
+                    f"{config['name']}: Retrieved latest_game_number ="
+                    f" {latest_game_number}"
+                )
+                current_game_number = game_info[game_number_key]
 
-                if success:
-                    chat_channel_name = config["chat_channel_name"]
-                    response += (
-                        f"\n\n{member.mention} You now have access to the"
-                        f" {chat_channel_name} channel!"
+                # If this is the latest game, update roles and notify
+                if current_game_number >= latest_game_number:
+                    config["update_latest_game_number_function"](
+                        config["name"], current_game_number
                     )
-                    await role_manager.introduce_player_in_game_channel(
-                        message.guild, message.author.display_name, config, game_info
+
+                    # Handle role assignment
+                    success = await role_manager.handle_game_role_assignment(
+                        message.guild,
+                        message.author,
+                        config,
+                        current_game_number,
+                        latest_game_number,
                     )
-            break  # Exit the loop after processing a game message
+
+                    if success:
+                        chat_channel_name = config["chat_channel_name"]
+                        response += (
+                            f"\n\n{member.mention} You now have access to the"
+                            f" {chat_channel_name} channel!"
+                        )
+                        await role_manager.introduce_player_in_game_channel(
+                            message.guild, message.author.display_name, config, game_info
+                        )
+                break  # Exit the loop after processing a game message
             
 async def handle_game_message(message, game_key, game_config):
     """
