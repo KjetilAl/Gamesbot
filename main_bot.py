@@ -125,7 +125,7 @@ async def handle_game_message(message, game_key, game_config):
     latest_game_number = config["get_latest_game_number_function"](
          config["name"]
     )
-      print(  # DEBUGGING
+    print(  # DEBUGGING
          f"{config['name']}: Retrieved latest_game_number ="
          f" {latest_game_number}"
        )
