@@ -274,70 +274,15 @@ def get_bandle_leaderboard():
     conn.close()
     return leaderboard
 
-def get_weekly_summary():
-    """Retrieve all players and their total scores for the past week for both Wordle and Connections."""
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
-    one_week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
-
-    # Wordle weekly scores
-    cursor.execute("""
-        SELECT display_name, SUM(total_score) AS total_score
-        FROM wordle_scores
-        WHERE timestamp >= ?
-        GROUP BY display_name
-        ORDER BY total_score DESC
-    """, (one_week_ago,))
-    wordle_scores = cursor.fetchall()
-
-    # Connections weekly scores
-    cursor.execute("""
-        SELECT display_name, SUM(total_score) AS total_score
-        FROM connections_scores
-        WHERE timestamp >= ?
-        GROUP BY display_name
-        ORDER BY total_score DESC
-    """, (one_week_ago,))
-    connections_scores = cursor.fetchall()
-
-    conn.close()
-    return wordle_scores, connections_scores
-
 def get_weekly_scores():
-    """Fetch total Wordle and Connections scores for the past week."""
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT display_name, SUM(total_score) AS total_score
-        FROM wordle_scores
-        WHERE timestamp >= datetime('now', '-7 days')
-        GROUP BY display_name
-        ORDER BY total_score DESC
-    """)
-    wordle_scores = cursor.fetchall()
-
-    cursor.execute("""
-        SELECT display_name, SUM(total_score) AS total_score
-        FROM connections_scores
-        WHERE timestamp >= datetime('now', '-7 days')
-        GROUP BY display_name
-        ORDER BY total_score DESC
-    """)
-    connections_scores = cursor.fetchall()
-
-    conn.close()
-    return wordle_scores, connections_scores
-
-def get_weekly_scores():
-    """Fetch total Wordle and Connections scores for the past week."""
+    """Fetch total scores for all games for the past week."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
     one_week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
 
     try:
+        # Wordle
         cursor.execute("""
             SELECT display_name, SUM(total_score) AS total_score
             FROM wordle_scores
@@ -347,6 +292,7 @@ def get_weekly_scores():
         """, (one_week_ago,))
         wordle_scores = cursor.fetchall()
 
+        # Connections
         cursor.execute("""
             SELECT display_name, SUM(total_score) AS total_score
             FROM connections_scores
@@ -356,21 +302,60 @@ def get_weekly_scores():
         """, (one_week_ago,))
         connections_scores = cursor.fetchall()
 
+        # Framed
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM framed_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY total_score DESC
+        """, (one_week_ago,))
+        framed_scores = cursor.fetchall()
+
+        # Gisnep (rank by shortest average time)
+        cursor.execute("""
+            SELECT display_name, AVG(completion_time) AS avg_time
+            FROM gisnep_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY avg_time ASC
+        """, (one_week_ago,))
+        gisnep_scores = cursor.fetchall()
+
+        # Bandle
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM bandle_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY total_score DESC
+        """, (one_week_ago,))
+        bandle_scores = cursor.fetchall()
+
         conn.close()
-        return wordle_scores, connections_scores
+
+        return {
+            "Wordle": wordle_scores,
+            "Connections": connections_scores,
+            "Framed": framed_scores,
+            "Gisnep": gisnep_scores,
+            "Bandle": bandle_scores
+        }
+
     except sqlite3.Error as e:
         print(f"Database error: {e}")
         conn.close()
-        return
+        return {}
 
 def get_monthly_scores():
-    """Fetch total Wordle and Connections scores for the past month."""
+    """Fetch total scores for all games for the past month."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
     first_day_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
 
     try:
+        # Wordle
         cursor.execute("""
             SELECT display_name, SUM(total_score) AS total_score
             FROM wordle_scores
@@ -380,6 +365,7 @@ def get_monthly_scores():
         """, (first_day_of_month,))
         wordle_scores = cursor.fetchall()
 
+        # Connections
         cursor.execute("""
             SELECT display_name, SUM(total_score) AS total_score
             FROM connections_scores
@@ -389,12 +375,50 @@ def get_monthly_scores():
         """, (first_day_of_month,))
         connections_scores = cursor.fetchall()
 
+        # Framed
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM framed_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY total_score DESC
+        """, (first_day_of_month,))
+        framed_scores = cursor.fetchall()
+
+        # Gisnep (rank by shortest average time)
+        cursor.execute("""
+            SELECT display_name, AVG(completion_time) AS avg_time
+            FROM gisnep_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY avg_time ASC
+        """, (first_day_of_month,))
+        gisnep_scores = cursor.fetchall()
+
+        # Bandle
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM bandle_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY total_score DESC
+        """, (first_day_of_month,))
+        bandle_scores = cursor.fetchall()
+
         conn.close()
-        return wordle_scores, connections_scores
+
+        return {
+            "Wordle": wordle_scores,
+            "Connections": connections_scores,
+            "Framed": framed_scores,
+            "Gisnep": gisnep_scores,
+            "Bandle": bandle_scores
+        }
+
     except sqlite3.Error as e:
         print(f"Database error: {e}")
         conn.close()
-        return
+        return {}
 
 # Database functions for tracking roles (add these to your database.py file)
 def save_user_role(user_id, role_name, game_number, expires_at):
