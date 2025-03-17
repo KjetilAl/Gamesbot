@@ -187,105 +187,48 @@ async def leaderboard(ctx, game="wordle"):
     # Send leaderboard to channel
     await ctx.send(leaderboard_message)
 
+async def post_scores(period: str):
+    """Post scores for the given period (weekly or monthly) to the 'leaderboards' channel."""
+    # Fetch scores from the database
+    if period == "weekly":
+        scores_by_game = database.get_weekly_scores()
+    elif period == "monthly":
+        scores_by_game = database.get_monthly_scores()
+    else:
+        raise ValueError("Invalid period. Use 'weekly' or 'monthly'.")
+
+    # Find the 'leaderboards' channel
+    leaderboard_channel = discord.utils.get(bot.get_all_channels(), name="leaderboards")
+    if not leaderboard_channel:
+        print("Warning: Could not find the 'leaderboards' channel.")
+        return
+
+    # Iterate over each game and post scores
+    for game, scores in scores_by_game.items():
+        if not scores:
+            continue
+        
+        message = f"**📅 {period.capitalize()} {game} Leaderboard**\n"
+        for i, (player, score) in enumerate(scores, 1):
+            message += f"{i}. {player}: {score} points\n"
+        
+        try:
+            await leaderboard_channel.send(message)
+            print(f"{period.capitalize()} {game} leaderboard posted.")
+        except Exception as e:
+            print(f"Error posting {period} {game} leaderboard: {e}")
+
 @tasks.loop(time=datetime.time(hour=23, minute=59, second=50, tzinfo=CET_TIMEZONE))
 async def check_weekly_scores():
-    """Check if we need to post weekly scores."""
-    now = datetime.datetime.now(CET_TIMEZONE)
-    if now.weekday() == 6:  # Sunday
-        await post_weekly_scores()
-        print("Weekly scores posted.")
-    else:
-        print("Not Sunday, skipping weekly scores.")
+    """Post weekly leaderboards on Sunday."""
+    if datetime.datetime.now(CET_TIMEZONE).weekday() == 6:  # Sunday
+        await post_scores("weekly")
 
 @tasks.loop(time=datetime.time(hour=0, minute=1, second=0, tzinfo=CET_TIMEZONE))
 async def check_monthly_scores():
-    """Check if we need to post monthly scores."""
-    now = datetime.datetime.now(CET_TIMEZONE)
-    if now.day == 1:  # First day of the month
-        await post_monthly_scores()
-        print("Monthly scores posted.")
-    else:
-        print("Not the first of the month, skipping monthly scores.")
-
-async def post_weekly_scores():
-    """Post the weekly scores to all game score channels."""
-    wordle_scores, connections_scores = database.get_weekly_scores()
-    
-    # Create a mapping of game keys to their scores
-    scores_by_game = {
-        "wordle": wordle_scores,
-        "connections": connections_scores
-        # Any new games would be added here automatically when database.get_weekly_scores() is updated
-    }
-    
-    # Iterate through all game configurations
-    for game_key, config in game_config.GAME_CONFIGS.items():
-        # Skip any games that don't have scores available
-        if game_key not in scores_by_game or not scores_by_game[game_key]:
-            continue
-            
-        # Get the score channel for this game
-        channel = discord.utils.get(bot.get_all_channels(), name=config["score_channel_name"])
-        if not channel:
-            print(f"Warning: Could not find channel {config['score_channel_name']} for {config['name']} weekly scores")
-            continue
-            
-        # Format and send the message
-        scores = scores_by_game[game_key]
-        
-        if not scores:
-            print(f"No weekly scores for {config['name']}")
-            continue
-            
-        message = f"**📅 Weekly {config['name']} Scores**\n"
-        for i, (player, score) in enumerate(scores, 1):
-            message += f"{i}. {player}: {score} points\n"
-            
-        try:
-            await channel.send(message)
-            print(f"Weekly scores for {config['name']} posted to {channel.name}")
-        except Exception as e:
-            print(f"Error posting weekly scores for {config['name']}: {e}")
-
-async def post_monthly_scores():
-    """Post the monthly scores to all game score channels."""
-    wordle_scores, connections_scores = database.get_monthly_scores()
-    
-    # Create a mapping of game keys to their scores
-    scores_by_game = {
-        "wordle": wordle_scores,
-        "connections": connections_scores
-        # Any new games would be added here automatically when database.get_monthly_scores() is updated
-    }
-    
-    # Iterate through all game configurations
-    for game_key, config in game_config.GAME_CONFIGS.items():
-        # Skip any games that don't have scores available
-        if game_key not in scores_by_game or not scores_by_game[game_key]:
-            continue
-            
-        # Get the score channel for this game
-        channel = discord.utils.get(bot.get_all_channels(), name=config["score_channel_name"])
-        if not channel:
-            print(f"Warning: Could not find channel {config['score_channel_name']} for {config['name']} monthly scores")
-            continue
-            
-        # Format and send the message
-        scores = scores_by_game[game_key]
-        
-        if not scores:
-            print(f"No monthly scores for {config['name']}")
-            continue
-            
-        message = f"**📅 Monthly {config['name']} Scores**\n"
-        for i, (player, score) in enumerate(scores, 1):
-            message += f"{i}. {player}: {score} points\n"
-            
-        try:
-            await channel.send(message)
-            print(f"Monthly scores for {config['name']} posted to {channel.name}")
-        except Exception as e:
-            print(f"Error posting monthly scores for {config['name']}: {e}")
+    """Post monthly leaderboards on the first of the month."""
+    if datetime.datetime.now(CET_TIMEZONE).day == 1:
+        await post_scores("monthly")
 
 if __name__ == "__main__":
     bot.run(TOKEN)
