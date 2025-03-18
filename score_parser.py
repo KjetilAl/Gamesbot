@@ -8,7 +8,7 @@ CONNECTIONS_PATTERN = re.compile(r'Connections\nPuzzle #(\d+)')
 FRAMED_PATTERN = re.compile(r'Framed\s+#?(\d+)', re.IGNORECASE)
 GISNEP_PATTERN = re.compile(r'#Gisnep.*in (\d{1,2}:\d{2})', re.IGNORECASE)
 GISNEP_NUMBER_PATTERN = re.compile(r'No\. (\d+)', re.IGNORECASE)
-BANDLE_PATTERN = re.compile(r'Bandle\s+#?(\d+)\s+(\d|X)/(\d)', re.IGNORECASE)
+BANDLE_PATTERN = re.compile(r"Bandle\s+#(\d+)\s+([xX]|\d+)/(\d+)", re.IGNORECASE)
 BONUS_PATTERN = re.compile(r'Bonus Rounds: (\d+)/(\d+)', re.IGNORECASE)
 
 def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
@@ -208,35 +208,27 @@ def parse_gisnep_score(message_content: str) -> Optional[Dict[str, Any]]:
 def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
     """Parses a Bandle score from a message."""
     match = BANDLE_PATTERN.search(message_content)
-    bonus_match = BONUS_PATTERN.search(message_content)
-
     if not match:
-        return None
-
+        return None  # If no match, return nothing
+    
     game_number = int(match.group(1))
-    attempts_str = match.group(2)  # Keep as string initially
+    attempts_str = match.group(2).lower()  # Normalize to lowercase
     max_attempts = int(match.group(3))
 
-    # Check if the puzzle was solved
-    solved = attempts_str != "X"
-    attempts = int(attempts_str) if solved else max_attempts + 1  # If failed, use max+1 to indicate failure
+    # Determine if the puzzle was solved
+    solved = attempts_str != "x"
+    attempts = int(attempts_str) if solved else max_attempts + 1  # Assign max+1 if failed
 
-    # Score calculation: Higher attempts = lower score
+    # Score calculation
     score = max(6 - attempts, 0) if solved else 0
 
-    # Extract bonus rounds
-    bonus_completed = int(bonus_match.group(1)) if bonus_match else 0
-    bonus_total = int(bonus_match.group(2)) if bonus_match else 0
-
-    print(f"Bandle: Extracted game_number = {game_number}, attempts = {attempts}, solved = {solved}, score = {score}")  # Debug logging
+    print(f"Bandle: Game #{game_number}, Attempts: {attempts}, Solved: {solved}, Score: {score}")  # Debug logging
 
     return {
         "game_number": game_number,
         "attempts": attempts,
         "solved": solved,
-        "total_score": score,
-        "bonus_completed": bonus_completed,
-        "bonus_total": bonus_total
+        "total_score": score
     }
 
 def is_bandle_message(message_content: str) -> bool:
