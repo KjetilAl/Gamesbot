@@ -209,26 +209,27 @@ def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
     """Parses a Bandle score from a message."""
     match = BANDLE_PATTERN.search(message_content)
     bonus_match = BONUS_PATTERN.search(message_content)
-    
+
     if not match:
         return None
-    
-    game_number = int(match.group(1))
-    attempts = match.group(2)
-    max_attempts = int(match.group(3))
-    
-    solved = attempts != "X"
-    attempts = int(attempts) if solved else max_attempts + 1  # If failed, set attempts above max
 
-    # Score based on attempts
+    game_number = int(match.group(1))
+    attempts_str = match.group(2)  # Keep as string initially
+    max_attempts = int(match.group(3))
+
+    # Check if the puzzle was solved
+    solved = attempts_str != "X"
+    attempts = int(attempts_str) if solved else max_attempts + 1  # If failed, use max+1 to indicate failure
+
+    # Score calculation: Higher attempts = lower score
     score = max(6 - attempts, 0) if solved else 0
 
     # Extract bonus rounds
     bonus_completed = int(bonus_match.group(1)) if bonus_match else 0
     bonus_total = int(bonus_match.group(2)) if bonus_match else 0
 
-    print(f"Bandle: Extracted game_number = {game_number}")  # Debug logging
-    
+    print(f"Bandle: Extracted game_number = {game_number}, attempts = {attempts}, solved = {solved}, score = {score}")  # Debug logging
+
     return {
         "game_number": game_number,
         "attempts": attempts,
