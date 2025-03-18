@@ -130,7 +130,7 @@ async def handle_game_message(message, game_key, game_config):
         game_config["update_latest_game_number_function"](game_config["name"], current_game_number)
         print(  # DEBUGGING
                         f"{game_config['name']}: Updated latest_game_number to"
-                        f" {game_number}"
+                        f" {game_number_key}"
                     )
         
         # Handle role assignment
