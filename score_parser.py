@@ -208,9 +208,11 @@ def parse_gisnep_score(message_content: str) -> Optional[Dict[str, Any]]:
 def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
     """Parses a Bandle score from a message."""
     match = BANDLE_PATTERN.search(message_content)
+    bonus_match = BONUS_PATTERN.search(message_content)  # Restore bonus round matching
+
     if not match:
         return None  # If no match, return nothing
-    
+
     game_number = int(match.group(1))
     attempts_str = match.group(2).lower()  # Normalize to lowercase
     max_attempts = int(match.group(3))
@@ -222,13 +224,19 @@ def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
     # Score calculation
     score = max(6 - attempts, 0) if solved else 0
 
-    print(f"Bandle: Game #{game_number}, Attempts: {attempts}, Solved: {solved}, Score: {score}")  # Debug logging
+    # ✅ Extract bonus rounds
+    bonus_completed = int(bonus_match.group(1)) if bonus_match else 0
+    bonus_total = int(bonus_match.group(2)) if bonus_match else 0
+
+    print(f"Bandle: Game #{game_number}, Attempts: {attempts}, Solved: {solved}, Score: {score}, Bonus Completed: {bonus_completed}/{bonus_total}")  # Debug logging
 
     return {
         "game_number": game_number,
         "attempts": attempts,
         "solved": solved,
-        "total_score": score
+        "total_score": score,
+        "bonus_completed": bonus_completed,  # ✅ Fix KeyError
+        "bonus_total": bonus_total          # ✅ Fix KeyError
     }
 
 def is_bandle_message(message_content: str) -> bool:
