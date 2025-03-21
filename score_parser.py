@@ -327,8 +327,12 @@ def create_framed_introduction(display_name: str, game_info: Dict[str, Any]) -> 
     """Create introduction message for Framed players."""
     game_number = game_info.get("game_number", "?")
     attempts = game_info.get("attempts", "?")
-
-    return f"🎥 **{display_name}** just played Framed #{game_number} and solved it in {attempts} guess{'es' if attempts != 1 else ''}!"
+    solved = game_info.get("solved", False)
+    
+    if solved:
+        return f"🎥 **{display_name}** solved Framed #{game_number} in {attempts} guess{'es' if attempts != 1 else ''}!"
+    else:
+        return f"🎥 **{display_name}** just played Framed #{game_number} but couldn't figure it out!"
 
 def create_gisnep_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create acknowledgement message for Gisnep scores."""
@@ -360,12 +364,15 @@ def create_bandle_introduction(display_name: str, game_info: Dict[str, Any]) -> 
     """Create introduction message for Bandle players."""
     game_number = game_info.get("game_number", "?")
     attempts = game_info.get("attempts", "?")
+    solved = game_info.get("solved", False)
     bonus_completed = game_info.get("bonus_completed", "?")
     bonus_total = game_info.get("bonus_total", "?")
-
-    message = f"🎵 **{display_name}** just played Bandle #{game_number} and got it in {attempts}!"
+    
+    if solved:
+        message = f"🎵 **{display_name}** just played Bandle #{game_number} and got it in {attempts}!"
+    else:
+        message = f"🎵 **{display_name}** just played Bandle #{game_number} but didn't get it!"
     
     if bonus_total > 0:
         message += f"\nBonus score: {bonus_completed}/{bonus_total}"
-
     return message
