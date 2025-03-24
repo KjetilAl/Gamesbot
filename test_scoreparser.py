@@ -10,6 +10,9 @@ import pprint
 import subprocess
 import unittest
 
+import score_parser
+
+logging.basicConfig(level=os.environ.get('LOG_LEVEL', logging.INFO))
 log = logging.getLogger()
 
 EXAMPLES_ODS    = "Minigame Scores Examples.ods"
@@ -118,6 +121,7 @@ def spreadsheet_xml_to_dict(odf_doc):
     return sheets
 
 class TestExamplesSheet(unittest.TestCase):
+    """Test cases against the ODF spreadsheet"""
 
     @classmethod
     def setUpClass(cls):
@@ -129,6 +133,7 @@ class TestExamplesSheet(unittest.TestCase):
 
         cls.doc = odf.opendocument.load(cls.ods_path)
         cls.sheets = spreadsheet_xml_to_dict(cls.doc)
+        log.debug(pprint.pformat(cls.sheets))
 
     @classmethod
     def findSheet(cls, sheet_name):
@@ -138,7 +143,3 @@ class TestExamplesSheet(unittest.TestCase):
             else:
                 raise Exception(f"{cls.ods_name!r} has no sheet named {sheet_name!r}")
 
-    def test_convert_sheets(self):
-        pprint.pp(self.sheets)
-        #sheet = self.findSheet("Wordle")
-        pass

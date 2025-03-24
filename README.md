@@ -16,6 +16,9 @@ pip3 install -r requirements.txt
 # Run unit tests
 python3 -m unittest
 
+# Run unit tests with log level DEBUG
+LOG_LEVEL=DEBUG python3 -m unittest
+
 # Exit virtual environment
 deactivate
 ```
