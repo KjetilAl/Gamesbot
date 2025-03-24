@@ -112,6 +112,19 @@ def cell_node_value(cellElement):
 
     return value
 
+def odf_expand_repeated(cellIterable):
+    """Iteration helper: repeats cells with 'number-columns-repeated' attribute"""
+    for cell in cellIterable:
+        repeat_attr = cell.getAttrNS(odf.namespaces.TABLENS, 'number-columns-repeated')
+        if repeat_attr is None:
+            yield cell
+        else:
+            repeat = int(repeat_attr)
+            while repeat:
+                #log.debug(f"repeating cell countdown {repeat}")
+                repeat -= 1
+                yield cell
+
 def spreadsheet_xml_to_dict(odf_doc):
     """Walks an ODF spreadsheet's XML and converts it to simple Python data"""
     sheets = {}
@@ -121,21 +134,31 @@ def spreadsheet_xml_to_dict(odf_doc):
 
         rows = table.getElementsByType(odf.table.TableRow).__iter__()
 
+        # Parse the first row as a header
         hrow = rows.__next__()
         header = []
         for cell in hrow.getElementsByType(odf.table.TableCell):
             contents = cell_node_string_content(cell)
             header.append(contents)
 
+        # For every row after the header:
         for row in rows:
             record = {}
-            for i, cell in enumerate(row.getElementsByType(odf.table.TableCell)):
+            # For each cell in the row:
+            for i, cell in enumerate(odf_expand_repeated(
+                            row.getElementsByType(odf.table.TableCell))):
+
+                # Ignore cells at end of row that have no matching header
+                if len(header) <= i: break
+
+                # Add cell contents to record
+                key = header[i]
                 value = cell_node_value(cell)
-                if value:
-                    key = header[i]
+                if value is not None:
                     record[key] = value
 
             if record:
+                log.debug(f"ODF row: {record!r}")
                 records.append(record)
 
         sheets[name] = records
@@ -170,16 +193,16 @@ class TestExamplesSheet(unittest.TestCase):
 
         for example in sheet:
             parsed = parsefn(example['share_text'])
+            if not parsed:
+                raise Exception(f"{parsefn!r} returned {parsed!r} for example:\n{example['share_text']}")
             show_example = {}
             show_parsed = {}
             mismatched = []
             for field in matchfields:
-                try:
-                    show_parsed[field] = parsed[field]
-                    show_example[field] = example[field]
-                    if example[field] != parsed[field]:
-                        mismatched.append(field)
-                except KeyError:
+                if field in parsed: show_parsed[field] = parsed[field]
+                if field in example: show_example[field] = example[field]
+                if field not in parsed or field not in example \
+                        or example[field] != parsed[field]:
                     mismatched.append(field)
 
             if mismatched:
@@ -202,8 +225,26 @@ Full parsed object:
             parsefn = score_parser.parse_wordle_score,
             matchfields = ['game_number', 'attempts', 'solved', 'hard_mode', 'skill', 'luck'])
 
-    def test_connections_result(self):
+    def test_parse_connections_result(self):
         self.do_parse_test(
             sheet = self.sheets['Connections'],
             parsefn = score_parser.parse_connections_result,
             matchfields = ['puzzle_number', 'num_guesses'])
+
+    def test_parse_framed_score(self):
+        self.do_parse_test(
+            sheet = self.sheets['Framed'],
+            parsefn = score_parser.parse_framed_score,
+            matchfields = ['game_number', 'attempts', 'solved'])
+
+    def test_parse_gisnep_score(self):
+        self.do_parse_test(
+            sheet = self.sheets['Gisnep'],
+            parsefn = score_parser.parse_gisnep_score,
+            matchfields = ['game_number', 'completion_time'])
+
+    def test_parse_bandle_score(self):
+        self.do_parse_test(
+            sheet = self.sheets['Bandle'],
+            parsefn = score_parser.parse_bandle_score,
+            matchfields = ['game_number', 'attempts', 'solved', 'bonus_completed', 'bonus_total'])
