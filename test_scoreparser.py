@@ -165,11 +165,7 @@ class TestExamplesSheet(unittest.TestCase):
             else:
                 raise Exception(f"{cls.ods_name!r} has no sheet named {sheet_name!r}")
 
-    def test_parse_wordle_score(self):
-        sheet = self.sheets['Wordle']
-        parsefn = score_parser.parse_wordle_score
-        matchfields = ['game_number', 'attempts', 'solved', 'hard_mode', 'skill', 'luck']
-
+    def do_parse_test(self, sheet, parsefn, matchfields):
         failed = []
 
         for example in sheet:
@@ -178,9 +174,12 @@ class TestExamplesSheet(unittest.TestCase):
             show_parsed = {}
             mismatched = []
             for field in matchfields:
-                show_example[field] = example[field]
-                show_parsed[field] = parsed[field]
-                if example[field] != parsed[field]:
+                try:
+                    show_parsed[field] = parsed[field]
+                    show_example[field] = example[field]
+                    if example[field] != parsed[field]:
+                        mismatched.append(field)
+                except KeyError:
                     mismatched.append(field)
 
             if mismatched:
@@ -191,6 +190,20 @@ class TestExamplesSheet(unittest.TestCase):
 Expected:   {show_example}
 Got:        {show_parsed}
 Mismatched fields:  {mismatched}
+Full example object:
+    {example}
 Full parsed object:
     {parsed}
 """)
+
+    def test_parse_wordle_score(self):
+        self.do_parse_test(
+            sheet = self.sheets['Wordle'],
+            parsefn = score_parser.parse_wordle_score,
+            matchfields = ['game_number', 'attempts', 'solved', 'hard_mode', 'skill', 'luck'])
+
+    def test_connections_result(self):
+        self.do_parse_test(
+            sheet = self.sheets['Connections'],
+            parsefn = score_parser.parse_connections_result,
+            matchfields = ['puzzle_number', 'num_guesses'])
