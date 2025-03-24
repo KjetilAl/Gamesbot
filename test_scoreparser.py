@@ -13,7 +13,7 @@ import unittest
 import score_parser
 
 logging.basicConfig(level=os.environ.get('LOG_LEVEL', logging.INFO))
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 EXAMPLES_ODS    = "Minigame Scores Examples.ods"
 
@@ -85,10 +85,32 @@ def cell_node_string_content(cellElement):
 def cell_node_value(cellElement):
     """Extracts the value of an ODF table cell element """
     value_type = cellElement.getAttrNS(odf.namespaces.OFFICENS, "value-type")
-    if value_type == "string":
-        return cell_node_string_content(cellElement)
+    formula = cellElement.getAttrNS(odf.namespaces.TABLENS, 'formula')
+    valattr = cellElement.getAttribute("value")
+    celltext = cell_node_string_content(cellElement)
+
+    if value_type is None:
+        return None
+
+    elif value_type == "string":
+        value = cell_node_string_content(cellElement)
+
+    elif value_type == 'float':
+
+        if formula == 'of:=TRUE()':     value = True
+        elif formula == 'of:=FALSE()':  value = False
+        elif '.' not in valattr:        value = int(valattr)
+        else:                           value = float(valattr)
+
+    elif value_type == 'time':
+        # TODO: Parse time text
+        value = celltext
+
     else:
-        return cellElement.getAttribute("value")
+        value = celltext
+        log.warn(f"Unparsed spreadsheet value type: {value_type!r}; text {value!r}")
+
+    return value
 
 def spreadsheet_xml_to_dict(odf_doc):
     """Walks an ODF spreadsheet's XML and converts it to simple Python data"""
@@ -133,7 +155,7 @@ class TestExamplesSheet(unittest.TestCase):
 
         cls.doc = odf.opendocument.load(cls.ods_path)
         cls.sheets = spreadsheet_xml_to_dict(cls.doc)
-        log.debug(pprint.pformat(cls.sheets))
+        # log.debug(pprint.pformat(cls.sheets))
 
     @classmethod
     def findSheet(cls, sheet_name):
@@ -143,3 +165,32 @@ class TestExamplesSheet(unittest.TestCase):
             else:
                 raise Exception(f"{cls.ods_name!r} has no sheet named {sheet_name!r}")
 
+    def test_parse_wordle_score(self):
+        sheet = self.sheets['Wordle']
+        parsefn = score_parser.parse_wordle_score
+        matchfields = ['game_number', 'attempts', 'solved', 'hard_mode', 'skill', 'luck']
+
+        failed = []
+
+        for example in sheet:
+            parsed = parsefn(example['share_text'])
+            show_example = {}
+            show_parsed = {}
+            mismatched = []
+            for field in matchfields:
+                show_example[field] = example[field]
+                show_parsed[field] = parsed[field]
+                if example[field] != parsed[field]:
+                    mismatched.append(field)
+
+            if mismatched:
+                raise AssertionError(f"""Parse mistmatch:
+
+{example['share_text']}
+
+Expected:   {show_example}
+Got:        {show_parsed}
+Mismatched fields:  {mismatched}
+Full parsed object:
+    {parsed}
+""")

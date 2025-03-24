@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <office:document xmlns:presentation="urn:oasis:names:tc:opendocument:xmlns:presentation:1.0" xmlns:css3t="http://www.w3.org/TR/css3-text/" xmlns:grddl="http://www.w3.org/2003/g/data-view#" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:formx="urn:openoffice:names:experimental:ooxml-odf-interop:xmlns:form:1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:chart="urn:oasis:names:tc:opendocument:xmlns:chart:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:oooc="http://openoffice.org/2004/calc" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:ooow="http://openoffice.org/2004/writer" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rpt="http://openoffice.org/2005/report" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:ooo="http://openoffice.org/2004/office" xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:dr3d="urn:oasis:names:tc:opendocument:xmlns:dr3d:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:number="urn:oasis:names:tc:opendocument:xmlns:datastyle:1.0" xmlns:of="urn:oasis:names:tc:opendocument:xmlns:of:1.2" xmlns:calcext="urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0" xmlns:tableooo="http://openoffice.org/2009/table" xmlns:drawooo="http://openoffice.org/2010/draw" xmlns:loext="urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0" xmlns:dom="http://www.w3.org/2001/xml-events" xmlns:field="urn:openoffice:names:experimental:ooo-ms-interop:xmlns:field:1.0" xmlns:math="http://www.w3.org/1998/Math/MathML" xmlns:form="urn:oasis:names:tc:opendocument:xmlns:form:1.0" xmlns:script="urn:oasis:names:tc:opendocument:xmlns:script:1.0" xmlns:xforms="http://www.w3.org/2002/xforms" office:version="1.3" office:mimetype="application/vnd.oasis.opendocument.spreadsheet">
- <office:meta><meta:generator>LibreOffice/7.3.7.2$Linux_X86_64 LibreOffice_project/30$Build-2</meta:generator><meta:document-statistic meta:table-count="6" meta:cell-count="43" meta:object-count="0"/></office:meta>
+ <office:meta><meta:generator>LibreOffice/7.3.7.2$Linux_X86_64 LibreOffice_project/30$Build-2</meta:generator><meta:document-statistic meta:table-count="6" meta:cell-count="54" meta:object-count="0"/></office:meta>
  <office:settings>
   <config:config-item-set config:name="ooo:view-settings">
    <config:config-item config:name="VisibleAreaTop" config:type="int">0</config:config-item>
    <config:config-item config:name="VisibleAreaLeft" config:type="int">0</config:config-item>
-   <config:config-item config:name="VisibleAreaWidth" config:type="int">15558</config:config-item>
+   <config:config-item config:name="VisibleAreaWidth" config:type="int">18032</config:config-item>
    <config:config-item config:name="VisibleAreaHeight" config:type="int">5015</config:config-item>
   </config:config-item-set>
   <config:config-item-set config:name="ooo:configuration-settings">
@@ -445,12 +445,15 @@
    <style:table-row-properties style:row-height="1.078in" fo:break-before="auto" style:use-optimal-row-height="true"/>
   </style:style>
   <style:style style:name="ro5" style:family="table-row">
-   <style:table-row-properties style:row-height="1.2535in" fo:break-before="auto" style:use-optimal-row-height="true"/>
+   <style:table-row-properties style:row-height="1.4299in" fo:break-before="auto" style:use-optimal-row-height="true"/>
   </style:style>
   <style:style style:name="ro6" style:family="table-row">
-   <style:table-row-properties style:row-height="0.7252in" fo:break-before="auto" style:use-optimal-row-height="true"/>
+   <style:table-row-properties style:row-height="1.2535in" fo:break-before="auto" style:use-optimal-row-height="true"/>
   </style:style>
   <style:style style:name="ro7" style:family="table-row">
+   <style:table-row-properties style:row-height="0.7252in" fo:break-before="auto" style:use-optimal-row-height="true"/>
+  </style:style>
+  <style:style style:name="ro8" style:family="table-row">
    <style:table-row-properties style:row-height="0.5492in" fo:break-before="auto" style:use-optimal-row-height="true"/>
   </style:style>
   <style:style style:name="ta1" style:family="table" style:master-page-name="PageStyle_5f_Wordle">
@@ -567,10 +570,13 @@
       <text:p>share_text</text:p>
      </table:table-cell>
      <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
-      <text:p>game_no</text:p>
+      <text:p>game_number</text:p>
      </table:table-cell>
      <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
-      <text:p>guesses</text:p>
+      <text:p>attempts</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
+      <text:p>solved</text:p>
      </table:table-cell>
      <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
       <text:p>hard_mode</text:p>
@@ -581,7 +587,7 @@
      <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
       <text:p>luck</text:p>
      </table:table-cell>
-     <table:table-cell table:number-columns-repeated="1018"/>
+     <table:table-cell table:number-columns-repeated="1017"/>
     </table:table-row>
     <table:table-row table:style-name="ro3">
      <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string"><text:p>Wordle 1,358 4/6*</text:p><text:p/><text:p>⬜⬜🟨🟨⬜</text:p><text:p>⬜🟨🟨🟨🟩</text:p><text:p>🟨🟨⬜🟩🟩</text:p><text:p>🟩🟩🟩🟩🟩</text:p><text:p/><text:p>WordleBot</text:p><text:p>Skill 92/99</text:p><text:p>Luck 56/99</text:p>
@@ -595,13 +601,16 @@
      <table:table-cell table:style-name="ce5" table:formula="of:=TRUE()" office:value-type="float" office:value="1" calcext:value-type="float">
       <text:p>1</text:p>
      </table:table-cell>
+     <table:table-cell table:style-name="ce5" table:formula="of:=TRUE()" office:value-type="float" office:value="1" calcext:value-type="float">
+      <text:p>1</text:p>
+     </table:table-cell>
      <table:table-cell table:style-name="ce5" office:value-type="float" office:value="92" calcext:value-type="float">
       <text:p>92</text:p>
      </table:table-cell>
      <table:table-cell table:style-name="ce5" office:value-type="float" office:value="56" calcext:value-type="float">
       <text:p>56</text:p>
      </table:table-cell>
-     <table:table-cell table:number-columns-repeated="1018"/>
+     <table:table-cell table:number-columns-repeated="1017"/>
     </table:table-row>
     <table:table-row table:style-name="ro2" table:number-rows-repeated="1048573">
      <table:table-cell table:number-columns-repeated="1024"/>
@@ -622,7 +631,10 @@
      <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
       <text:p>guesses</text:p>
      </table:table-cell>
-     <table:table-cell table:number-columns-repeated="1021"/>
+     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
+      <text:p>bonus</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="1020"/>
     </table:table-row>
     <table:table-row table:style-name="ro4">
      <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string"><text:p>Connections</text:p><text:p>Puzzle #636</text:p><text:p>🟦🟦🟦🟦</text:p><text:p>🟨🟨🟨🟨</text:p><text:p>🟪🟪🟪🟪</text:p><text:p>🟩🟩🟩🟩</text:p>
@@ -633,9 +645,31 @@
      <table:table-cell table:style-name="ce5" office:value-type="float" office:value="4" calcext:value-type="float">
       <text:p>4</text:p>
      </table:table-cell>
-     <table:table-cell table:number-columns-repeated="1021"/>
+     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
+      <text:p>blues first</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="1020"/>
     </table:table-row>
-    <table:table-row table:style-name="ro2" table:number-rows-repeated="1048573">
+    <table:table-row table:style-name="ro5">
+     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string"><text:p>Connections</text:p><text:p>Puzzle #639</text:p><text:p>🟩🟪🟦🟨</text:p><text:p>🟨🟨🟨🟨</text:p><text:p>🟩🟦🟩🟩</text:p><text:p>🟪🟪🟪🟪</text:p><text:p>🟦🟦🟦🟦</text:p><text:p>🟩🟩🟩🟩</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce5" office:value-type="float" office:value="639" calcext:value-type="float">
+      <text:p>639</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce5" office:value-type="float" office:value="6" calcext:value-type="float">
+      <text:p>6</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
+      <text:p>pan guess</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="1020"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4">
+     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string"><text:p>Connections</text:p><text:p>Puzzle #645</text:p><text:p>🟪🟪🟪🟪</text:p><text:p>🟦🟦🟦🟦</text:p><text:p>🟩🟩🟩🟩</text:p><text:p>🟨🟨🟨🟨</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="1023"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2" table:number-rows-repeated="1048571">
      <table:table-cell table:number-columns-repeated="1024"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
@@ -663,7 +697,7 @@
      </table:table-cell>
      <table:table-cell table:number-columns-repeated="1019"/>
     </table:table-row>
-    <table:table-row table:style-name="ro5">
+    <table:table-row table:style-name="ro6">
      <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string"><text:p>Bandle #932 6/6</text:p><text:p>🟥🟥🟥🟥🟥🟩</text:p><text:p>Found: 359/378 (95%)</text:p><text:p>Current Daily Streak: 78 (max 78)</text:p><text:p>Bonus Rounds: 6/8 🎤  🖼️  🌍  📅  💿  ⏱️  </text:p><text:p>#Bandle #Heardle </text:p><text:p>https://bandle.app</text:p>
      </table:table-cell>
      <table:table-cell table:style-name="ce5" office:value-type="float" office:value="932" calcext:value-type="float">
@@ -677,7 +711,17 @@
      </table:table-cell>
      <table:table-cell table:number-columns-repeated="1019"/>
     </table:table-row>
-    <table:table-row table:style-name="ro2" table:number-rows-repeated="1048573">
+    <table:table-row table:style-name="ro7">
+     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string"><text:p>Bandle #944 x/6</text:p><text:p>🟥⬛⬛⬛⬛🟥</text:p><text:p>Found: 155/172 (90.1%)</text:p><text:p>Current Daily Streak: 0 (max 71)</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="1023"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro4">
+     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string"><text:p>Bandle #947 3/6</text:p><text:p>🟥🟨🟩⬜⬜⬜</text:p><text:p>Found: 353/370 (95.4%)</text:p><text:p>Current Daily Streak: 163 (max 163)</text:p><text:p>#Bandle #Heardle </text:p><text:p>https://bandle.app</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="1023"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2" table:number-rows-repeated="1048571">
      <table:table-cell table:number-columns-repeated="1024"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
@@ -699,7 +743,7 @@
      </table:table-cell>
      <table:table-cell table:number-columns-repeated="1021"/>
     </table:table-row>
-    <table:table-row table:style-name="ro6">
+    <table:table-row table:style-name="ro7">
      <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string"><text:p>Framed #1091</text:p><text:p>🎥 🟥 🟥 🟥 🟥 🟩 ⬛</text:p><text:p/><text:p>https://framed.wtf</text:p>
      </table:table-cell>
      <table:table-cell table:style-name="ce5" office:value-type="float" office:value="1091" calcext:value-type="float">
@@ -732,7 +776,7 @@
      </table:table-cell>
      <table:table-cell table:number-columns-repeated="1021"/>
     </table:table-row>
-    <table:table-row table:style-name="ro7">
+    <table:table-row table:style-name="ro8">
      <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string"><text:p>I solved today’s #Gisnep in 06:12. 🎉</text:p><text:p>No. 211 | 6. mars 2025 </text:p><text:p>https://gisnep.com</text:p>
      </table:table-cell>
      <table:table-cell table:style-name="ce5" office:value-type="float" office:value="211" calcext:value-type="float">
