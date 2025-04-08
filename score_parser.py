@@ -10,6 +10,10 @@ GISNEP_PATTERN = re.compile(r'#Gisnep.*in (\d{1,2}:\d{2})', re.IGNORECASE)
 GISNEP_NUMBER_PATTERN = re.compile(r'No\. (\d+)', re.IGNORECASE)
 BANDLE_PATTERN = re.compile(r"Bandle\s+#(\d+)\s+([xX]|\d+)/(\d+)", re.IGNORECASE)
 BONUS_PATTERN = re.compile(r'Bonus Rounds: (\d+)/(\d+)', re.IGNORECASE)
+MINUTE_CRYPTIC_HEADER_PATTERN = re.compile(r'Minute Cryptic - (\d{1,2} \w+ \d{4})', re.IGNORECASE)
+MINUTE_CRYPTIC_CLUE_PATTERN = re.compile(r'"(.*)" \((\d+)\)', re.IGNORECASE) # Extracts clue and word length
+MINUTE_CRYPTIC_GRID_PATTERN = re.compile(r'([⚪️🟡🟣]+)', re.IGNORECASE) # Simplified grid capture
+MINUTE_CRYPTIC_SCORE_PATTERN = re.compile(r'I scored: (.*)', re.IGNORECASE) # Captures the score description
 
 def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
     wordle_match = WORDLE_PATTERN.search(message_content)
@@ -238,6 +242,54 @@ def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
         "bonus_completed": bonus_completed,  # ✅ Fix KeyError
         "bonus_total": bonus_total          # ✅ Fix KeyError
     }
+    
+def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]:
+    """Parses a Minute Cryptic score message."""
+    header_match = MINUTE_CRYPTIC_HEADER_PATTERN.search(message_content)
+    clue_match = MINUTE_CRYPTIC_CLUE_PATTERN.search(message_content)
+    grid_match = MINUTE_CRYPTIC_GRID_PATTERN.search(message_content)
+    score_match = MINUTE_CRYPTIC_SCORE_PATTERN.search(message_content)
+
+    if not (header_match and clue_match and grid_match and score_match):
+        return None
+
+    # Extract Date
+    date_str = header_match.group(1)
+    try:
+        # Attempt to parse the date to validate and standardize
+        game_date = datetime.strptime(date_str, '%d %B %Y').date()
+    except ValueError:
+        return None # Invalid date format
+
+    # Extract other info
+    clue = clue_match.group(1)
+    word_length = int(clue_match.group(2))
+    grid = grid_match.group(1) # This captures the sequence of circles
+    score_desc = score_match.group(1).strip()
+
+    # Interpret score description into a numerical value
+    # Lower is better. Solved = 0, 1 over = 1, etc.
+    # This logic might need refinement based on actual possible scores
+    score_value = -1 # Default/unknown
+    if "solved" in score_desc.lower():
+        score_value = 0
+    elif "over par" in score_desc.lower():
+        parts = score_desc.split()
+        try:
+            score_value = int(parts[0])
+        except (ValueError, IndexError):
+            score_value = -1 # Failed to parse number
+
+    return {
+        "game_date": game_date.isoformat(), # Store as ISO string YYYY-MM-DD
+        "clue": clue,
+        "word_length": word_length,
+        "grid": grid,
+        "score_description": score_desc,
+        "score_value": score_value, # Numerical score for ranking
+        "solved": score_value == 0
+    }
+
 
 def is_bandle_message(message_content: str) -> bool:
     """Checks if a message contains a Bandle score."""
@@ -258,6 +310,13 @@ def is_wordle_message(message_content: str) -> bool:
 def is_connections_message(message_content: str) -> bool:
     """Check if a message contains Connections results."""
     return "connections" in message_content.lower() and CONNECTIONS_PATTERN.search(message_content) is not None
+
+def is_minute_cryptic_message(message_content: str) -> bool:
+    """Checks if a message contains a Minute Cryptic score."""
+    # Check for key phrases and patterns
+    return "Minute Cryptic" in message_content and \
+           MINUTE_CRYPTIC_HEADER_PATTERN.search(message_content) is not None and \
+           MINUTE_CRYPTIC_SCORE_PATTERN.search(message_content) is not None
     
 def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create acknowledgement message for Wordle scores."""
@@ -376,3 +435,20 @@ def create_bandle_introduction(display_name: str, game_info: Dict[str, Any]) -> 
     if bonus_total > 0:
         message += f"\nBonus score: {bonus_completed}/{bonus_total}"
     return message
+
+def create_minute_cryptic_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create acknowledgement message for Minute Cryptic scores."""
+    game_date = game_info.get("game_date", "?")
+    score_desc = game_info.get("score_description", "score recorded")
+    # Format date back for display if needed, or keep as ISO
+    return f"📝 {display_name}'s Minute Cryptic for {game_date} score recorded: {score_desc}."
+    
+def create_minute_cryptic_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create introduction message for Minute Cryptic players."""
+    game_date = game_info.get("game_date", "?")
+    score_desc = game_info.get("score_description", "?")
+    grid = game_info.get("grid", "")
+
+    return (f"🤔 **{display_name}** just finished the Minute Cryptic for {game_date}!\n"
+            f"Score: {score_desc}\n"
+            f"{grid}")
