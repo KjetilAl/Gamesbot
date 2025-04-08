@@ -26,15 +26,19 @@ async def handle_game_role_assignment(
     game_key: str,
     game_config: Dict[str, Any], # This is the config for the specific game_key
     current_identifier: Any,
-    latest_identifier: Any
+    latest_identifier: Any,
+    all_game_configs: Dict[str, Dict[str, Any]] = None  # Add this optional parameter
 ) -> bool:
     role_name = game_config["player_role_name"]
-    game_key = next((key for key, cfg in game_config.GAME_CONFIGS.items() if cfg["name"] == game_config["name"]), None) # Find game key
-
+    
+    # Remove this problematic line that's causing the error
+    # No need to look up the game_key since it's already passed in as a parameter
+    # game_key = next((key for key, cfg in game_config.GAME_CONFIGS.items() if cfg["name"] == game_config["name"]), None)
+    
     newly_assigned = False
     is_newer = False
     is_same = False
-
+    
     try:
         # --- Use the PASSED-IN game_key directly ---
         if game_key == "minute_cryptic":
@@ -54,11 +58,10 @@ async def handle_game_role_assignment(
                 is_newer = True
             elif current_num == latest_num:
                 is_same = True
-
     except (ValueError, TypeError) as e:
         print(f"Error comparing identifiers for {game_key}: Current='{current_identifier}', Latest='{latest_identifier}'. Error: {e}")
         return False # Cannot compare, do nothing
-
+    
     # --- Role Logic ---
     if is_newer:
         # New highest identifier: reset roles for everyone with the role
@@ -68,16 +71,14 @@ async def handle_game_role_assignment(
                  await remove_role(member_to_revoke, role_name)
             #else: # Debug log
                  #print(f"Skipping revoke for current poster: {member.display_name}")
-
+        
         # Assign role to the current poster
         newly_assigned = await assign_role(member, role_name)
-
     elif is_same:
         # Same as latest identifier: just assign role if needed
         newly_assigned = await assign_role(member, role_name)
-
     # else: old identifier, do nothing
-
+    
     return newly_assigned # Return True only if the role was newly assigned to *this* user
 
 async def introduce_player_in_game_channel(
