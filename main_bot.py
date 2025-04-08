@@ -79,7 +79,6 @@ async def on_message(message):
                         latest_identifier_str
                     )
                     # --- Check if current identifier is newer BEFORE updating DB ---
-                    # (Logic remains the same here)
                     try:
                         if game_key == "minute_cryptic":
                             try: # Inner try for date comparison
@@ -116,6 +115,8 @@ async def on_message(message):
                                 config,
                                 game_info
                             )
+                    except Exception as e:
+                        print(f"Error handling game identifiers for {game_key}: {e}")
                 # --- End Role Handling ---
                 processed = True
                 break # Stop checking other games
