@@ -115,7 +115,6 @@ async def on_message(message):
                         game_info["game_date"],
                         game_info["clue"],
                         game_info["word_length"],
-                        game_info["grid"],
                         game_info["score_description"]
                     )
                 
