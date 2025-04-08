@@ -84,10 +84,10 @@ GAME_CONFIGS = {
     "is_game_message": score_parser.is_minute_cryptic_message,
     "save_score_function": database.save_minute_cryptic_score,
     "get_leaderboard_function": database.get_minute_cryptic_leaderboard,
-    "get_latest_game_number_function": database.get_latest_game_number_from_db, # Uses existing function (returns placeholder 0)
-    "update_latest_game_number_function": database.update_latest_game_number_in_db, # Uses existing function
+    "get_latest_game_number_function": database.get_latest_minute_cryptic_date,
+    "update_latest_game_number_function": database.update_latest_minute_cryptic_date,
     "create_acknowledgement": score_parser.create_minute_cryptic_acknowledgement,
     "create_introduction": score_parser.create_minute_cryptic_introduction,
-    "game_number_key": "game_date"  # Key for the game identifier (ISOs date string)
+    "game_number_key": "game_date"
     }
 }
