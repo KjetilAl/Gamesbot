@@ -121,36 +121,35 @@ async def on_message(message):
                 # Create acknowledgement and handle roles
                 response = config["create_acknowledgement"](message.author.display_name, game_info)
                 
-                # Get the latest game number from the database
-                game_number_key = config["game_number_key"]
-                latest_game_number = config["get_latest_game_number_function"](game_key)
-                current_game_number = game_info[game_number_key]
-                
-                # If this is the latest game, update roles and notify
-                if current_game_number and (isinstance(latest_game_number, (int, str)) and 
-                                          (str(current_game_number) > str(latest_game_number) or latest_game_number == '0')):
-                    config["update_latest_game_number_function"](game_key, str(current_game_number))
-                    
+            # Get the latest game number (date) from the database
+            game_number_key = config["game_number_key"]
+            latest_game_date_str = config["get_latest_game_number_function"](game_key)
+            current_game_date_str = game_info[game_number_key]
+
+            if current_game_date_str:
+                if latest_game_date_str is None or current_game_date_str > latest_game_date_str:
+                    config["update_latest_game_number_function"](game_key, current_game_date_str)
+
                     # Handle role assignment
                     success = await role_manager.handle_game_role_assignment(
-                        message.guild, 
-                        message.author, 
+                        message.guild,
+                        message.author,
                         game_key,
-                        config, 
-                        current_game_number,
-                        latest_game_number
+                        config,
+                        current_game_date_str,
+                        latest_game_date_str
                     )
-                    
+
                     if success:
                         chat_channel_name = config["chat_channel_name"]
                         response += f"\n\n{message.author.mention} You now have access to the {chat_channel_name} channel!"
                         await role_manager.introduce_player_in_game_channel(
-                            message.guild, 
-                            message.author.display_name, 
-                            config, 
+                            message.guild,
+                            message.author.display_name,
+                            config,
                             game_info
                         )
-                
+                    
                 # Send the response message
                 await message.channel.send(response)
                 
