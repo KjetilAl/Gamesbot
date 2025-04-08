@@ -245,11 +245,14 @@ def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
     }
     
 def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]:
-    """Parses a Minute Cryptic score message."""
-    header_match = MINUTE_CRYPTIC_HEADER_PATTERN.search(message_content)
-    clue_match = MINUTE_CRYPTIC_CLUE_PATTERN.search(message_content)
-    grid_match = MINUTE_CRYPTIC_GRID_PATTERN.search(message_content)
-    score_match = MINUTE_CRYPTIC_SCORE_PATTERN.search(message_content)
+    """Parse a Minute Cryptic result message."""
+    print(f"Attempting to parse Minute Cryptic content: {content}")
+    
+    try:
+        header_match = MINUTE_CRYPTIC_HEADER_PATTERN.search(message_content)
+        clue_match = MINUTE_CRYPTIC_CLUE_PATTERN.search(message_content)
+        grid_match = MINUTE_CRYPTIC_GRID_PATTERN.search(message_content)
+        score_match = MINUTE_CRYPTIC_SCORE_PATTERN.search(message_content)
 
     if not (header_match and clue_match and grid_match and score_match):
         return None
@@ -280,6 +283,14 @@ def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]
             score_value = int(parts[0])
         except (ValueError, IndexError):
             score_value = -1 # Failed to parse number
+
+        print(f"Parsed Minute Cryptic data: {game_info}")
+        return game_info
+    except Exception as e:
+        print(f"Error parsing Minute Cryptic score: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
     return {
         "game_date": game_date.isoformat(), # Store as ISO string YYYY-MM-DD
