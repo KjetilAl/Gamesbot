@@ -21,11 +21,12 @@ async def assign_role(member: discord.Member, role_name: str) -> bool:
     return False
 
 async def handle_game_role_assignment(
-    guild: discord.Guild, 
-    member: discord.Member, 
-    game_config: Dict[str, Any],
-    current_game_number: Any,
-    latest_game_number: Any
+    guild: discord.Guild,
+    member: discord.Member,
+    game_key: str,
+    game_config: Dict[str, Any], # This is the config for the specific game_key
+    current_identifier: Any,
+    latest_identifier: Any
 ) -> bool:
     role_name = game_config["player_role_name"]
     game_key = next((key for key, cfg in game_config.GAME_CONFIGS.items() if cfg["name"] == game_config["name"]), None) # Find game key
@@ -35,19 +36,20 @@ async def handle_game_role_assignment(
     is_same = False
 
     try:
-        # --- Handle Minute Cryptic (Date comparison) ---
+        # --- Use the PASSED-IN game_key directly ---
         if game_key == "minute_cryptic":
             current_date = date.fromisoformat(str(current_identifier))
             latest_date = date.fromisoformat(str(latest_identifier))
+            print(f"Role Check (Date): Current={current_date}, Latest={latest_date} for {member.display_name}") # Debug
             if current_date > latest_date:
                 is_newer = True
             elif current_date == latest_date:
                 is_same = True
-
-        # --- Handle other games (Integer comparison) ---
-        else:
+        else: # Handle other games (Integer comparison)
+             # Convert identifier strings to int for comparison
             current_num = int(current_identifier)
-            latest_num = int(latest_identifier)
+            latest_num = int(latest_identifier) # latest_identifier from DB is already string
+            print(f"Role Check (Int): Current={current_num}, Latest={latest_num} for {member.display_name}") # Debug
             if current_num > latest_num:
                 is_newer = True
             elif current_num == latest_num:
