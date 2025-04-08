@@ -135,8 +135,8 @@ async def on_message(message):
             processed = True
             break # Stop checking other games
 
-        if not processed:
-            await bot.process_commands(message)
+            if not processed:
+                await bot.process_commands(message)
         
 async def handle_game_message(message, game_key, game_config):
     """
