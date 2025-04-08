@@ -333,7 +333,7 @@ def get_bandle_leaderboard():
     conn.close()
     return leaderboard
 
-def get_minute_cryptic_leaderboard(period: str = 'weekly') -> list[Tuple[str, int]]:
+def get_minute_cryptic_leaderboard(period: str = 'weekly') -> list[tuple[str, int]]:
     """
     Fetches the Minute Cryptic leaderboard data.
     Currently counts number of puzzles solved (score_value = 0) in the given period.
