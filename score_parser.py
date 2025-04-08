@@ -254,8 +254,8 @@ def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]
         grid_match = MINUTE_CRYPTIC_GRID_PATTERN.search(message_content)
         score_match = MINUTE_CRYPTIC_SCORE_PATTERN.search(message_content)
 
-    if not (header_match and clue_match and grid_match and score_match):
-        return None
+        if not (header_match and clue_match and grid_match and score_match):
+            return None
 
     # Extract Date
     date_str = header_match.group(1)
