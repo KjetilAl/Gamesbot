@@ -556,6 +556,10 @@ def get_latest_minute_cryptic_date():
         conn.close()
     return latest_date
 
+def update_latest_minute_cryptic_date(game_date: str):
+    """Placeholder function - we are managing the latest date directly in the scores table."""
+    pass
+
 def get_latest_game_number_from_db(game_name: str) -> str:
     """Fetches the latest game identifier (number or date string) from the database."""
     conn = sqlite3.connect(DB_NAME)
