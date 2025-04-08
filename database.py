@@ -231,7 +231,7 @@ def save_bandle_score(user_id, display_name, game_number, attempts, total_score,
     conn.commit()
     conn.close()
 
-def save_minute_cryptic_score(user_id: int, display_name: str, game_info: Dict[str, Any]):
+def save_minute_cryptic_score(user_id: int, display_name: str, game_info: dict[str, Any]):
     """Saves a Minute Cryptic score to the database."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
