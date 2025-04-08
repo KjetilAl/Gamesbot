@@ -130,7 +130,7 @@ async def on_message(message):
                 # If this is the latest game, update roles and notify
                 if current_game_number and (isinstance(latest_game_number, (int, str)) and 
                                           (str(current_game_number) > str(latest_game_number) or latest_game_number == '0')):
-                    await config["update_latest_game_number_function"](game_key, str(current_game_number))
+                    config["update_latest_game_number_function"](game_key, str(current_game_number))
                     
                     # Handle role assignment
                     success = await role_manager.handle_game_role_assignment(
