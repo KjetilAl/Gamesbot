@@ -100,24 +100,24 @@ async def on_message(message):
                                 game_info["score_description"]
                             )
 
-                # Send acknowledgement
-                ack_message = config["create_acknowledgement"](message.author.display_name, game_info)
-                await message.channel.send(ack_message)
-                # --- Handle Role Assignment ---
-                game_identifier_key = config["game_number_key"]
-                current_game_identifier = game_info.get(game_identifier_key) # str (date or number)
-                latest_identifier_str = config["get_latest_game_number_function"](game_key) # str
-                role_updated = False
-                is_newer = False
-                if current_game_identifier is not None:
-                    # --- UPDATED CALL: Pass game_key ---
-                    role_updated = await role_manager.handle_game_role_assignment(
-                        message.guild,
-                        message.author,
-                        game_key,  # <<< Pass the game_key from the loop
-                        config,    # Pass the specific game's config dict
-                        current_game_identifier,
-                        latest_identifier_str
+                        # Send acknowledgement
+                        ack_message = config["create_acknowledgement"](message.author.display_name, game_info)
+                        await message.channel.send(ack_message)
+                        # --- Handle Role Assignment ---
+                        game_identifier_key = config["game_number_key"]
+                        current_game_identifier = game_info.get(game_identifier_key) # str (date or number)
+                        latest_identifier_str = config["get_latest_game_number_function"](game_key) # str
+                        role_updated = False
+                        is_newer = False
+                        if current_game_identifier is not None:
+                            # --- UPDATED CALL: Pass game_key ---
+                            role_updated = await role_manager.handle_game_role_assignment(
+                                message.guild,
+                                message.author,
+                                game_key,  # <<< Pass the game_key from the loop
+                                config,    # Pass the specific game's config dict
+                                current_game_identifier,
+                                latest_identifier_str
                     )
                     # --- Check if current identifier is newer BEFORE updating DB ---
                     try:
