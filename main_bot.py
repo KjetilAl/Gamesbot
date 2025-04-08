@@ -103,10 +103,10 @@ async def on_message(message):
                                     current_date = date.fromisoformat(current_date_str)
                                     latest_date = date.fromisoformat(latest_date_str)
                                     is_newer = current_date > latest_date
-                        except (ValueError, TypeError) as e:
-                            print(f"Error comparing identifiers in main_bot before DB update for {game_key}: {e}")
-                            # Default to True to ensure the score is recorded
-                            is_newer = True
+                            except (ValueError, TypeError) as e:
+                                print(f"Error comparing identifiers in main_bot before DB update for {game_key}: {e}")
+                                # Default to True to ensure the score is recorded
+                                is_newer = True
                     else:
                         # Integer comparison for other games
                         try:
