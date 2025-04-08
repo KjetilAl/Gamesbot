@@ -1,6 +1,6 @@
 import discord
 import asyncio
-import datetime
+import datetime, date
 import zoneinfo
 from discord.ext import commands, tasks
 from typing import Dict, List, Tuple, Optional, Any
