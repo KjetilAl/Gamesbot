@@ -61,7 +61,7 @@ async def on_message(message):
                 display_name = message.author.display_name
                 # Save the score based on the game type
                 if game_key == "wordle":
-                    game_config["save_score_function"](
+                    config["save_score_function"](
                         user_id, display_name,
                         game_info["game_number"],
                         game_info["attempts"],
@@ -71,20 +71,20 @@ async def on_message(message):
                     )
 
                 elif game_key == "connections":
-                    game_config["save_score_function"](user_id, display_name, game_info["puzzle_number"],
+                    config["save_score_function"](user_id, display_name, game_info["puzzle_number"],
                                                        game_info["total_score"], game_info["num_guesses"],
                                                        game_info["solved_purple_first"], game_info["solved_blue_first"])
 
                 elif game_key == "framed":
-                    game_config["save_score_function"](user_id, display_name, game_info["game_number"],
+                    config["save_score_function"](user_id, display_name, game_info["game_number"],
                                                        game_info["attempts"], game_info["total_score"])
 
                 elif game_key == "gisnep":
-                    game_config["save_score_function"](user_id, display_name, game_info["game_number"],
+                    config["save_score_function"](user_id, display_name, game_info["game_number"],
                                                        game_info["completion_time"])
 
                 elif game_key == "bandle":
-                    game_config["save_score_function"](user_id, display_name, game_info["game_number"],
+                    config["save_score_function"](user_id, display_name, game_info["game_number"],
                                                        game_info["attempts"], game_info["total_score"],
                                                        game_info["bonus_completed"], game_info["bonus_total"])
 
