@@ -5,68 +5,99 @@ DB_NAME = "wordle.db"
 
 def initialize_db():
     """Create the database and tables if they don't exist."""
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
-    # Wordle. Added hard_mode column and made skill/luck nullable
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS wordle_scores (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            display_name TEXT,
-            game_number TEXT,
-            attempts INTEGER,
-            skill INTEGER NULL,
-            luck INTEGER NULL,
-            hard_mode BOOLEAN,
-            total_score INTEGER,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    # Connections table (corrected)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS connections_scores (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            display_name TEXT,
-            puzzle_number TEXT,
-            total_score INTEGER,
-            guesses INTEGER,
-            solved_purple_first BOOLEAN,
-            solved_blue_first BOOLEAN,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    # Generic table for tracking latest game numbers/dates - CHANGE latest_number to TEXT
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS latest_game_numbers (
-            game_name TEXT PRIMARY KEY,
-            latest_number TEXT -- Changed from INTEGER to TEXT
-        )
-    """)
-    conn.commit() # Commit schema change before inserting data
-
-    # Initialize latest numbers if not present - use string '0' or default date
-    initial_games = [
-        ('Wordle', '0'),
-        ('Connections', '0'),
-        ('Gisnep', '0'),
-        ('Bandle', '0'),
-        ('Minute Cryptic', '2000-01-01') # Use an old ISO date string as default
-    ]
-    # Use INSERT OR IGNORE to safely add initial values without overwriting existing ones
+    conn = None # Initialize conn to None
     try:
-        cursor.executemany("INSERT OR IGNORE INTO latest_game_numbers (game_name, latest_number) VALUES (?, ?)", initial_games)
-    except sqlite3.IntegrityError:
-        print("DB: Initial game numbers likely already exist.") # Handle potential race condition or re-run
-    except sqlite3.Error as e:
-        print(f"Database error during initial game number insertion: {e}")
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
 
-    conn.commit()
-    conn.close()
-    print("Database initialized successfully (latest_number is TEXT).")
+        # --- Create All Tables ---
+        # Wordle
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS wordle_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
+                game_number TEXT, attempts INTEGER, skill INTEGER NULL, luck INTEGER NULL,
+                hard_mode BOOLEAN, total_score INTEGER, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        # Connections
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS connections_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
+                puzzle_number TEXT, total_score INTEGER, guesses INTEGER,
+                solved_purple_first BOOLEAN, solved_blue_first BOOLEAN,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        # Minute Cryptic
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS minute_cryptic_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
+                game_date TEXT, clue TEXT, word_length INTEGER, grid TEXT,
+                score_description TEXT, score_value INTEGER,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        # Framed
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS framed_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
+                game_number INTEGER, attempts INTEGER, total_score INTEGER,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        # Gisnep
+        cursor.execute("""
+             CREATE TABLE IF NOT EXISTS gisnep_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
+                game_number INTEGER, completion_time INTEGER,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+             )
+        """)
+        # Bandle
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS bandle_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
+                game_number INTEGER, attempts INTEGER, total_score INTEGER,
+                bonus_completed INTEGER, bonus_total INTEGER,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        # Latest Game Numbers/Identifiers
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS latest_game_numbers (
+                game_name TEXT PRIMARY KEY,
+                latest_number TEXT -- Storing as TEXT for dates/numbers
+            )
+        """)
+
+        # Commit all schema changes together
+        conn.commit()
+        print("DB: All tables created or verified.")
+
+        # --- Initialize latest_game_numbers Data ---
+        initial_games = [
+            ('Wordle', '0'), ('Connections', '0'), ('Framed', '0'),
+            ('Gisnep', '0'), ('Bandle', '0'), ('Minute Cryptic', '2000-01-01')
+        ]
+        try:
+            cursor.executemany("INSERT OR IGNORE INTO latest_game_numbers (game_name, latest_number) VALUES (?, ?)", initial_games)
+            # Commit data insertion
+            conn.commit()
+            print("DB: Initial latest game numbers inserted or verified.")
+        except sqlite3.Error as e:
+            print(f"Database error during initial game number insertion: {e}")
+
+        print("Database initialized successfully.")
+
+    except sqlite3.Error as e:
+        print(f"DATABASE INITIALIZATION FAILED: {e}")
+        # Optional: Rollback changes if an error occurred mid-transaction
+        # if conn:
+        #     conn.rollback()
+    finally:
+        # --- Ensure connection is closed ONLY at the very end ---
+        if conn:
+            conn.close()
 
     # Framed Table
     cursor.execute("""
