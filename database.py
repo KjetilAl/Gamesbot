@@ -540,7 +540,7 @@ def get_overall_recent_connections_puzzle_number(limit=5):
     finally:
         conn.close()
 
-def get_latest_minute_cryptic_date():
+def get_latest_minute_cryptic_date(game_key: str):
     """Retrieves the latest game_date from minute_cryptic_scores."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
