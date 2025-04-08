@@ -117,19 +117,19 @@ async def on_message(message):
                                 print(f"Error comparing integer identifiers in main_bot for {game_key}: {e}")
                                 is_newer = False # Safer default
 
-                    # Update latest identifier in DB only if newer
-                    if is_newer:
-                        print(f"Identifier {current_game_identifier} is newer than {latest_identifier_str} for {game_key}. Updating DB.")
-                        await config["update_latest_game_number_function"](game_key, str(current_game_identifier))
+                        # Update latest identifier in DB only if newer
+                        if is_newer:
+                            print(f"Identifier {current_game_identifier} is newer than {latest_identifier_str} for {game_key}. Updating DB.")
+                            await config["update_latest_game_number_function"](game_key, str(current_game_identifier))
 
-                    # Introduce player if role updated
-                    if role_updated:
-                        await role_manager.introduce_player_in_game_channel(
-                            message.guild,
-                            message.author.display_name,
-                            config,
-                            game_info
-                        )
+                        # Introduce player if role updated
+                        if role_updated:
+                            await role_manager.introduce_player_in_game_channel(
+                                message.guild,
+                                message.author.display_name,
+                                config,
+                                game_info
+                            )
             # --- End Role Handling ---
 
             processed = True
