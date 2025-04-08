@@ -290,7 +290,6 @@ def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]
             "game_date": game_date.isoformat(), # Store as ISO 8601 string (YYYY-MM-DD)
             "clue": clue_text,
             "word_length": word_length,
-            "grid": None, # We don't have grid info in this format
             "score_description": score_desc,
             "score_value": score_value, # Numerical score for ranking
             "solved": solved
