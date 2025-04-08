@@ -57,6 +57,8 @@ async def on_message(message):
             game_info = config["parse_function"](content)
             if game_info:
                 print(f"Detected {config['name']} score from {message.author.display_name}") # Debug log
+                user_id = message.author.id
+                display_name = message.author.display_name
                 # Save the score based on the game type
                 if game_key == "wordle":
                     game_config["save_score_function"](
@@ -221,7 +223,7 @@ async def handle_game_message(message, game_key, game_config):
     # Get the latest game number from the database
     game_number_key = game_config["game_number_key"]  # Use game_number_key from config
     latest_game_number = game_config["get_latest_game_number_function"](game_config["name"])
-    print(  # DEBUGGING
+    print(
         f"{game_config['name']}: Retrieved latest_game_number = {latest_game_number}"
     )
     current_game_number = game_info[game_number_key]
@@ -229,7 +231,7 @@ async def handle_game_message(message, game_key, game_config):
     # If this is the latest game, update roles and notify
     if current_game_number >= latest_game_number:
         game_config["update_latest_game_number_function"](game_config["name"], current_game_number)
-        print(  # DEBUGGING
+        print(
             f"{game_config['name']}: Updated latest_game_number to {game_number_key}"
         )
 
@@ -341,16 +343,4 @@ async def post_scores(period: str):
             except Exception as e:
                 print(f"Error posting {period} {game_name} leaderboard: {e}")
         else:
-            print(f"No valid scores formatted for {period} {game_name} leaderboard.")
-
-@tasks.loop(time=datetime.time(hour=23, minute=59, second=50, tzinfo=CET_TIMEZONE))
-async def check_weekly_scores():
-    """Post weekly leaderboards on Sunday."""
-    if datetime.datetime.now(CET_TIMEZONE).weekday() == 6:  # Sunday
-        await post_scores("weekly")
-
-@tasks.loop(time=datetime.time(hour=0, minute=1, second=0, tzinfo=CET_TIMEZONE))
-async def check_monthly_scores():
-    """Post monthly leaderboards on the first of the month."""
-    if datetime.datetime.now(CET_TIMEZONE).day == 1:
-        await post_scores("
+            print(f"No valid scores formatted for {period} {game_name} leaderbo
