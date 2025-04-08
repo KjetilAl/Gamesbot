@@ -257,32 +257,32 @@ def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]
         if not (header_match and clue_match and grid_match and score_match):
             return None
 
-    # Extract Date
-    date_str = header_match.group(1)
-    try:
-        # Attempt to parse the date to validate and standardize
-        game_date = datetime.strptime(date_str, '%d %B %Y').date()
-    except ValueError:
-        return None # Invalid date format
-
-    # Extract other info
-    clue = clue_match.group(1)
-    word_length = int(clue_match.group(2))
-    grid = grid_match.group(1) # This captures the sequence of circles
-    score_desc = score_match.group(1).strip()
-
-    # Interpret score description into a numerical value
-    # Lower is better. Solved = 0, 1 over = 1, etc.
-    # This logic might need refinement based on actual possible scores
-    score_value = -1 # Default/unknown
-    if "solved" in score_desc.lower():
-        score_value = 0
-    elif "over par" in score_desc.lower():
-        parts = score_desc.split()
+        # Extract Date
+        date_str = header_match.group(1)
         try:
-            score_value = int(parts[0])
-        except (ValueError, IndexError):
-            score_value = -1 # Failed to parse number
+            # Attempt to parse the date to validate and standardize
+            game_date = datetime.strptime(date_str, '%d %B %Y').date()
+        except ValueError:
+            return None # Invalid date format
+    
+        # Extract other info
+        clue = clue_match.group(1)
+        word_length = int(clue_match.group(2))
+        grid = grid_match.group(1) # This captures the sequence of circles
+        score_desc = score_match.group(1).strip()
+
+        # Interpret score description into a numerical value
+        # Lower is better. Solved = 0, 1 over = 1, etc.
+        # This logic might need refinement based on actual possible scores
+        score_value = -1 # Default/unknown
+        if "solved" in score_desc.lower():
+            score_value = 0
+        elif "over par" in score_desc.lower():
+            parts = score_desc.split()
+            try:
+                score_value = int(parts[0])
+            except (ValueError, IndexError):
+                score_value = -1 # Failed to parse number
 
         print(f"Parsed Minute Cryptic data: {game_info}")
         return game_info
