@@ -49,142 +49,118 @@ async def on_message(message):
         return  # Ignore bot messages
     if not message.guild: # Ignore DMs
         return
+        
     content = message.content
     processed = False
+    
     # Check each game configuration to see if the message matches
     for game_key, config in game_config.GAME_CONFIGS.items():
         if config["is_game_message"](content):
+            print(f"Detected {config['name']} score from {message.author.display_name}")
+            processed = True
+            
+            # Parse the message content
             game_info = config["parse_function"](content)
-            if game_info:
-                print(f"Detected {config['name']} score from {message.author.display_name}") # Debug log
-                user_id = message.author.id
-                display_name = message.author.display_name
-                # Save the score based on the game type
+            
+            if not game_info:
+                await message.channel.send(f"⚠️ Couldn't process your {config['name']} result.")
+                break
+            
+            # Process the game score based on game type
+            try:
+                # Save the score (using the code from the handle_game_message function)
                 if game_key == "wordle":
                     config["save_score_function"](
-                        user_id, display_name,
+                        message.author.id, message.author.display_name, 
                         game_info["game_number"],
-                        game_info["attempts"],
-                        game_info.get("skill"),  # Use .get() to handle None values
+                        game_info["attempts"], 
+                        game_info.get("skill"),
                         game_info.get("luck"),
                         game_info.get("hard_mode", False)
                     )
-
                 elif game_key == "connections":
-                    config["save_score_function"](user_id, display_name, game_info["puzzle_number"],
-                                                       game_info["total_score"], game_info["num_guesses"],
-                                                       game_info["solved_purple_first"], game_info["solved_blue_first"])
-
+                    config["save_score_function"](
+                        message.author.id, message.author.display_name, 
+                        game_info["puzzle_number"],
+                        game_info["total_score"], 
+                        game_info["num_guesses"],
+                        game_info["solved_purple_first"], 
+                        game_info["solved_blue_first"]
+                    )
                 elif game_key == "framed":
-                    config["save_score_function"](user_id, display_name, game_info["game_number"],
-                                                       game_info["attempts"], game_info["total_score"])
-
+                    config["save_score_function"](
+                        message.author.id, message.author.display_name, 
+                        game_info["game_number"],
+                        game_info["attempts"], 
+                        game_info["total_score"]
+                    )
                 elif game_key == "gisnep":
-                    config["save_score_function"](user_id, display_name, game_info["game_number"],
-                                                       game_info["completion_time"])
-
+                    config["save_score_function"](
+                        message.author.id, message.author.display_name, 
+                        game_info["game_number"],
+                        game_info["completion_time"]
+                    )
                 elif game_key == "bandle":
-                    config["save_score_function"](user_id, display_name, game_info["game_number"],
-                                                       game_info["attempts"], game_info["total_score"],
-                                                       game_info["bonus_completed"], game_info["bonus_total"])
-
+                    config["save_score_function"](
+                        message.author.id, message.author.display_name, 
+                        game_info["game_number"],
+                        game_info["attempts"], 
+                        game_info["total_score"],
+                        game_info["bonus_completed"], 
+                        game_info["bonus_total"]
+                    )
                 elif game_key == "minute_cryptic":
-                 required_keys = ["game_date", "clue", "word_length", "grid", "score_description"]
-                 if all(key in game_info for key in required_keys):
-                     saved_successfully = False # Flag to track if save worked
-                     try:
-                         # Attempt to save the score
-                         config["save_score_function"](
-                             message.author.id,
-                             message.author.display_name,
-                             game_info["game_date"],
-                             game_info["clue"],
-                             game_info["word_length"],
-                             game_info["grid"],
-                             game_info["score_description"]
-                         )
-                         saved_successfully = True # Mark as successful if no exception
-                         print(f"Successfully saved Minute Cryptic score for {message.author.display_name}") # Optional success log
-
-                     except Exception as e:
-                         # Catch potential errors during saving
-                         print(f"Error saving Minute Cryptic score for {message.author.display_name}: {e}")
-                         # Optionally notify the user
-                         await message.channel.send(f"⚠️ Sorry {message.author.display_name}, there was an error saving your Minute Cryptic score.")
-
-                     # --- Only proceed if saving was successful ---
-                     if saved_successfully:
-                         # Send acknowledgement
-                         ack_message = config["create_acknowledgement"](message.author.display_name, game_info)
-                         await message.channel.send(ack_message)
-
-                         # --- Handle Role Assignment ---
-                         try: # Add a try/except around role handling as well
-                            game_identifier_key = config["game_number_key"] # Should be "game_date" for minute_cryptic
-                            current_game_identifier = game_info.get(game_identifier_key) # str (date)
-                            # Ensure you fetch the latest identifier correctly using the game_key
-                            latest_identifier_str = config["get_latest_game_number_function"](game_key) # str
-                            role_updated = False
-                            is_newer = False
-
-                            if current_game_identifier is not None:
-                                # --- Comparison Logic (moved from inside the original try) ---
-                                try:
-                                     # Date comparison for Minute Cryptic
-                                     current_date_str = str(current_game_identifier)
-                                     latest_date_str = str(latest_identifier_str)
-
-                                     # Use the correct default date string for comparison if latest is missing
-                                     if not latest_date_str or latest_date_str == '0': # Check for '0' or empty
-                                         latest_date_str = '2000-01-01' # Use the same default as get_latest...
-
-                                     current_date = date.fromisoformat(current_date_str)
-                                     latest_date = date.fromisoformat(latest_date_str)
-                                     is_newer = current_date > latest_date
-
-                                except (ValueError, TypeError) as e:
-                                     print(f"Error comparing date identifiers in main_bot for {game_key}: {e}")
-                                     is_newer = False # Safer default
-
-                                # --- Role Assignment Call (moved from inside the original try) ---
-                                role_updated = await role_manager.handle_game_role_assignment(
-                                    message.guild,
-                                    message.author,
-                                    game_key,
-                                    config,
-                                    current_game_identifier,
-                                    latest_identifier_str
-                                    # Removed all_game_configs if not needed by role_manager
-                                )
-
-                                # --- Update DB and Introduce (moved from inside the original try) ---
-                                if is_newer:
-                                    print(f"Identifier {current_game_identifier} is newer than {latest_identifier_str} for {game_key}. Updating DB.")
-                                    # Ensure the update function is awaited if it's async
-                                    await config["update_latest_game_number_function"](game_key, str(current_game_identifier))
-
-                                if role_updated:
-                                    # Ensure introduce function is awaited if it's async
-                                    await role_manager.introduce_player_in_game_channel(
-                                        message.guild,
-                                        message.author.display_name,
-                                        config,
-                                        game_info
-                                    )
-                         except Exception as e:
-                             print(f"Error during role handling/DB update/introduction for {game_key} for {message.author.display_name}: {e}")
-                             # Optionally notify user about role assignment issues
-                             # await message.channel.send(f"⚠️ There was an issue updating roles for your score.")
-
-
-                 else: # This else corresponds to 'if all(key in game_info...'
-                     print(f"Minute Cryptic game_info dictionary missing keys for {message.author.display_name}: {game_info}")
-                     await message.channel.send(f"⚠️ Couldn't process your Minute Cryptic score, {message.author.display_name}. Some information seems missing.")
-
-                 # --- Mark as processed and break loop ---
-                 processed = True
-                 break # Stop checking other games
-
+                    config["save_score_function"](
+                        message.author.id, message.author.display_name,
+                        game_info["game_date"],
+                        game_info["clue"],
+                        game_info["word_length"],
+                        game_info["grid"],
+                        game_info["score_description"]
+                    )
+                
+                # Create acknowledgement and handle roles
+                response = config["create_acknowledgement"](message.author.display_name, game_info)
+                
+                # Get the latest game number from the database
+                game_number_key = config["game_number_key"]
+                latest_game_number = config["get_latest_game_number_function"](game_key)
+                current_game_number = game_info[game_number_key]
+                
+                # If this is the latest game, update roles and notify
+                if current_game_number and (isinstance(latest_game_number, (int, str)) and 
+                                          (str(current_game_number) > str(latest_game_number) or latest_game_number == '0')):
+                    await config["update_latest_game_number_function"](game_key, str(current_game_number))
+                    
+                    # Handle role assignment
+                    success = await role_manager.handle_game_role_assignment(
+                        message.guild, 
+                        message.author, 
+                        game_key,
+                        config, 
+                        current_game_number,
+                        latest_game_number
+                    )
+                    
+                    if success:
+                        chat_channel_name = config["chat_channel_name"]
+                        response += f"\n\n{message.author.mention} You now have access to the {chat_channel_name} channel!"
+                        await role_manager.introduce_player_in_game_channel(
+                            message.guild, 
+                            message.author.display_name, 
+                            config, 
+                            game_info
+                        )
+                
+                # Send the response message
+                await message.channel.send(response)
+                
+            except Exception as e:
+                print(f"Error processing {config['name']} score: {e}")
+                await message.channel.send(f"⚠️ There was an error processing your {config['name']} score.")
+            
+            break
+    
     if not processed:
         await bot.process_commands(message)
 
