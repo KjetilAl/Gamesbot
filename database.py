@@ -195,7 +195,7 @@ def save_bandle_score(user_id, display_name, game_number, attempts, total_score,
     conn.commit()
     conn.close()
 
-def save_minute_cryptic_score(user_id: int, display_name: str, game_info: dict[str, any]):
+def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, clue: str, word_length: int, grid: Optional[str], score_description: str):
     """Saves a Minute Cryptic score to the database."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -203,20 +203,19 @@ def save_minute_cryptic_score(user_id: int, display_name: str, game_info: dict[s
         cursor.execute("""
             INSERT INTO minute_cryptic_scores (
                 user_id, display_name, game_date, clue, word_length,
-                grid, score_description, score_value
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                grid, score_description
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
             user_id,
             display_name,
-            game_info.get("game_date"),
-            game_info.get("clue"),
-            game_info.get("word_length"),
-            game_info.get("grid"),
-            game_info.get("score_description"),
-            game_info.get("score_value")
+            game_date,
+            clue,
+            word_length,
+            grid,
+            score_description
         ))
         conn.commit()
-        print(f"DB: Saved Minute Cryptic score for {display_name} on {game_info.get('game_date')}")
+        print(f"DB: Saved Minute Cryptic score for {display_name} on {game_date}")
     except sqlite3.Error as e:
         print(f"Database error in save_minute_cryptic_score: {e}")
     finally:
