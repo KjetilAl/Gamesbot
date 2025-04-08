@@ -539,7 +539,23 @@ def get_overall_recent_connections_puzzle_number(limit=5):
         return [] # Return empty list in case of error
     finally:
         conn.close()
-        
+
+def get_latest_minute_cryptic_date():
+    """Retrieves the latest game_date from minute_cryptic_scores."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    latest_date = None
+    try:
+        cursor.execute("SELECT MAX(game_date) FROM minute_cryptic_scores")
+        result = cursor.fetchone()
+        if result and result[0]:
+            latest_date = result[0]
+    except sqlite3.Error as e:
+        print(f"Database error in get_latest_minute_cryptic_date: {e}")
+    finally:
+        conn.close()
+    return latest_date
+
 def get_latest_game_number_from_db(game_name: str) -> str:
     """Fetches the latest game identifier (number or date string) from the database."""
     conn = sqlite3.connect(DB_NAME)
