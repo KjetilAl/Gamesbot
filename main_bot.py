@@ -91,36 +91,36 @@ async def on_message(message):
                     # (Logic remains the same here)
                     try:
                         if game_key == "minute_cryptic":
-                        try: # Inner try for date comparison
-                        current_date_str = str(current_game_identifier)
-                        latest_date_str = str(latest_identifier_str)
+                            try: # Inner try for date comparison
+                            current_date_str = str(current_game_identifier)
+                            latest_date_str = str(latest_identifier_str)
 
-                        # Use the correct default date string for comparison if latest is missing
-                        if not latest_date_str or latest_date_str == '0': # Check for '0' or empty
-                            latest_date_str = '2000-01-01' # Use the same default as get_latest...
+                            # Use the correct default date string for comparison if latest is missing
+                            if not latest_date_str or latest_date_str == '0': # Check for '0' or empty
+                                latest_date_str = '2000-01-01' # Use the same default as get_latest...
 
-                        current_date = date.fromisoformat(current_date_str)
-                        latest_date = date.fromisoformat(latest_date_str)
-                        is_newer = current_date > latest_date
+                            current_date = date.fromisoformat(current_date_str)
+                            latest_date = date.fromisoformat(latest_date_str)
+                            is_newer = current_date > latest_date
 
-                    except (ValueError, TypeError) as e:
-                        print(f"Error comparing date identifiers in main_bot for {game_key}: {e}")
-                        # Decide how to handle error - maybe assume not newer? Or log and skip update?
-                        is_newer = False # Safer default than True? Depends on desired behavior.
+                        except (ValueError, TypeError) as e:
+                            print(f"Error comparing date identifiers in main_bot for {game_key}: {e}")
+                            # Decide how to handle error - maybe assume not newer? Or log and skip update?
+                            is_newer = False # Safer default than True? Depends on desired behavior.
                     else:
-                    # Integer comparison for other games
-                    try: # Inner try for integer comparison
-                        current_num = int(current_game_identifier)
-                        latest_num = int(latest_identifier_str) # latest_identifier_str is '0' by default if missing
-                        is_newer = current_num > latest_num
-                    except (ValueError, TypeError) as e:
-                        print(f"Error comparing integer identifiers in main_bot for {game_key}: {e}")
-                        is_newer = False # Safer default
+                        # Integer comparison for other games
+                        try: # Inner try for integer comparison
+                            current_num = int(current_game_identifier)
+                            latest_num = int(latest_identifier_str) # latest_identifier_str is '0' by default if missing
+                            is_newer = current_num > latest_num
+                        except (ValueError, TypeError) as e:
+                            print(f"Error comparing integer identifiers in main_bot for {game_key}: {e}")
+                            is_newer = False # Safer default
 
-                # Update latest identifier in DB only if newer
-                if is_newer:
-                    print(f"Identifier {current_game_identifier} is newer than {latest_identifier_str} for {game_key}. Updating DB.")
-                    await config["update_latest_game_number_function"](game_key, str(current_game_identifier))
+                    # Update latest identifier in DB only if newer
+                    if is_newer:
+                        print(f"Identifier {current_game_identifier} is newer than {latest_identifier_str} for {game_key}. Updating DB.")
+                        await config["update_latest_game_number_function"](game_key, str(current_game_identifier))
 
                 # Introduce player if role updated
                 if role_updated:
