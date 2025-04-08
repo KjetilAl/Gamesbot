@@ -49,33 +49,25 @@ async def on_message(message):
         return  # Ignore bot messages
     if not message.guild: # Ignore DMs
         return
-
     content = message.content
     processed = False
-
     # Check each game configuration to see if the message matches
     for game_key, config in game_config.GAME_CONFIGS.items():
         if config["is_game_message"](content):
             game_info = config["parse_function"](content)
-
             if game_info:
                 print(f"Detected {config['name']} score from {message.author.display_name}") # Debug log
-
                 # Save the score
                 config["save_score_function"](message.author.id, message.author.display_name, game_info)
-
                 # Send acknowledgement
                 ack_message = config["create_acknowledgement"](message.author.display_name, game_info)
                 await message.channel.send(ack_message)
-
                 # --- Handle Role Assignment ---
                 game_identifier_key = config["game_number_key"]
                 current_game_identifier = game_info.get(game_identifier_key) # str (date or number)
                 latest_identifier_str = config["get_latest_game_number_function"](game_key) # str
-
                 role_updated = False
                 is_newer = False
-
                 if current_game_identifier is not None:
                     # --- UPDATED CALL: Pass game_key ---
                     role_updated = await role_manager.handle_game_role_assignment(
@@ -86,7 +78,6 @@ async def on_message(message):
                         current_game_identifier,
                         latest_identifier_str
                     )
-
                     # --- Check if current identifier is newer BEFORE updating DB ---
                     # (Logic remains the same here)
                     try:
@@ -94,15 +85,12 @@ async def on_message(message):
                             try: # Inner try for date comparison
                                 current_date_str = str(current_game_identifier)
                                 latest_date_str = str(latest_identifier_str)
-
                                 # Use the correct default date string for comparison if latest is missing
                                 if not latest_date_str or latest_date_str == '0': # Check for '0' or empty
                                     latest_date_str = '2000-01-01' # Use the same default as get_latest...
-
                                 current_date = date.fromisoformat(current_date_str)
                                 latest_date = date.fromisoformat(latest_date_str)
                                 is_newer = current_date > latest_date
-
                             except (ValueError, TypeError) as e:
                                 print(f"Error comparing date identifiers in main_bot for {game_key}: {e}")
                                 # Decide how to handle error - maybe assume not newer? Or log and skip update?
@@ -116,12 +104,10 @@ async def on_message(message):
                             except (ValueError, TypeError) as e:
                                 print(f"Error comparing integer identifiers in main_bot for {game_key}: {e}")
                                 is_newer = False # Safer default
-
                         # Update latest identifier in DB only if newer
                         if is_newer:
                             print(f"Identifier {current_game_identifier} is newer than {latest_identifier_str} for {game_key}. Updating DB.")
                             await config["update_latest_game_number_function"](game_key, str(current_game_identifier))
-
                         # Introduce player if role updated
                         if role_updated:
                             await role_manager.introduce_player_in_game_channel(
@@ -130,13 +116,12 @@ async def on_message(message):
                                 config,
                                 game_info
                             )
-            # --- End Role Handling ---
-
-            processed = True
-            break # Stop checking other games
-
-            if not processed:
-                await bot.process_commands(message)
+                # --- End Role Handling ---
+                processed = True
+                break # Stop checking other games
+    
+    if not processed:
+        await bot.process_commands(message)
         
 async def handle_game_message(message, game_key, game_config):
     """
