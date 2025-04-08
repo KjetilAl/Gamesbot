@@ -69,44 +69,45 @@ async def on_message(message):
 
                 # --- Handle Role Assignment ---
                 game_identifier_key = config["game_number_key"] # e.g., "game_number", "puzzle_number", "game_date"
-                current_game_identifier = game_info.get(game_identifier_key)
+                current_game_identifier = game_info.get(game_identifier_key) # This is now str (date or number)
 
-                # Get the latest *integer* number stored (placeholder 0 for Minute Cryptic)
-                latest_game_number_int = config["get_latest_game_number_function"](game_key)
+                latest_identifier_str = config["get_latest_game_number_function"](game_key) # Returns str
 
                 role_updated = False
+                is_newer = False # Flag to track if we need to update latest identifier
+
                 if current_game_identifier is not None:
-                    # *** TEMPORARY HANDLING FOR MINUTE CRYPTIC DATE ***
-                    # The role manager expects integers. We pass 1 for the current game ID
-                    # to ensure role logic triggers (1 > 0).
-                    # We will skip updating the latest number/date for now.
-                    # Proper date comparison will be handled in role_manager.py
-                    if game_key == "minute_cryptic":
-                         # Pass 1 temporarily for current_game_number. latest_game_number_int is 0.
-                        role_updated = await role_manager.handle_game_role_assignment(
-                            message.guild,
-                            message.author,
-                            config,
-                            1, # Temporary current game identifier (as int)
-                            latest_game_number_int # Placeholder latest identifier (as int)
-                        )
-                        # Skip updating latest game number/date for Minute Cryptic for now
-                    else:
-                        # Handle normally for games with integer IDs
-                        try:
-                            current_game_num_int = int(current_game_identifier)
-                            role_updated = await role_manager.handle_game_role_assignment(
-                                message.guild,
-                                message.author,
-                                config,
-                                current_game_num_int,
-                                latest_game_number_int
-                            )
-                            # Update latest number if this one is newer
-                            if current_game_num_int > latest_game_number_int:
-                                await config["update_latest_game_number_function"](game_key, current_game_num_int)
-                        except ValueError:
-                             print(f"Error: Could not convert game identifier '{current_game_identifier}' to int for {game_key}")
+                    # Call the updated role manager, passing the actual identifiers (as strings)
+                    role_updated = await role_manager.handle_game_role_assignment(
+                        message.guild,
+                        message.author,
+                        config, # Pass the specific game's config dict
+                        current_game_identifier, # Pass the actual identifier (string)
+                        latest_identifier_str  # Pass the latest identifier (string)
+                    )
+
+                    # --- Check if current identifier is newer BEFORE updating DB ---
+                    try:
+                        if game_key == "minute_cryptic":
+                            current_date = date.fromisoformat(str(current_game_identifier))
+                            latest_date = date.fromisoformat(latest_identifier_str)
+                            if current_date > latest_date:
+                                is_newer = True
+                        else: # Assume integer comparison for others
+                            current_num = int(current_game_identifier)
+                            latest_num = int(latest_identifier_str)
+                            if current_num > latest_num:
+                                is_newer = True
+                    except (ValueError, TypeError) as e:
+                         print(f"Error comparing identifiers in main_bot before DB update for {game_key}: {e}")
+
+                    # Update latest identifier in DB *only if* the current one is newer
+                    if is_newer:
+                        print(f"Identifier {current_game_identifier} is newer than {latest_identifier_str} for {game_key}. Updating DB.")
+                        # Pass the current identifier string to the update function
+                        await config["update_latest_game_number_function"](game_key, str(current_game_identifier))
+                    #else: # Debug log
+                        #print(f"Identifier {current_game_identifier} is NOT newer than {latest_identifier_str} for {game_key}. DB not updated.")
 
                     # If role was newly assigned, introduce the player
                     if role_updated:
@@ -119,7 +120,7 @@ async def on_message(message):
                 # --- End Role Handling ---
 
                 processed = True
-                break # Stop checking other games once a match is found and processed
+                break # Stop checking other games
 
     if not processed:
         # If no game score was processed, pass the message to command handlers
