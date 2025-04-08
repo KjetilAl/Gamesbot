@@ -88,6 +88,19 @@ def initialize_db():
             print(f"Database error during initial game number insertion: {e}")
 
         print("Database initialized successfully.")
+        
+        except sqlite3.Error as e:
+        # This block catches errors from anywhere within the 'try' block above
+            print(f"DATABASE INITIALIZATION FAILED: {e}")
+        # Optional: Rollback changes if an error occurred mid-transaction
+        # if conn:
+        #     conn.rollback()
+        finally:
+        # --- This 'finally' block ensures the connection is closed ---
+        # It runs whether the 'try' block succeeded or an 'except' block was triggered.
+        if conn:
+            conn.close() # This is where the database connection is closed
+            print("DB: Connection closed.")
 
     # Framed Table
     cursor.execute("""
