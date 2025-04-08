@@ -75,7 +75,7 @@ GAME_CONFIGS = {
     "create_acknowledgement": score_parser.create_bandle_acknowledgement,
     "create_introduction": score_parser.create_bandle_introduction,
     "game_number_key": "game_number"  # Key for game number
-    }
+    },
 "minute_cryptic": {
     "name": "Minute Cryptic",
     "chat_channel_name": "minute-cryptic-chat",
