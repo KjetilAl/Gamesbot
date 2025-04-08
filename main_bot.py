@@ -46,23 +46,85 @@ async def on_message(message):
     """Handler for new messages."""
     if message.author.bot:
         return  # Ignore bot messages
+    if not message.guild: # Ignore DMs
+        return
 
     content = message.content
     processed = False
 
-    # Check if the message is in the 'scores' channel
-    if message.channel.name == "scores":
-        # Check each game configuration
-        for game_key, config in game_config.GAME_CONFIGS.items():
-            if config["is_game_message"](content):
-                print(f"Detected {config['name']} message from {message.author.display_name}")
-                await handle_game_message(message, game_key, config)
+    # Check each game configuration to see if the message matches
+    for game_key, config in game_config.GAME_CONFIGS.items():
+        if config["is_game_message"](content):
+            game_info = config["parse_function"](content)
+
+            if game_info:
+                print(f"Detected {config['name']} score from {message.author.display_name}") # Debug log
+
+                # Save the score
+                config["save_score_function"](message.author.id, message.author.display_name, game_info)
+
+                # Send acknowledgement
+                ack_message = config["create_acknowledgement"](message.author.display_name, game_info)
+                await message.channel.send(ack_message)
+
+                # --- Handle Role Assignment ---
+                game_identifier_key = config["game_number_key"] # e.g., "game_number", "puzzle_number", "game_date"
+                current_game_identifier = game_info.get(game_identifier_key)
+
+                # Get the latest *integer* number stored (placeholder 0 for Minute Cryptic)
+                latest_game_number_int = config["get_latest_game_number_function"](game_key)
+
+                role_updated = False
+                if current_game_identifier is not None:
+                    # *** TEMPORARY HANDLING FOR MINUTE CRYPTIC DATE ***
+                    # The role manager expects integers. We pass 1 for the current game ID
+                    # to ensure role logic triggers (1 > 0).
+                    # We will skip updating the latest number/date for now.
+                    # Proper date comparison will be handled in role_manager.py
+                    if game_key == "minute_cryptic":
+                         # Pass 1 temporarily for current_game_number. latest_game_number_int is 0.
+                        role_updated = await role_manager.handle_game_role_assignment(
+                            message.guild,
+                            message.author,
+                            config,
+                            1, # Temporary current game identifier (as int)
+                            latest_game_number_int # Placeholder latest identifier (as int)
+                        )
+                        # Skip updating latest game number/date for Minute Cryptic for now
+                    else:
+                        # Handle normally for games with integer IDs
+                        try:
+                            current_game_num_int = int(current_game_identifier)
+                            role_updated = await role_manager.handle_game_role_assignment(
+                                message.guild,
+                                message.author,
+                                config,
+                                current_game_num_int,
+                                latest_game_number_int
+                            )
+                            # Update latest number if this one is newer
+                            if current_game_num_int > latest_game_number_int:
+                                await config["update_latest_game_number_function"](game_key, current_game_num_int)
+                        except ValueError:
+                             print(f"Error: Could not convert game identifier '{current_game_identifier}' to int for {game_key}")
+
+                    # If role was newly assigned, introduce the player
+                    if role_updated:
+                        await role_manager.introduce_player_in_game_channel(
+                            message.guild,
+                            message.author.display_name,
+                            config,
+                            game_info
+                        )
+                # --- End Role Handling ---
+
                 processed = True
-                break
+                break # Stop checking other games once a match is found and processed
 
     if not processed:
-        await bot.process_commands(message)  # Process commands if not a game message
-
+        # If no game score was processed, pass the message to command handlers
+        await bot.process_commands(message)
+        
 async def handle_game_message(message, game_key, game_config):
     """
     Handle a game message (Wordle, Connections, Framed, Gisnep, Bandle).
@@ -188,35 +250,60 @@ async def leaderboard(ctx, game="wordle"):
     await ctx.send(leaderboard_message)
 
 async def post_scores(period: str):
-    """Post scores for the given period (weekly or monthly) to the 'leaderboards' channel."""
-    # Fetch scores from the database
-    if period == "weekly":
-        scores_by_game = database.get_weekly_scores()
-    elif period == "monthly":
-        scores_by_game = database.get_monthly_scores()
-    else:
-        raise ValueError("Invalid period. Use 'weekly' or 'monthly'.")
+    """Fetches and posts leaderboard scores for all games."""
+    scores_by_game = {}
+    leaderboard_channel_name = "leaderboards" # Or fetch from a central config
+
+    # Fetch scores for each game using functions from game_config
+    for game_key, config in game_config.GAME_CONFIGS.items():
+        if "get_leaderboard_function" in config:
+            try:
+                scores = config["get_leaderboard_function"](period=period)
+                if scores: # Only add if there are scores
+                    scores_by_game[config["name"]] = scores
+            except Exception as e:
+                 print(f"Error fetching {period} leaderboard for {config['name']}: {e}")
 
     # Find the 'leaderboards' channel
-    leaderboard_channel = discord.utils.get(bot.get_all_channels(), name="leaderboards")
+    leaderboard_channel = discord.utils.get(bot.get_all_channels(), name=leaderboard_channel_name)
     if not leaderboard_channel:
-        print("Warning: Could not find the 'leaderboards' channel.")
+        print(f"Warning: Could not find the '{leaderboard_channel_name}' channel.")
         return
 
     # Iterate over each game and post scores
-    for game, scores in scores_by_game.items():
-        if not scores:
-            continue
-        
-        message = f"**📅 {period.capitalize()} {game} Leaderboard**\n"
-        for i, (player, score) in enumerate(scores, 1):
-            message += f"{i}. {player}: {score} points\n"
-        
-        try:
-            await leaderboard_channel.send(message)
-            print(f"{period.capitalize()} {game} leaderboard posted.")
-        except Exception as e:
-            print(f"Error posting {period} {game} leaderboard: {e}")
+    if not scores_by_game:
+         print(f"No {period} leaderboard data found for any game.")
+         return
+
+    for game_name, scores in scores_by_game.items():
+        message = f"**📅 {period.capitalize()} {game_name} Leaderboard**\n"
+        rank = 1
+        for player_data in scores:
+            # Adapt formatting based on data structure returned by leaderboard function
+            if game_name == "Minute Cryptic": # Specific formatting for Minute Cryptic (solved count)
+                player, score = player_data # Expecting (display_name, solved_count)
+                message += f"{rank}. {player}: {score} solved\n"
+            # Add elif for other games with non-standard score formats if needed
+            else: # Default formatting (assuming score is points or similar)
+                try:
+                    player, score = player_data # Expecting (display_name, score)
+                    message += f"{rank}. {player}: {score} points\n" # Or adjust unit
+                except ValueError:
+                     print(f"Warning: Could not unpack score data for {game_name}: {player_data}")
+                     message += f"{rank}. {player_data[0]}: Score format error\n" # Fallback
+
+            rank += 1
+
+        if rank > 1: # Only send if there was data
+            try:
+                await leaderboard_channel.send(message)
+                print(f"{period.capitalize()} {game_name} leaderboard posted.")
+            except discord.errors.HTTPException as e:
+                 print(f"Error posting {period} {game_name} leaderboard (message too long?): {e}")
+            except Exception as e:
+                 print(f"Error posting {period} {game_name} leaderboard: {e}")
+        else:
+             print(f"No valid scores formatted for {period} {game_name} leaderboard.")
 
 @tasks.loop(time=datetime.time(hour=23, minute=59, second=50, tzinfo=CET_TIMEZONE))
 async def check_weekly_scores():
