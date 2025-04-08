@@ -76,5 +76,18 @@ GAME_CONFIGS = {
     "create_introduction": score_parser.create_bandle_introduction,
     "game_number_key": "game_number"  # Key for game number
     }
+"minute_cryptic": {
+    "name": "Minute Cryptic",
+    "chat_channel_name": "minute-cryptic-chat",
+    "player_role_name": "minute-cryptic-player",
+    "parse_function": score_parser.parse_minute_cryptic_score,
+    "is_game_message": score_parser.is_minute_cryptic_message,
+    "save_score_function": database.save_minute_cryptic_score,
+    "get_leaderboard_function": database.get_minute_cryptic_leaderboard,
+    "get_latest_game_number_function": database.get_latest_game_number_from_db, # Uses existing function (returns placeholder 0)
+    "update_latest_game_number_function": database.update_latest_game_number_in_db, # Uses existing function
+    "create_acknowledgement": score_parser.create_minute_cryptic_acknowledgement,
+    "create_introduction": score_parser.create_minute_cryptic_introduction,
+    "game_number_key": "game_date"  # Key for the game identifier (ISOs date string)
+    }
 }
-
