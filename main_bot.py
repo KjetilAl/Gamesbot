@@ -90,8 +90,8 @@ async def on_message(message):
                     # --- Check if current identifier is newer BEFORE updating DB ---
                     # (Logic remains the same here)
                     try:
-                                        if game_key == "minute_cryptic":
-                    try: # Inner try for date comparison
+                        if game_key == "minute_cryptic":
+                        try: # Inner try for date comparison
                         current_date_str = str(current_game_identifier)
                         latest_date_str = str(latest_identifier_str)
 
@@ -107,7 +107,7 @@ async def on_message(message):
                         print(f"Error comparing date identifiers in main_bot for {game_key}: {e}")
                         # Decide how to handle error - maybe assume not newer? Or log and skip update?
                         is_newer = False # Safer default than True? Depends on desired behavior.
-                else:
+                    else:
                     # Integer comparison for other games
                     try: # Inner try for integer comparison
                         current_num = int(current_game_identifier)
