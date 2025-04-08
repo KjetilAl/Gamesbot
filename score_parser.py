@@ -246,7 +246,7 @@ def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
     
 def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]:
     """Parse a Minute Cryptic result message."""
-    print(f"Attempting to parse Minute Cryptic content: {content}")
+    print(f"Attempting to parse Minute Cryptic content: {message_content}")
     
     try:
         header_match = MINUTE_CRYPTIC_HEADER_PATTERN.search(message_content)
