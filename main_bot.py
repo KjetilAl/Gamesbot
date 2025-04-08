@@ -91,19 +91,31 @@ async def on_message(message):
                     # (Logic remains the same here)
                     try:
                         if game_key == "minute_cryptic":
-                            # ... (date comparison logic) ...
-                             current_date = date.fromisoformat(str(current_game_identifier))
-                             latest_date = date.fromisoformat(latest_identifier_str)
-                             if current_date > latest_date:
-                                 is_newer = True
-                        else: # Assume integer comparison for others
-                            # ... (integer comparison logic) ...
+                            try:
+                                # For Minute Cryptic, handle date comparisons properly
+                                current_date_str = str(current_game_identifier)
+                                latest_date_str = str(latest_identifier_str)
+        
+                                # Handle the case where latest_identifier_str is '0'
+                                if latest_date_str == '0':
+                                    is_newer = True
+                                else:
+                                    current_date = date.fromisoformat(current_date_str)
+                                    latest_date = date.fromisoformat(latest_date_str)
+                                    is_newer = current_date > latest_date
+                        except (ValueError, TypeError) as e:
+                            print(f"Error comparing identifiers in main_bot before DB update for {game_key}: {e}")
+                            # Default to True to ensure the score is recorded
+                            is_newer = True
+                    else:
+                        # Integer comparison for other games
+                        try:
                             current_num = int(current_game_identifier)
                             latest_num = int(latest_identifier_str)
-                            if current_num > latest_num:
-                                is_newer = True
-                    except (ValueError, TypeError) as e:
-                         print(f"Error comparing identifiers in main_bot before DB update for {game_key}: {e}")
+                            is_newer = current_num > latest_num
+                        except (ValueError, TypeError) as e:
+                            print(f"Error comparing identifiers in main_bot before DB update for {game_key}: {e}")
+                            is_newer = False
 
                     # Update latest identifier in DB only if newer
                     if is_newer:
