@@ -68,32 +68,35 @@ async def on_message(message):
                 await message.channel.send(ack_message)
 
                 # --- Handle Role Assignment ---
-                game_identifier_key = config["game_number_key"] # e.g., "game_number", "puzzle_number", "game_date"
-                current_game_identifier = game_info.get(game_identifier_key) # This is now str (date or number)
-
-                latest_identifier_str = config["get_latest_game_number_function"](game_key) # Returns str
+                game_identifier_key = config["game_number_key"]
+                current_game_identifier = game_info.get(game_identifier_key) # str (date or number)
+                latest_identifier_str = config["get_latest_game_number_function"](game_key) # str
 
                 role_updated = False
-                is_newer = False # Flag to track if we need to update latest identifier
+                is_newer = False
 
                 if current_game_identifier is not None:
-                    # Call the updated role manager, passing the actual identifiers (as strings)
+                    # --- UPDATED CALL: Pass game_key ---
                     role_updated = await role_manager.handle_game_role_assignment(
                         message.guild,
                         message.author,
-                        config, # Pass the specific game's config dict
-                        current_game_identifier, # Pass the actual identifier (string)
-                        latest_identifier_str  # Pass the latest identifier (string)
+                        game_key,  # <<< Pass the game_key from the loop
+                        config,    # Pass the specific game's config dict
+                        current_game_identifier,
+                        latest_identifier_str
                     )
 
                     # --- Check if current identifier is newer BEFORE updating DB ---
+                    # (Logic remains the same here)
                     try:
                         if game_key == "minute_cryptic":
-                            current_date = date.fromisoformat(str(current_game_identifier))
-                            latest_date = date.fromisoformat(latest_identifier_str)
-                            if current_date > latest_date:
-                                is_newer = True
+                            # ... (date comparison logic) ...
+                             current_date = date.fromisoformat(str(current_game_identifier))
+                             latest_date = date.fromisoformat(latest_identifier_str)
+                             if current_date > latest_date:
+                                 is_newer = True
                         else: # Assume integer comparison for others
+                            # ... (integer comparison logic) ...
                             current_num = int(current_game_identifier)
                             latest_num = int(latest_identifier_str)
                             if current_num > latest_num:
@@ -101,20 +104,19 @@ async def on_message(message):
                     except (ValueError, TypeError) as e:
                          print(f"Error comparing identifiers in main_bot before DB update for {game_key}: {e}")
 
-                    # Update latest identifier in DB *only if* the current one is newer
+                    # Update latest identifier in DB only if newer
                     if is_newer:
+                        # ... (DB update logic remains the same) ...
                         print(f"Identifier {current_game_identifier} is newer than {latest_identifier_str} for {game_key}. Updating DB.")
-                        # Pass the current identifier string to the update function
                         await config["update_latest_game_number_function"](game_key, str(current_game_identifier))
-                    #else: # Debug log
-                        #print(f"Identifier {current_game_identifier} is NOT newer than {latest_identifier_str} for {game_key}. DB not updated.")
 
-                    # If role was newly assigned, introduce the player
+                    # Introduce player if role updated
                     if role_updated:
+                        # ... (introduction logic remains the same) ...
                         await role_manager.introduce_player_in_game_channel(
                             message.guild,
                             message.author.display_name,
-                            config,
+                            config, # Pass the specific game's config
                             game_info
                         )
                 # --- End Role Handling ---
