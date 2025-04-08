@@ -135,9 +135,8 @@ async def on_message(message):
             processed = True
             break # Stop checking other games
 
-    if not processed:
-        # If no game score was processed, pass the message to command handlers
-        await bot.process_commands(message)
+        if not processed:
+            await bot.process_commands(message)
         
 async def handle_game_message(message, game_key, game_config):
     """
