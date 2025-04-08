@@ -89,16 +89,6 @@ def initialize_db():
 
         print("Database initialized successfully.")
 
-    except sqlite3.Error as e:
-        print(f"DATABASE INITIALIZATION FAILED: {e}")
-        # Optional: Rollback changes if an error occurred mid-transaction
-        # if conn:
-        #     conn.rollback()
-    finally:
-        # --- Ensure connection is closed ONLY at the very end ---
-        if conn:
-            conn.close()
-
     # Framed Table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS framed_scores (
