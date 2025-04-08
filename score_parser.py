@@ -1,5 +1,6 @@
 import re
 from typing import Dict, List, Tuple, Optional, Any, Union
+from datetime import datetime, timedelta, date
 
 # Regular expressions for game patterns
 WORDLE_PATTERN = re.compile(r'Wordle\s+(?:#?\s*)(\d+(?:,\d+)?)\s+([0-6X])/6(\*?)', re.IGNORECASE)
