@@ -9,7 +9,6 @@ def initialize_db():
     try:
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-
         # --- Create All Tables ---
         # Wordle
         cursor.execute("""
@@ -69,11 +68,22 @@ def initialize_db():
                 latest_number TEXT -- Storing as TEXT for dates/numbers
             )
         """)
-
+        
+        # Table for tracking user roles if needed
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_roles (
+                user_id INTEGER,
+                role_name TEXT,
+                game_number TEXT,
+                expires_at TEXT,
+                PRIMARY KEY (user_id, role_name)
+            )
+        """)
+        
         # Commit all schema changes together
         conn.commit()
         print("DB: All tables created or verified.")
-
+        
         # --- Initialize latest_game_numbers Data ---
         initial_games = [
             ('Wordle', '0'), ('Connections', '0'), ('Framed', '0'),
@@ -86,7 +96,7 @@ def initialize_db():
             print("DB: Initial latest game numbers inserted or verified.")
         except sqlite3.Error as e:
             print(f"Database error during initial game number insertion: {e}")
-
+            
         print("Database initialized successfully.")
         
     except sqlite3.Error as e:
@@ -102,65 +112,6 @@ def initialize_db():
             conn.close() # This is where the database connection is closed
             print("DB: Connection closed.")
 
-    # Framed Table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS framed_scores (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            display_name TEXT,
-            game_number INTEGER,
-            attempts INTEGER,
-            total_score INTEGER,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    # Gisnep Table (Stores time instead of points)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS gisnep_scores (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            display_name TEXT,
-            game_number INTEGER,
-            completion_time INTEGER, -- Time in seconds
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    # Bandle Table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS bandle_scores (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            display_name TEXT,
-            game_number INTEGER,
-            attempts INTEGER,
-            total_score INTEGER,
-            bonus_completed INTEGER,
-            bonus_total INTEGER,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-        # New table for Minute Cryptic
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS minute_cryptic_scores (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            display_name TEXT,
-            game_date TEXT, -- Store as ISO format string 'YYYY-MM-DD'
-            clue TEXT,
-            word_length INTEGER,
-            grid TEXT,
-            score_description TEXT,
-            score_value INTEGER, -- Numerical score (0=solved, >0 = over par, -1=unknown)
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    conn.commit()
-    conn.close()
-
 def save_wordle_score(user_id, display_name, game_number, attempts, skill=None, luck=None, hard_mode=False):
     """Save a new Wordle score with optional skill, luck, and hard mode flag."""
     if attempts == 1:
@@ -175,9 +126,7 @@ def save_wordle_score(user_id, display_name, game_number, attempts, skill=None, 
         attempt_score = 20
     else:
         attempt_score = 0
-
     total_score = (skill or 0) + attempt_score - (luck or 0)
-
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
@@ -210,25 +159,6 @@ def save_connections_score(user_id, display_name, puzzle_number, total_score, gu
         INSERT INTO connections_scores (user_id, display_name, puzzle_number, total_score, guesses, solved_purple_first, solved_blue_first)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (user_id, display_name, puzzle_number, total_score, guesses, solved_purple_first, solved_blue_first))
-    conn.commit()
-    conn.close()
-
-def create_connections_scores_table():
-    """Create the Connections scores table if it doesn't exist."""
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS connections_scores (
-            user_id INTEGER,
-            display_name TEXT,
-            puzzle_number INTEGER,
-            total_score INTEGER,
-            guesses INTEGER,
-            solved_purple_first BOOLEAN,
-            solved_blue_first BOOLEAN,
-            PRIMARY KEY (user_id, puzzle_number)
-        )
-    """)
     conn.commit()
     conn.close()
 
@@ -376,16 +306,13 @@ def get_minute_cryptic_leaderboard(period: str = 'weekly') -> list[tuple[str, in
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     leaderboard = []
-
     if period == 'weekly':
         days = 7
     elif period == 'monthly':
         days = 30
     else: # Default to weekly if period is invalid
         days = 7
-
     start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
-
     try:
         # Query counts puzzles solved (score_value = 0) within the time period
         cursor.execute("""
@@ -402,7 +329,6 @@ def get_minute_cryptic_leaderboard(period: str = 'weekly') -> list[tuple[str, in
         print(f"Database error in get_minute_cryptic_leaderboard: {e}")
     finally:
         conn.close()
-
     # Return list of (display_name, solved_count)
     return leaderboard
 
@@ -410,9 +336,7 @@ def get_weekly_scores():
     """Fetch total scores for all games for the past week."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-
     one_week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
-
     try:
         # Wordle
         cursor.execute("""
@@ -423,7 +347,6 @@ def get_weekly_scores():
             ORDER BY total_score DESC
         """, (one_week_ago,))
         wordle_scores = cursor.fetchall()
-
         # Connections
         cursor.execute("""
             SELECT display_name, SUM(total_score) AS total_score
@@ -433,7 +356,6 @@ def get_weekly_scores():
             ORDER BY total_score DESC
         """, (one_week_ago,))
         connections_scores = cursor.fetchall()
-
         # Framed
         cursor.execute("""
             SELECT display_name, SUM(total_score) AS total_score
@@ -443,7 +365,6 @@ def get_weekly_scores():
             ORDER BY total_score DESC
         """, (one_week_ago,))
         framed_scores = cursor.fetchall()
-
         # Gisnep (rank by shortest average time)
         cursor.execute("""
             SELECT display_name, AVG(completion_time) AS avg_time
@@ -453,7 +374,6 @@ def get_weekly_scores():
             ORDER BY avg_time ASC
         """, (one_week_ago,))
         gisnep_scores = cursor.fetchall()
-
         # Bandle
         cursor.execute("""
             SELECT display_name, SUM(total_score) AS total_score
@@ -463,9 +383,7 @@ def get_weekly_scores():
             ORDER BY total_score DESC
         """, (one_week_ago,))
         bandle_scores = cursor.fetchall()
-
         conn.close()
-
         return {
             "Wordle": wordle_scores,
             "Connections": connections_scores,
@@ -473,7 +391,6 @@ def get_weekly_scores():
             "Gisnep": gisnep_scores,
             "Bandle": bandle_scores
         }
-
     except sqlite3.Error as e:
         print(f"Database error: {e}")
         conn.close()
@@ -483,9 +400,7 @@ def get_monthly_scores():
     """Fetch total scores for all games for the past month."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-
     first_day_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
-
     try:
         # Wordle
         cursor.execute("""
@@ -496,7 +411,6 @@ def get_monthly_scores():
             ORDER BY total_score DESC
         """, (first_day_of_month,))
         wordle_scores = cursor.fetchall()
-
         # Connections
         cursor.execute("""
             SELECT display_name, SUM(total_score) AS total_score
@@ -506,7 +420,6 @@ def get_monthly_scores():
             ORDER BY total_score DESC
         """, (first_day_of_month,))
         connections_scores = cursor.fetchall()
-
         # Framed
         cursor.execute("""
             SELECT display_name, SUM(total_score) AS total_score
@@ -516,7 +429,6 @@ def get_monthly_scores():
             ORDER BY total_score DESC
         """, (first_day_of_month,))
         framed_scores = cursor.fetchall()
-
         # Gisnep (rank by shortest average time)
         cursor.execute("""
             SELECT display_name, AVG(completion_time) AS avg_time
@@ -526,7 +438,6 @@ def get_monthly_scores():
             ORDER BY avg_time ASC
         """, (first_day_of_month,))
         gisnep_scores = cursor.fetchall()
-
         # Bandle
         cursor.execute("""
             SELECT display_name, SUM(total_score) AS total_score
@@ -536,9 +447,7 @@ def get_monthly_scores():
             ORDER BY total_score DESC
         """, (first_day_of_month,))
         bandle_scores = cursor.fetchall()
-
         conn.close()
-
         return {
             "Wordle": wordle_scores,
             "Connections": connections_scores,
@@ -546,16 +455,15 @@ def get_monthly_scores():
             "Gisnep": gisnep_scores,
             "Bandle": bandle_scores
         }
-
     except sqlite3.Error as e:
         print(f"Database error: {e}")
         conn.close()
         return {}
 
-# Database functions for tracking roles (add these to your database.py file)
+# Database functions for tracking roles
 def save_user_role(user_id, role_name, game_number, expires_at):
     """Save information about a role granted to a user."""
-    conn = get_db_connection()
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
         INSERT OR REPLACE INTO user_roles 
@@ -567,8 +475,8 @@ def save_user_role(user_id, role_name, game_number, expires_at):
 
 def get_expired_roles():
     """Get all expired roles that need to be removed."""
-    now = datetime.datetime.now(cet_timezone).strftime("%Y-%m-%d %H:%M:%S")
-    conn = get_db_connection()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
         SELECT user_id, role_name FROM user_roles
@@ -580,8 +488,8 @@ def get_expired_roles():
 
 def delete_expired_roles():
     """Delete records of expired roles from the database."""
-    now = datetime.datetime.now(cet_timezone).strftime("%Y-%m-%d %H:%M:%S")
-    conn = get_db_connection()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
         DELETE FROM user_roles WHERE expires_at < ?
@@ -662,7 +570,6 @@ def get_latest_game_number_from_db(game_name: str) -> str:
              latest_identifier = '0'
     finally:
         conn.close()
-
     return latest_identifier
 
 def update_latest_game_number_in_db(game_name: str, latest_identifier: str):
