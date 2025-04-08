@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 DB_NAME = "wordle.db"
 
@@ -48,7 +48,7 @@ def initialize_db():
     """)
 
     # Initialize with 0 if empty
-    games = ["Wordle", "Connections", "Framed", "Gisnep", "Bandle"]
+    games = ["Wordle", "Connections", "Framed", "Gisnep", "Bandle", "Minute Cryptic"]
     for game in games:
         cursor.execute("INSERT OR IGNORE INTO latest_game_numbers (game_name, latest_number) VALUES (?, 0)", (game,))
 
@@ -88,6 +88,22 @@ def initialize_db():
             total_score INTEGER,
             bonus_completed INTEGER,
             bonus_total INTEGER,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+        # New table for Minute Cryptic
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS minute_cryptic_scores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            display_name TEXT,
+            game_date TEXT, -- Store as ISO format string 'YYYY-MM-DD'
+            clue TEXT,
+            word_length INTEGER,
+            grid TEXT,
+            score_description TEXT,
+            score_value INTEGER, -- Numerical score (0=solved, >0 = over par, -1=unknown)
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -199,6 +215,33 @@ def save_bandle_score(user_id, display_name, game_number, attempts, total_score,
     conn.commit()
     conn.close()
 
+def save_minute_cryptic_score(user_id: int, display_name: str, game_info: Dict[str, Any]):
+    """Saves a Minute Cryptic score to the database."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO minute_cryptic_scores (
+                user_id, display_name, game_date, clue, word_length,
+                grid, score_description, score_value
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            user_id,
+            display_name,
+            game_info.get("game_date"),
+            game_info.get("clue"),
+            game_info.get("word_length"),
+            game_info.get("grid"),
+            game_info.get("score_description"),
+            game_info.get("score_value")
+        ))
+        conn.commit()
+        print(f"DB: Saved Minute Cryptic score for {display_name} on {game_info.get('game_date')}")
+    except sqlite3.Error as e:
+        print(f"Database error in save_minute_cryptic_score: {e}")
+    finally:
+        conn.close()
+
 def get_wordle_leaderboard():
     """Fetch the top players for Wordle leaderboard."""
     conn = sqlite3.connect(DB_NAME)
@@ -272,6 +315,45 @@ def get_bandle_leaderboard():
     """)
     leaderboard = cursor.fetchall()
     conn.close()
+    return leaderboard
+
+def get_minute_cryptic_leaderboard(period: str = 'weekly') -> List[Tuple[str, int]]:
+    """
+    Fetches the Minute Cryptic leaderboard data.
+    Currently counts number of puzzles solved (score_value = 0) in the given period.
+    'weekly' = last 7 days, 'monthly' = last 30 days.
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    leaderboard = []
+
+    if period == 'weekly':
+        days = 7
+    elif period == 'monthly':
+        days = 30
+    else: # Default to weekly if period is invalid
+        days = 7
+
+    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
+
+    try:
+        # Query counts puzzles solved (score_value = 0) within the time period
+        cursor.execute("""
+            SELECT display_name, COUNT(id) as solved_count
+            FROM minute_cryptic_scores
+            WHERE score_value = 0 AND timestamp >= ?
+            GROUP BY user_id, display_name
+            ORDER BY solved_count DESC
+            LIMIT 10
+        """, (start_date,))
+        leaderboard = cursor.fetchall()
+        print(f"DB: Fetched Minute Cryptic {period} leaderboard ({len(leaderboard)} players).")
+    except sqlite3.Error as e:
+        print(f"Database error in get_minute_cryptic_leaderboard: {e}")
+    finally:
+        conn.close()
+
+    # Return list of (display_name, solved_count)
     return leaderboard
 
 def get_weekly_scores():
