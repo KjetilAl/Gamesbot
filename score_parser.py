@@ -11,10 +11,9 @@ GISNEP_PATTERN = re.compile(r'#Gisnep.*in (\d{1,2}:\d{2})', re.IGNORECASE)
 GISNEP_NUMBER_PATTERN = re.compile(r'No\. (\d+)', re.IGNORECASE)
 BANDLE_PATTERN = re.compile(r"Bandle\s+#(\d+)\s+([xX]|\d+)/(\d+)", re.IGNORECASE)
 BONUS_PATTERN = re.compile(r'Bonus Rounds: (\d+)/(\d+)', re.IGNORECASE)
-MINUTE_CRYPTIC_HEADER_PATTERN = re.compile(r'Minute Cryptic - (\d{1,2} \w+ \d{4})', re.IGNORECASE)
-MINUTE_CRYPTIC_CLUE_PATTERN = re.compile(r'"(.*)" \((\d+)\)', re.IGNORECASE) # Extracts clue and word length
-MINUTE_CRYPTIC_GRID_PATTERN = re.compile(r'([⚪️🟡🟣]+)', re.IGNORECASE) # Simplified grid capture
-MINUTE_CRYPTIC_SCORE_PATTERN = re.compile(r'I scored: (.*)', re.IGNORECASE) # Captures the score description
+MINUTE_CRYPTIC_HEADER_PATTERN = re.compile(r"Minute Cryptic - (\d+ \w+ \d+)")
+MINUTE_CRYPTIC_CLUE_PATTERN = re.compile(r'"(.*?)" \((\d+)\)')
+MINUTE_CRYPTIC_SCORE_PATTERN = re.compile(r"I scored: (.*)")
 
 def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
     wordle_match = WORDLE_PATTERN.search(message_content)
@@ -251,10 +250,10 @@ def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]
     try:
         header_match = MINUTE_CRYPTIC_HEADER_PATTERN.search(message_content)
         clue_match = MINUTE_CRYPTIC_CLUE_PATTERN.search(message_content)
-        grid_match = MINUTE_CRYPTIC_GRID_PATTERN.search(message_content)
         score_match = MINUTE_CRYPTIC_SCORE_PATTERN.search(message_content)
 
-        if not (header_match and clue_match and grid_match and score_match):
+        if not (header_match and clue_match and score_match):
+            print("Could not match all basic patterns.")
             return None
 
         # Extract Date
@@ -263,29 +262,42 @@ def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]
             # Attempt to parse the date to validate and standardize
             game_date = datetime.strptime(date_str, '%d %B %Y').date()
         except ValueError:
+            print(f"Invalid date format: {date_str}")
             return None # Invalid date format
     
         # Extract other info
-        clue = clue_match.group(1)
+        clue_text = clue_match.group(1).strip()
         word_length = int(clue_match.group(2))
-        grid = grid_match.group(1) # This captures the sequence of circles
         score_desc = score_match.group(1).strip()
 
         # Interpret score description into a numerical value
-        # Lower is better. Solved = 0, 1 over = 1, etc.
-        # This logic might need refinement based on actual possible scores
         score_value = -1 # Default/unknown
+        solved = False
         if "solved" in score_desc.lower():
             score_value = 0
+            solved = True
         elif "over par" in score_desc.lower():
             parts = score_desc.split()
             try:
                 score_value = int(parts[0])
             except (ValueError, IndexError):
                 score_value = -1 # Failed to parse number
+        elif score_desc.lower() == "par":
+            score_value = 0
+            solved = True # Assuming par means solved
 
+        game_info = {
+            "game_date": game_date.isoformat(), # Store as ISO 8601 string (YYYY-MM-DD)
+            "clue": clue_text,
+            "word_length": word_length,
+            "grid": None, # We don't have grid info in this format
+            "score_description": score_desc,
+            "score_value": score_value, # Numerical score for ranking
+            "solved": solved
+        }
         print(f"Parsed Minute Cryptic data: {game_info}")
         return game_info
+
     except Exception as e:
         print(f"Error parsing Minute Cryptic score: {e}")
         import traceback
@@ -301,7 +313,6 @@ def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]
         "score_value": score_value, # Numerical score for ranking
         "solved": score_value == 0
     }
-
 
 def is_bandle_message(message_content: str) -> bool:
     """Checks if a message contains a Bandle score."""
