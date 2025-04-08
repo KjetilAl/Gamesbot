@@ -107,15 +107,15 @@ async def on_message(message):
                                 print(f"Error comparing identifiers in main_bot before DB update for {game_key}: {e}")
                                 # Default to True to ensure the score is recorded
                                 is_newer = True
-                    else:
-                        # Integer comparison for other games
-                        try:
-                            current_num = int(current_game_identifier)
-                            latest_num = int(latest_identifier_str)
-                            is_newer = current_num > latest_num
-                        except (ValueError, TypeError) as e:
-                            print(f"Error comparing identifiers in main_bot before DB update for {game_key}: {e}")
-                            is_newer = False
+                        else:
+                            # Integer comparison for other games
+                            try:
+                                current_num = int(current_game_identifier)
+                                latest_num = int(latest_identifier_str)
+                                is_newer = current_num > latest_num
+                            except (ValueError, TypeError) as e:
+                                print(f"Error comparing identifiers in main_bot before DB update for {game_key}: {e}")
+                                is_newer = False
 
                     # Update latest identifier in DB only if newer
                     if is_newer:
