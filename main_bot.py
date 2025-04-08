@@ -121,14 +121,14 @@ async def on_message(message):
                 # Create acknowledgement and handle roles
                 response = config["create_acknowledgement"](message.author.display_name, game_info)
                 
-            # Get the latest game number (date) from the database
-            game_number_key = config["game_number_key"]
-            latest_game_date_str = config["get_latest_game_number_function"](game_key)
-            current_game_date_str = game_info[game_number_key]
+                # Get the latest game number (date) from the database
+                game_number_key = config["game_number_key"]
+                latest_game_date_str = config["get_latest_game_number_function"](game_key)
+                current_game_date_str = game_info[game_number_key]
 
-            if current_game_date_str:
-                if latest_game_date_str is None or current_game_date_str > latest_game_date_str:
-                    config["update_latest_game_number_function"](game_key, current_game_date_str)
+                if current_game_date_str:
+                    if latest_game_date_str is None or current_game_date_str > latest_game_date_str:
+                        config["update_latest_game_number_function"](game_key, current_game_date_str)
 
                     # Handle role assignment
                     success = await role_manager.handle_game_role_assignment(
