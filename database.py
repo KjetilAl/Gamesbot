@@ -31,7 +31,7 @@ def initialize_db():
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS minute_cryptic_scores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
-                game_date TEXT, clue TEXT, word_length INTEGER, grid TEXT,
+                game_date TEXT, clue TEXT, word_length INTEGER,
                 score_description TEXT, score_value INTEGER,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -195,7 +195,7 @@ def save_bandle_score(user_id, display_name, game_number, attempts, total_score,
     conn.commit()
     conn.close()
 
-def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, clue: str, word_length: int, grid: Optional[str], score_description: str):
+def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, clue: str, word_length: int, score_description: str):
     """Saves a Minute Cryptic score to the database."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -203,15 +203,14 @@ def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, c
         cursor.execute("""
             INSERT INTO minute_cryptic_scores (
                 user_id, display_name, game_date, clue, word_length,
-                grid, score_description
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                score_description
+            ) VALUES (?, ?, ?, ?, ?, ?)
         """, (
             user_id,
             display_name,
             game_date,
             clue,
             word_length,
-            grid,
             score_description
         ))
         conn.commit()
@@ -220,7 +219,7 @@ def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, c
         print(f"Database error in save_minute_cryptic_score: {e}")
     finally:
         conn.close()
-
+        
 def get_wordle_leaderboard():
     """Fetch the top players for Wordle leaderboard."""
     conn = sqlite3.connect(DB_NAME)
