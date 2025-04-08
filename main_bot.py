@@ -343,4 +343,19 @@ async def post_scores(period: str):
             except Exception as e:
                 print(f"Error posting {period} {game_name} leaderboard: {e}")
         else:
-            print(f"No valid scores formatted for {period} {game_name} leaderbo
+            print(f"No valid scores formatted for {period} {game_name} leaderboard.")
+
+@tasks.loop(time=datetime.time(hour=23, minute=59, second=50, tzinfo=CET_TIMEZONE))
+async def check_weekly_scores():
+    """Post weekly leaderboards on Sunday."""
+    if datetime.datetime.now(CET_TIMEZONE).weekday() == 6:  # Sunday
+        await post_scores("weekly")
+
+@tasks.loop(time=datetime.time(hour=0, minute=1, second=0, tzinfo=CET_TIMEZONE))
+async def check_monthly_scores():
+    """Post monthly leaderboards on the first of the month."""
+    if datetime.datetime.now(CET_TIMEZONE).day == 1:
+        await post_scores("monthly")
+
+if __name__ == "__main__":
+    bot.run(TOKEN)
