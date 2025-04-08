@@ -39,18 +39,34 @@ def initialize_db():
         )
     """)
 
-    # New generic table for tracking latest game numbers
+    # Generic table for tracking latest game numbers/dates - CHANGE latest_number to TEXT
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS latest_game_numbers (
             game_name TEXT PRIMARY KEY,
-            latest_number INTEGER
+            latest_number TEXT -- Changed from INTEGER to TEXT
         )
     """)
+    conn.commit() # Commit schema change before inserting data
 
-    # Initialize with 0 if empty
-    games = ["Wordle", "Connections", "Framed", "Gisnep", "Bandle", "Minute Cryptic"]
-    for game in games:
-        cursor.execute("INSERT OR IGNORE INTO latest_game_numbers (game_name, latest_number) VALUES (?, 0)", (game,))
+    # Initialize latest numbers if not present - use string '0' or default date
+    initial_games = [
+        ('Wordle', '0'),
+        ('Connections', '0'),
+        ('Gisnep', '0'),
+        ('Bandle', '0'),
+        ('Minute Cryptic', '2000-01-01') # Use an old ISO date string as default
+    ]
+    # Use INSERT OR IGNORE to safely add initial values without overwriting existing ones
+    try:
+        cursor.executemany("INSERT OR IGNORE INTO latest_game_numbers (game_name, latest_number) VALUES (?, ?)", initial_games)
+    except sqlite3.IntegrityError:
+        print("DB: Initial game numbers likely already exist.") # Handle potential race condition or re-run
+    except sqlite3.Error as e:
+        print(f"Database error during initial game number insertion: {e}")
+
+    conn.commit()
+    conn.close()
+    print("Database initialized successfully (latest_number is TEXT).")
 
     # Framed Table
     cursor.execute("""
@@ -584,21 +600,46 @@ def get_overall_recent_connections_puzzle_number(limit=5):
     finally:
         conn.close()
         
-def get_latest_game_number_from_db(game_name):
-    """Fetches the latest game number from the database."""
+def get_latest_game_number_from_db(game_name: str) -> str:
+    """Fetches the latest game identifier (number or date string) from the database."""
     conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row # Easier access by column name
     cursor = conn.cursor()
-    cursor.execute("SELECT latest_number FROM latest_game_numbers WHERE game_name = ?", (game_name,))
-    result = cursor.fetchone()
-    conn.close()
-    return result[0] if result else 0
-    print(f"DB: Retrieved latest_number for {game_name} = {latest_number}")  # DEBUGGING
+    latest_identifier = None
+    try:
+        cursor.execute("SELECT latest_number FROM latest_game_numbers WHERE game_name = ?", (game_name,))
+        result = cursor.fetchone()
+        if result:
+            latest_identifier = result['latest_number']
+            print(f"DB: Retrieved latest_identifier for {game_name} = {latest_identifier}")
+        else:
+            # Fallback if game somehow isn't in the table (shouldn't happen after init)
+            print(f"DB WARNING: Game '{game_name}' not found in latest_game_numbers. Returning default.")
+            if game_name == 'Minute Cryptic':
+                latest_identifier = '2000-01-01'
+            else:
+                latest_identifier = '0'
+    except sqlite3.Error as e:
+        print(f"Database error in get_latest_game_number_from_db for {game_name}: {e}")
+        # Fallback on error
+        if game_name == 'Minute Cryptic':
+             latest_identifier = '2000-01-01'
+        else:
+             latest_identifier = '0'
+    finally:
+        conn.close()
 
-def update_latest_game_number_in_db(game_name, latest_number):
-    """Updates the latest game number in the database."""
+    return latest_identifier
+
+def update_latest_game_number_in_db(game_name: str, latest_identifier: str):
+    """Updates the latest game identifier (number or date string) in the database."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("INSERT OR REPLACE INTO latest_game_numbers (game_name, latest_number) VALUES (?, ?)", (game_name, latest_number,))
-    conn.commit()
-    conn.close()
-    print(f"DB: Updated latest_number for {game_name} to {latest_number}")  # DEBUGGING
+    try:
+        cursor.execute("INSERT OR REPLACE INTO latest_game_numbers (game_name, latest_number) VALUES (?, ?)",
+                       (game_name, str(latest_identifier))) # Ensure it's stored as string
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"Database error in update_latest_game_number_in_db for {game_name}: {e}")
+    finally:
+        conn.close()
