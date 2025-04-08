@@ -57,8 +57,49 @@ async def on_message(message):
             game_info = config["parse_function"](content)
             if game_info:
                 print(f"Detected {config['name']} score from {message.author.display_name}") # Debug log
-                # Save the score
-                config["save_score_function"](message.author.id, message.author.display_name, game_info)
+                    # Save the score based on the game type
+                    if game_key == "wordle":
+                        game_config["save_score_function"](
+                        user_id, display_name, 
+                        game_info["game_number"],
+                        game_info["attempts"], 
+                        game_info.get("skill"),  # Use .get() to handle None values
+                        game_info.get("luck"),
+                        game_info.get("hard_mode", False)
+                    )
+    
+    elif game_key == "connections":
+        game_config["save_score_function"](user_id, display_name, game_info["puzzle_number"],
+                                           game_info["total_score"], game_info["num_guesses"],
+                                           game_info["solved_purple_first"], game_info["solved_blue_first"])
+
+    elif game_key == "framed":
+        game_config["save_score_function"](user_id, display_name, game_info["game_number"],
+                                           game_info["attempts"], game_info["total_score"])
+
+    elif game_key == "gisnep":
+        game_config["save_score_function"](user_id, display_name, game_info["game_number"],
+                                           game_info["completion_time"])
+
+    elif game_key == "bandle":
+        game_config["save_score_function"](user_id, display_name, game_info["game_number"],
+                                           game_info["attempts"], game_info["total_score"],
+                                           game_info["bonus_completed"], game_info["bonus_total"])
+
+    elif game_key == "minute_cryptic":
+            required_keys = ["game_date", "clue", "word_length", "grid", "score_description"]
+            if all(key in game_info for key in required_keys):
+                 try:
+                     config["save_score_function"](
+                        message.author.id,
+                        message.author.display_name,
+                        game_info["game_date"],
+                        game_info["clue"],
+                        game_info["word_length"],
+                        game_info["grid"],
+                        game_info["score_description"]
+                    )
+
                 # Send acknowledgement
                 ack_message = config["create_acknowledgement"](message.author.display_name, game_info)
                 await message.channel.send(ack_message)
