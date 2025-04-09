@@ -127,8 +127,16 @@ async def on_message(message):
                 current_game_date_str = game_info[game_number_key]
 
                 if current_game_date_str:
-                    if latest_game_date_str is None or current_game_date_str > latest_game_date_str:
-                        config["update_latest_game_number_function"](game_key, current_game_date_str)
+                    # For Minute Cryptic (dates)
+                    if game_key == "minute_cryptic":
+                        if latest_game_date_str is None or current_game_date_str > latest_game_date_str:
+                            config["update_latest_game_number_function"](game_key, current_game_date_str)
+                    # For all other games (numbers)
+                    else:
+                        current_num = int(current_game_date_str)
+                        latest_num = int(latest_game_date_str) if latest_game_date_str is not None else 0
+                        if latest_game_date_str is None or current_num > latest_num:
+                            config["update_latest_game_number_function"](game_key, str(current_num))
 
                     # Handle role assignment
                     success = await role_manager.handle_game_role_assignment(
