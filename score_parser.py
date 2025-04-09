@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, date
 # Regular expressions for game patterns
 WORDLE_PATTERN = re.compile(r'Wordle\s+(?:#?\s*)(\d+(?:,\d+)?)\s+([0-6X])/6(\*?)', re.IGNORECASE)
 SKILL_LUCK_PATTERN = re.compile(r'Skill\s+(\d+)/99\s+Luck\s+(\d+)/99', re.MULTILINE | re.IGNORECASE)
-CONNECTIONS_PATTERN = re.compile(r'Connections\\s*Puzzle #(\\d+)', re.IGNORECASE)
+CONNECTIONS_PATTERN = re.compile(r'Connections\s*Puzzle #(\d+)', re.IGNORECASE)
 FRAMED_PATTERN = re.compile(r'Framed\s+#?(\d+)', re.IGNORECASE)
 GISNEP_PATTERN = re.compile(r'#Gisnep.*in (\d{1,2}:\d{2})', re.IGNORECASE)
 GISNEP_NUMBER_PATTERN = re.compile(r'No\. (\d+)', re.IGNORECASE)
