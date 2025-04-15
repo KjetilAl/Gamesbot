@@ -147,6 +147,13 @@ async def on_message(message):
                         current_game_date_str,
                         latest_game_date_str
                     )
+                    if success:
+                        await role_manager.introduce_player_in_game_channel(
+                            message.guild,
+                            message.author.display_name,
+                            config,
+                            game_info
+                        )
                     
                 # Send the response message
                 await message.channel.send(response)
