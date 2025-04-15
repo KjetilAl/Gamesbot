@@ -246,7 +246,7 @@ def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
 def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]:
     """Parse a Minute Cryptic result message."""
     print(f"Attempting to parse Minute Cryptic content: {message_content}")
-    
+
     try:
         header_match = MINUTE_CRYPTIC_HEADER_PATTERN.search(message_content)
         clue_match = MINUTE_CRYPTIC_CLUE_PATTERN.search(message_content)
@@ -264,34 +264,39 @@ def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]
         except ValueError:
             print(f"Invalid date format: {date_str}")
             return None # Invalid date format
-    
+
         # Extract other info
         clue_text = clue_match.group(1).strip()
         word_length = int(clue_match.group(2))
         score_desc = score_match.group(1).strip()
 
         # Interpret score description into a numerical value
-        score_value = -1 # Default/unknown
+        score_value = 0 # Default to 0 for par or solved
         solved = False
-        if "solved" in score_desc.lower():
+        if "solved" in score_desc.lower() or score_desc.lower() == "par":
             score_value = 0
             solved = True
         elif "over par" in score_desc.lower():
             parts = score_desc.split()
             try:
-                score_value = int(parts[0])
+                number = int(parts[0])
+                score_value = -number
             except (ValueError, IndexError):
-                score_value = -1 # Failed to parse number
-        elif score_desc.lower() == "par":
-            score_value = 0
-            solved = True # Assuming par means solved
+                score_value = -1 # Failed to parse number, should investigate
+        elif "below par" in score_desc.lower():
+            parts = score_desc.split()
+            try:
+                number = int(parts[0])
+                score_value = number
+            except (ValueError, IndexError):
+                score_value = -1 # Failed to parse number, should investigate
 
         game_info = {
             "game_date": game_date.isoformat(), # Store as ISO 8601 string (YYYY-MM-DD)
             "clue": clue_text,
             "word_length": word_length,
             "score_description": score_desc,
-            "score_value": score_value, # Numerical score for ranking
+            "score_value": score_value, # Numerical score based on the new logic
             "solved": solved
         }
         print(f"Parsed Minute Cryptic data: {game_info}")
@@ -302,16 +307,6 @@ def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]
         import traceback
         traceback.print_exc()
         return None
-
-    return {
-        "game_date": game_date.isoformat(), # Store as ISO string YYYY-MM-DD
-        "clue": clue,
-        "word_length": word_length,
-        "grid": grid,
-        "score_description": score_desc,
-        "score_value": score_value, # Numerical score for ranking
-        "solved": score_value == 0
-    }
 
 def is_bandle_message(message_content: str) -> bool:
     """Checks if a message contains a Bandle score."""
