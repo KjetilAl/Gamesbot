@@ -341,13 +341,7 @@ def is_minute_cryptic_message(message_content: str) -> bool:
            MINUTE_CRYPTIC_SCORE_PATTERN.search(message_content) is not None
     
 def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create acknowledgement message for Wordle scores."""
-    game_number = game_info.get("game_number", "?")
-    hard_mode = game_info.get("hard_mode", False)
-
-    # Add hard mode indicator
-    hard_mode_text = " (Hard Mode)" if hard_mode else ""
-    return f"📊 {display_name}'s Wordle {game_number}{hard_mode_text} recorded!\n"
+    return "🤖"
   
 def create_wordle_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create a compact acknowledgement message for Wordle scores."""
@@ -374,9 +368,7 @@ def create_wordle_introduction(display_name: str, game_info: Dict[str, Any]) -> 
     return message
 
 def create_connections_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create acknowledgement message for Connections scores."""
-    puzzle_number = game_info.get("puzzle_number", "?")
-    return f"🟪 {display_name}'s Connections Puzzle #{puzzle_number} recorded!"
+    return "🤖"
 
 def create_connections_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create a compact acknowledgement message for Connections scores."""
@@ -397,12 +389,7 @@ def create_connections_introduction(display_name: str, game_info: Dict[str, Any]
     return message
 
 def create_framed_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create acknowledgement message for Framed scores."""
-    game_number = game_info.get("game_number", "?")
-    attempts = game_info.get("attempts", "?")
-    total_score = game_info.get("total_score", "?")
-
-    return f"🎥 @{display_name} just posted a Framed score!⁠"
+    return "🤖"
 
 def create_framed_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create introduction message for Framed players."""
@@ -416,11 +403,7 @@ def create_framed_introduction(display_name: str, game_info: Dict[str, Any]) -> 
         return f"🎥 **{display_name}** just played Framed #{game_number} but couldn't figure it out!"
 
 def create_gisnep_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create acknowledgement message for Gisnep scores."""
-    game_number = game_info.get("game_number", "?")
-    completion_time = game_info.get("completion_time", "?")
-
-    return f"🎬 @{display_name} just posted a Gisnep score!"
+    return "🤖"
 
 def create_gisnep_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create introduction message for Gisnep players."""
@@ -430,16 +413,7 @@ def create_gisnep_introduction(display_name: str, game_info: Dict[str, Any]) -> 
     return f"🎬 **{display_name}** just completed Gisnep #{game_number} in {completion_time} seconds!"
 
 def create_bandle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create acknowledgement message for Bandle scores."""
-    game_number = game_info.get("game_number", "?")
-    attempts = game_info.get("attempts", "?")
-    total_score = game_info.get("total_score", "?")
-    bonus_completed = game_info.get("bonus_completed", "?")
-    bonus_total = game_info.get("bonus_total", "?")
-
-    message = f"🎵 @{display_name} just posted a Bandle score!⁠"
-
-    return message
+    return "🤖"
 
 def create_bandle_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create introduction message for Bandle players."""
@@ -459,11 +433,7 @@ def create_bandle_introduction(display_name: str, game_info: Dict[str, Any]) -> 
     return message
 
 def create_minute_cryptic_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create acknowledgement message for Minute Cryptic scores."""
-    game_date = game_info.get("game_date", "?")
-    score_desc = game_info.get("score_description", "score recorded")
-    # Format date back for display if needed, or keep as ISO
-    return f"📝 {display_name}'s Minute Cryptic for {game_date} score recorded: {score_desc}."
+    return "🤖"
     
 def create_minute_cryptic_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
     """Create introduction message for Minute Cryptic players."""
