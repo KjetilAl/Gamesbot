@@ -155,8 +155,8 @@ async def on_message(message):
                             game_info
                         )
                     
-                # Send the response message
-                await message.channel.send(response)
+                # Replace message sending with emoji reaction
+                await message.add_reaction("🤖")
                 
             except Exception as e:
                 print(f"Error processing {config['name']} score: {e}")
