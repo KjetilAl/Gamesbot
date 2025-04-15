@@ -147,16 +147,6 @@ async def on_message(message):
                         current_game_date_str,
                         latest_game_date_str
                     )
-
-                    if success:
-                        chat_channel_name = config["chat_channel_name"]
-                        response += f"\n\n{message.author.mention} You now have access to the {chat_channel_name} channel!"
-                        await role_manager.introduce_player_in_game_channel(
-                            message.guild,
-                            message.author.display_name,
-                            config,
-                            game_info
-                        )
                     
                 # Send the response message
                 await message.channel.send(response)
