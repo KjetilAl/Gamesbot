@@ -61,37 +61,37 @@ def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
 
 def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
     """
-    Extract puzzle number and all guesses from a Connections result.
-    Args:
-        message_content: The content of the message to parse
-
-    Returns:
-        Dictionary with puzzle number and guesses or None if not a valid Connections result
+    Extract puzzle number and all guesses from a Connections result (handles older formats).
     """
     lines = message_content.split("\n")
 
-    if not (lines[0].strip() == "Connections" and "Puzzle #" in lines[1]):
-        print("Connections - Not a valid Connections result (header mismatch)")
-        return None
+    puzzle_match = None
+    puzzle_start_index = -1
+    for i, line in enumerate(lines):
+        if "Puzzle #" in line:
+            puzzle_match = re.search(r"Puzzle #(\d+)", line)
+            puzzle_start_index = i
+            break
 
-    puzzle_match = re.search(r"Puzzle #(\d+)", lines[1])
     if not puzzle_match:
         print("Connections - Not a valid Connections result (puzzle number not found)")
         return None
 
     puzzle_number = int(puzzle_match.group(1))
-
     guesses = []
-    for line in lines[2:]:
+
+    # Extract guesses from the lines following the puzzle number
+    for line in lines[puzzle_start_index + 1:]:
         line = line.strip()
-        if len(line) == 4:
-            colors = set(line)
-            if len(colors) == 1:
-                guesses.append(line[0])
-            else:
-                guesses.append("X")
-        elif len(line) > 0:  # Handles if the line is not 4 characters long
-            guesses.append("X")
+        if len(line) == 4 and all(char in "🟨🟪🟩🟦" for char in line):
+            guesses.append(line[0]) # We only need one emoji per line for successful connections
+        elif len(line) > 0 and not line.startswith("Archive"): # Ignore empty lines and archive line
+            guesses.append("X") # Mark as a mistake if it's not a successful connection
+
+    # Ensure we have exactly 4 successful connections
+    guesses = [g for g in guesses if g in "🟨🟪🟩🟦"]
+    mistake_count = len([g for g in guesses if g == "X"])
+    correct_guesses = len(guesses) - mistake_count # Recalculate correct guesses
 
     # Calculate the score details
     score_details = calculate_connections_score(guesses)
@@ -101,7 +101,7 @@ def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
         "guesses": guesses,
         **score_details  # Unpack the calculated score details
     }
-
+    
 def calculate_connections_score(guesses: List[str]) -> Dict[str, Any]:
     """
     Calculate the Connections score based on guesses.
