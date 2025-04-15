@@ -220,77 +220,182 @@ def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, c
     finally:
         conn.close()
         
-def get_wordle_leaderboard():
-    """Fetch the top players for Wordle leaderboard."""
+def get_wordle_leaderboard(period: str = 'overall'):
+    """Fetch the top players for Wordle leaderboard, supporting different periods."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT display_name, MAX(total_score) AS best_score
-        FROM wordle_scores
-        GROUP BY display_name
-        ORDER BY best_score DESC
-        LIMIT 10
-    """)
+    if period == 'weekly':
+        one_week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM wordle_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY total_score DESC
+            LIMIT 10
+        """, (one_week_ago,))
+    elif period == 'monthly':
+        first_day_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM wordle_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY total_score DESC
+            LIMIT 10
+        """, (first_day_of_month,))
+    else: # overall
+        cursor.execute("""
+            SELECT display_name, MAX(total_score) AS best_score
+            FROM wordle_scores
+            GROUP BY display_name
+            ORDER BY best_score DESC
+            LIMIT 10
+        """)
     leaderboard = cursor.fetchall()
     conn.close()
     return leaderboard
 
-def get_connections_leaderboard():
-    """Fetch the top players for Connections leaderboard."""
+def get_connections_leaderboard(period: str = 'overall'):
+    """Fetch the top players for Connections leaderboard, supporting different periods."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT display_name, SUM(total_score) AS total_score
-        FROM connections_scores
-        GROUP BY display_name
-        ORDER BY total_score DESC
-        LIMIT 10
-    """)
+    if period == 'weekly':
+        one_week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM connections_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY total_score DESC
+            LIMIT 10
+        """, (one_week_ago,))
+    elif period == 'monthly':
+        first_day_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM connections_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY total_score DESC
+            LIMIT 10
+        """, (first_day_of_month,))
+    else: # overall
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM connections_scores
+            GROUP BY display_name
+            ORDER BY total_score DESC
+            LIMIT 10
+        """)
     leaderboard = cursor.fetchall()
     conn.close()
     return leaderboard
 
-def get_framed_leaderboard():
-    """Fetch top players for Framed based on highest scores."""
+def get_framed_leaderboard(period: str = 'overall'):
+    """Fetch top players for Framed based on highest scores, supporting different periods."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT display_name, MAX(total_score) AS best_score
-        FROM framed_scores
-        GROUP BY display_name
-        ORDER BY best_score DESC
-        LIMIT 10
-    """)
+    if period == 'weekly':
+        one_week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM framed_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY total_score DESC
+            LIMIT 10
+        """, (one_week_ago,))
+    elif period == 'monthly':
+        first_day_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM framed_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY total_score DESC
+            LIMIT 10
+        """, (first_day_of_month,))
+    else: # overall
+        cursor.execute("""
+            SELECT display_name, MAX(total_score) AS best_score
+            FROM framed_scores
+            GROUP BY display_name
+            ORDER BY best_score DESC
+            LIMIT 10
+        """)
     leaderboard = cursor.fetchall()
     conn.close()
     return leaderboard
 
-def get_gisnep_leaderboard():
-    """Fetch top players for Gisnep, ranking by shortest average time."""
+def get_gisnep_leaderboard(period: str = 'overall'):
+    """Fetch top players for Gisnep, ranking by shortest average time, supporting different periods."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT display_name, AVG(completion_time) AS avg_time, COUNT(*) AS games_played
-        FROM gisnep_scores
-        GROUP BY display_name
-        ORDER BY avg_time ASC, games_played DESC
-        LIMIT 10
-    """)
+    if period == 'weekly':
+        one_week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("""
+            SELECT display_name, AVG(completion_time) AS avg_time
+            FROM gisnep_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY avg_time ASC
+            LIMIT 10
+        """, (one_week_ago,))
+    elif period == 'monthly':
+        first_day_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("""
+            SELECT display_name, AVG(completion_time) AS avg_time
+            FROM gisnep_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY avg_time ASC
+            LIMIT 10
+        """, (first_day_of_month,))
+    else: # overall
+        cursor.execute("""
+            SELECT display_name, AVG(completion_time) AS avg_time, COUNT(*) AS games_played
+            FROM gisnep_scores
+            GROUP BY display_name
+            ORDER BY avg_time ASC, games_played DESC
+            LIMIT 10
+        """)
     leaderboard = cursor.fetchall()
     conn.close()
     return leaderboard
 
-def get_bandle_leaderboard():
-    """Fetch top players for Bandle based on highest total scores."""
+def get_bandle_leaderboard(period: str = 'overall'):
+    """Fetch top players for Bandle based on highest total scores, supporting different periods."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT display_name, SUM(total_score) AS total_score
-        FROM bandle_scores
-        GROUP BY display_name
-        ORDER BY total_score DESC
-        LIMIT 10
-    """)
+    if period == 'weekly':
+        one_week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM bandle_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY total_score DESC
+            LIMIT 10
+        """, (one_week_ago,))
+    elif period == 'monthly':
+        first_day_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM bandle_scores
+            WHERE timestamp >= ?
+            GROUP BY display_name
+            ORDER BY total_score DESC
+            LIMIT 10
+        """, (first_day_of_month,))
+    else: # overall
+        cursor.execute("""
+            SELECT display_name, SUM(total_score) AS total_score
+            FROM bandle_scores
+            GROUP BY display_name
+            ORDER BY total_score DESC
+            LIMIT 10
+        """)
     leaderboard = cursor.fetchall()
     conn.close()
     return leaderboard
@@ -329,134 +434,6 @@ def get_minute_cryptic_leaderboard(period: str = 'weekly') -> list[tuple[str, in
         conn.close()
     # Return list of (display_name, solved_count)
     return leaderboard
-
-def get_weekly_scores():
-    """Fetch total scores for all games for the past week."""
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    one_week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
-    try:
-        # Wordle
-        cursor.execute("""
-            SELECT display_name, SUM(total_score) AS total_score
-            FROM wordle_scores
-            WHERE timestamp >= ?
-            GROUP BY display_name
-            ORDER BY total_score DESC
-        """, (one_week_ago,))
-        wordle_scores = cursor.fetchall()
-        # Connections
-        cursor.execute("""
-            SELECT display_name, SUM(total_score) AS total_score
-            FROM connections_scores
-            WHERE timestamp >= ?
-            GROUP BY display_name
-            ORDER BY total_score DESC
-        """, (one_week_ago,))
-        connections_scores = cursor.fetchall()
-        # Framed
-        cursor.execute("""
-            SELECT display_name, SUM(total_score) AS total_score
-            FROM framed_scores
-            WHERE timestamp >= ?
-            GROUP BY display_name
-            ORDER BY total_score DESC
-        """, (one_week_ago,))
-        framed_scores = cursor.fetchall()
-        # Gisnep (rank by shortest average time)
-        cursor.execute("""
-            SELECT display_name, AVG(completion_time) AS avg_time
-            FROM gisnep_scores
-            WHERE timestamp >= ?
-            GROUP BY display_name
-            ORDER BY avg_time ASC
-        """, (one_week_ago,))
-        gisnep_scores = cursor.fetchall()
-        # Bandle
-        cursor.execute("""
-            SELECT display_name, SUM(total_score) AS total_score
-            FROM bandle_scores
-            WHERE timestamp >= ?
-            GROUP BY display_name
-            ORDER BY total_score DESC
-        """, (one_week_ago,))
-        bandle_scores = cursor.fetchall()
-        conn.close()
-        return {
-            "Wordle": wordle_scores,
-            "Connections": connections_scores,
-            "Framed": framed_scores,
-            "Gisnep": gisnep_scores,
-            "Bandle": bandle_scores
-        }
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        conn.close()
-        return {}
-
-def get_monthly_scores():
-    """Fetch total scores for all games for the past month."""
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    first_day_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
-    try:
-        # Wordle
-        cursor.execute("""
-            SELECT display_name, SUM(total_score) AS total_score
-            FROM wordle_scores
-            WHERE timestamp >= ?
-            GROUP BY display_name
-            ORDER BY total_score DESC
-        """, (first_day_of_month,))
-        wordle_scores = cursor.fetchall()
-        # Connections
-        cursor.execute("""
-            SELECT display_name, SUM(total_score) AS total_score
-            FROM connections_scores
-            WHERE timestamp >= ?
-            GROUP BY display_name
-            ORDER BY total_score DESC
-        """, (first_day_of_month,))
-        connections_scores = cursor.fetchall()
-        # Framed
-        cursor.execute("""
-            SELECT display_name, SUM(total_score) AS total_score
-            FROM framed_scores
-            WHERE timestamp >= ?
-            GROUP BY display_name
-            ORDER BY total_score DESC
-        """, (first_day_of_month,))
-        framed_scores = cursor.fetchall()
-        # Gisnep (rank by shortest average time)
-        cursor.execute("""
-            SELECT display_name, AVG(completion_time) AS avg_time
-            FROM gisnep_scores
-            WHERE timestamp >= ?
-            GROUP BY display_name
-            ORDER BY avg_time ASC
-        """, (first_day_of_month,))
-        gisnep_scores = cursor.fetchall()
-        # Bandle
-        cursor.execute("""
-            SELECT display_name, SUM(total_score) AS total_score
-            FROM bandle_scores
-            WHERE timestamp >= ?
-            GROUP BY display_name
-            ORDER BY total_score DESC
-        """, (first_day_of_month,))
-        bandle_scores = cursor.fetchall()
-        conn.close()
-        return {
-            "Wordle": wordle_scores,
-            "Connections": connections_scores,
-            "Framed": framed_scores,
-            "Gisnep": gisnep_scores,
-            "Bandle": bandle_scores
-        }
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        conn.close()
-        return {}
 
 # Database functions for tracking roles
 def save_user_role(user_id, role_name, game_number, expires_at):
