@@ -78,73 +78,76 @@ def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
         return None
     
     puzzle_number = int(puzzle_match.group(1))
-    guesses = []
     
-    # Extract guesses from the lines following the puzzle number
-    for line in lines[puzzle_start_index + 1:]:
-        line = line.strip()
-        if not line or line.startswith("Archive"):
-            continue
+    # Process the game lines
+    game_lines = [line.strip() for line in lines[puzzle_start_index + 1:] 
+                 if line.strip() and not line.startswith("Archive")]
+    
+    # Track successful connections and mistakes
+    found_colors = set()
+    mistakes = 0
+    all_guesses = []
+    first_successful = {}
+    
+    for line in game_lines:
+        # Identify complete color groups (identical emojis in a row)
+        if len(line) == 4 and len(set(line)) == 1 and line[0] in "🟨🟪🟩🟦":
+            color = line[0]
+            all_guesses.append(color)
             
-        if len(line) == 4 and all(char in "🟨🟪🟩🟦" for char in line):
-            # For successful connections, store which color was found
-            guesses.append(line[0])
+            # Track when each color was first found
+            if color not in found_colors:
+                found_colors.add(color)
+                first_successful[color] = len(all_guesses) - 1
         else:
-            # Mark as a mistake if it's not a successful connection
-            guesses.append("X")
+            # Not a complete group - this is a mistake
+            mistakes += 1
+            all_guesses.append("X")
     
-    # Calculate the score details
-    score_details = calculate_connections_score(guesses)
+    # Calculate score details
+    score_details = calculate_connections_score(all_guesses, found_colors, first_successful, mistakes)
     
     return {
         "puzzle_number": puzzle_number,
-        "guesses": guesses,
-        **score_details  # Unpack the calculated score details
+        "guesses": all_guesses,
+        **score_details
     }
     
-def calculate_connections_score(guesses: List[str]) -> Dict[str, Any]:
+def calculate_connections_score(guesses, found_colors, first_successful, mistake_count):
     """
     Calculate the Connections score based on guesses.
-    
-    Args:
-        guesses: List of guesses (🟪, 🟦, 🟩, 🟨, or X for mistakes)
-    
-    Returns:
-        Dictionary with score details
     """
     base_points = {"🟪": 4, "🟦": 3, "🟩": 2, "🟨": 1}
     total_score = 0
     
-    # Count successful guesses and mistakes
-    correct_guesses = sum(1 for g in guesses if g in base_points)
-    mistake_count = sum(1 for g in guesses if g == "X")
+    # Add base points for each color found
+    for color in found_colors:
+        total_score += base_points[color]
     
-    # Add base points for each color
-    for guess in guesses:
-        if guess in base_points:
-            total_score += base_points[guess]
+    # Bonus points
+    all_groups_found = len(found_colors) == 4
+    no_mistakes = mistake_count == 0
     
-    # Check if all connections were solved in 4 attempts (no mistakes)
-    if correct_guesses == 4 and mistake_count == 0:
+    # Bonus for solving all in just 4 attempts (no mistakes)
+    if all_groups_found and no_mistakes:
         total_score += 5
     
-    # Check if purple or blue was solved first
-    successful_guesses = [g for g in guesses if g in base_points]
-    if successful_guesses and successful_guesses[0] == "🟪":
-        total_score += 2  # +2 for getting purple first
-    elif successful_guesses and successful_guesses[0] == "🟦":
-        total_score += 1  # +1 for getting blue first
+    # Bonus for getting purple or blue first
+    if "🟪" in first_successful and first_successful["🟪"] == 0:
+        total_score += 2  # +2 for getting purple in first attempt
+    elif "🟦" in first_successful and first_successful["🟦"] == 0:
+        total_score += 1  # +1 for getting blue in first attempt
     
-    # Subtract points for mistakes
+    # Penalty for mistakes
     total_score -= mistake_count
     
     return {
         "total_score": total_score,
-        "num_guesses": len(guesses),
-        "solved_purple_first": successful_guesses and successful_guesses[0] == "🟪",
-        "solved_blue_first": successful_guesses and successful_guesses[0] == "🟦",
-        "finished_game": correct_guesses == 4,
-        "correct_guesses": correct_guesses,
+        "found_colors": list(found_colors),
+        "solved_purple_first": "🟪" in first_successful and first_successful["🟪"] == 0,
+        "solved_blue_first": "🟦" in first_successful and first_successful["🟦"] == 0,
+        "finished_game": len(found_colors) == 4,
+        "correct_guesses": len(found_colors),
         "mistake_count": mistake_count
     }
     
