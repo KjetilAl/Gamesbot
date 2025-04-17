@@ -61,41 +61,41 @@ def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
 
 def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
     """
-    Extract puzzle number and all guesses from a Connections result (handles older formats).
+    Extract puzzle number and all guesses from a Connections result.
     """
     lines = message_content.split("\n")
-
     puzzle_match = None
     puzzle_start_index = -1
+    
     for i, line in enumerate(lines):
         if "Puzzle #" in line:
             puzzle_match = re.search(r"Puzzle #(\d+)", line)
             puzzle_start_index = i
             break
-
+    
     if not puzzle_match:
         print("Connections - Not a valid Connections result (puzzle number not found)")
         return None
-
+    
     puzzle_number = int(puzzle_match.group(1))
     guesses = []
-
+    
     # Extract guesses from the lines following the puzzle number
     for line in lines[puzzle_start_index + 1:]:
         line = line.strip()
+        if not line or line.startswith("Archive"):
+            continue
+            
         if len(line) == 4 and all(char in "🟨🟪🟩🟦" for char in line):
-            guesses.append(line[0]) # We only need one emoji per line for successful connections
-        elif len(line) > 0 and not line.startswith("Archive"): # Ignore empty lines and archive line
-            guesses.append("X") # Mark as a mistake if it's not a successful connection
-
-    # Ensure we have exactly 4 successful connections
-    guesses = [g for g in guesses if g in "🟨🟪🟩🟦"]
-    mistake_count = len([g for g in guesses if g == "X"])
-    correct_guesses = len(guesses) - mistake_count # Recalculate correct guesses
-
+            # For successful connections, store which color was found
+            guesses.append(line[0])
+        else:
+            # Mark as a mistake if it's not a successful connection
+            guesses.append("X")
+    
     # Calculate the score details
     score_details = calculate_connections_score(guesses)
-
+    
     return {
         "puzzle_number": puzzle_number,
         "guesses": guesses,
@@ -105,58 +105,49 @@ def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
 def calculate_connections_score(guesses: List[str]) -> Dict[str, Any]:
     """
     Calculate the Connections score based on guesses.
-
+    
     Args:
         guesses: List of guesses (🟪, 🟦, 🟩, 🟨, or X for mistakes)
-
+    
     Returns:
         Dictionary with score details
     """
     base_points = {"🟪": 4, "🟦": 3, "🟩": 2, "🟨": 1}
-
     total_score = 0
-    solved_purple_first = False
-    solved_blue_first = False
-    first_group = ""
-    correct_guesses = 0
-    mistake_count = 0
-
-    for guess in guesses:
-        if guess in base_points:
-            if not first_group:
-                first_group = guess
-            correct_guesses += 1
-        elif guess == "X":
-            mistake_count += 1
-
-    if first_group == "🟪":
-        solved_purple_first = True
-        total_score += 2
-    elif first_group == "🟦":
-        solved_blue_first = True
-        total_score += 1
-
+    
+    # Count successful guesses and mistakes
+    correct_guesses = sum(1 for g in guesses if g in base_points)
+    mistake_count = sum(1 for g in guesses if g == "X")
+    
+    # Add base points for each color
     for guess in guesses:
         if guess in base_points:
             total_score += base_points[guess]
-
+    
+    # Check if all connections were solved in 4 attempts (no mistakes)
     if correct_guesses == 4 and mistake_count == 0:
         total_score += 5
-    else:
-        total_score -= mistake_count
-
-    finished_game = correct_guesses == 4
-
+    
+    # Check if purple or blue was solved first
+    successful_guesses = [g for g in guesses if g in base_points]
+    if successful_guesses and successful_guesses[0] == "🟪":
+        total_score += 2  # +2 for getting purple first
+    elif successful_guesses and successful_guesses[0] == "🟦":
+        total_score += 1  # +1 for getting blue first
+    
+    # Subtract points for mistakes
+    total_score -= mistake_count
+    
     return {
         "total_score": total_score,
         "num_guesses": len(guesses),
-        "solved_purple_first": solved_purple_first,
-        "solved_blue_first": solved_blue_first,
-        "finished_game": finished_game,
+        "solved_purple_first": successful_guesses and successful_guesses[0] == "🟪",
+        "solved_blue_first": successful_guesses and successful_guesses[0] == "🟦",
+        "finished_game": correct_guesses == 4,
         "correct_guesses": correct_guesses,
         "mistake_count": mistake_count
     }
-
+    
 def parse_framed_score(message_content: str) -> Optional[Dict[str, Any]]:
     """Parses a Framed score from a message."""
     match = FRAMED_PATTERN.search(message_content)
