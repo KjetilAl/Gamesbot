@@ -61,93 +61,99 @@ def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
 
 def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
     """
-    Extract puzzle number and all guesses from a Connections result.
+    Extract puzzle number and all guesses from a Connections result (handles older formats).
     """
     lines = message_content.split("\n")
     puzzle_match = None
     puzzle_start_index = -1
-    
+
     for i, line in enumerate(lines):
         if "Puzzle #" in line:
             puzzle_match = re.search(r"Puzzle #(\d+)", line)
             puzzle_start_index = i
             break
-    
+
     if not puzzle_match:
         print("Connections - Not a valid Connections result (puzzle number not found)")
         return None
-    
+
     puzzle_number = int(puzzle_match.group(1))
-    
+
     # Process the game lines
-    game_lines = [line.strip() for line in lines[puzzle_start_index + 1:] 
-                 if line.strip() and not line.startswith("Archive")]
-    
+    game_lines = [line.strip() for line in lines[puzzle_start_index + 1:]
+                  if line.strip() and not line.startswith("Archive")]
+
     # Track successful connections and mistakes
     found_colors = set()
     mistakes = 0
     all_guesses = []
     first_successful = {}
-    
+
     for line in game_lines:
         # Identify complete color groups (identical emojis in a row)
         if len(line) == 4 and len(set(line)) == 1 and line[0] in "🟨🟪🟩🟦":
             color = line[0]
             all_guesses.append(color)
-            
+
             # Track when each color was first found
             if color not in found_colors:
                 found_colors.add(color)
-                first_successful[color] = len(all_guesses) - 1
+                first_successful[color] = len(all_guesses) - 1 # Store index based on all_guesses
         else:
             # Not a complete group - this is a mistake
             mistakes += 1
-            all_guesses.append("X")
-    
+            all_guesses.append("X") # Add mistake to all_guesses list
+
     # Calculate score details
+    # Pass mistake_count to score calculation if needed for total score logic
     score_details = calculate_connections_score(all_guesses, found_colors, first_successful, mistakes)
-    
+
+
     return {
         "puzzle_number": puzzle_number,
         "guesses": all_guesses,
+        "num_guesses": len(all_guesses),  # <-- Added num_guesses here
         **score_details
     }
-    
+
+# Keep your calculate_connections_score function as is if it correctly uses the parameters passed
 def calculate_connections_score(guesses, found_colors, first_successful, mistake_count):
     """
     Calculate the Connections score based on guesses.
     """
     base_points = {"🟪": 4, "🟦": 3, "🟩": 2, "🟨": 1}
     total_score = 0
-    
+
     # Add base points for each color found
     for color in found_colors:
         total_score += base_points[color]
-    
+
     # Bonus points
     all_groups_found = len(found_colors) == 4
     no_mistakes = mistake_count == 0
-    
+
     # Bonus for solving all in just 4 attempts (no mistakes)
     if all_groups_found and no_mistakes:
         total_score += 5
-    
+
     # Bonus for getting purple or blue first
+    # Check if keys exist before accessing
     if "🟪" in first_successful and first_successful["🟪"] == 0:
         total_score += 2  # +2 for getting purple in first attempt
     elif "🟦" in first_successful and first_successful["🟦"] == 0:
         total_score += 1  # +1 for getting blue in first attempt
-    
+
+
     # Penalty for mistakes
     total_score -= mistake_count
-    
+
     return {
         "total_score": total_score,
         "found_colors": list(found_colors),
-        "solved_purple_first": "🟪" in first_successful and first_successful["🟪"] == 0,
-        "solved_blue_first": "🟦" in first_successful and first_successful["🟦"] == 0,
+        "solved_purple_first": "🟪" in first_successful and first_successful.get("🟪", -1) == 0, # Use .get() for safety
+        "solved_blue_first": "🟦" in first_successful and first_successful.get("🟦", -1) == 0, # Use .get() for safety
         "finished_game": len(found_colors) == 4,
-        "correct_guesses": len(found_colors),
+        "correct_guesses": len(found_colors), # This might be correct based on the logic, or it should be len(guesses) - mistake_count if guesses includes X
         "mistake_count": mistake_count
     }
     
