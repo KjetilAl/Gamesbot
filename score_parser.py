@@ -481,3 +481,16 @@ def create_minute_cryptic_introduction(display_name: str, game_info: Dict[str, A
     return (f"🤔 **{display_name}** just finished the Minute Cryptic for {game_date}!\n"
             f"Score: {score_desc}\n"
             f"{grid}")
+
+def create_word_salad_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
+    return "🤖"
+
+def create_word_salad_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create introduction message for Word Salad players."""
+    game_number = game_info.get("game_number", "?")
+    completion_time_seconds = game_info.get("completion_time_seconds", "?")
+    hints_used = game_info.get("hints_used", "?")
+
+    message = f"🥗 **{display_name}** just finished Word Salad #{game_number} in {completion_time_seconds} seconds with {hints_used} hints."
+
+    return message
