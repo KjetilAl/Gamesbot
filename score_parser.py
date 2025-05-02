@@ -14,6 +14,9 @@ BONUS_PATTERN = re.compile(r'Bonus Rounds: (\d+)/(\d+)', re.IGNORECASE)
 MINUTE_CRYPTIC_HEADER_PATTERN = re.compile(r"Minute Cryptic - (\d+ \w+ \d+)")
 MINUTE_CRYPTIC_CLUE_PATTERN = re.compile(r'"(.*?)" \((\d+)\)')
 MINUTE_CRYPTIC_SCORE_PATTERN = re.compile(r"I scored: (.*)")
+WORD_SALAD_NUMBER_PATTERN = re.compile(r"Word Salad #(\d+)", re.IGNORECASE)
+WORD_SALAD_TIME_PATTERN = re.compile(r"⌛(\d+m\s*\d+s)", re.IGNORECASE)
+WORD_SALAD_HINTS_PATTERN = re.compile(r"❓(\d+)", re.IGNORECASE)
 
 def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
     wordle_match = WORDLE_PATTERN.search(message_content)
@@ -308,6 +311,39 @@ def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]
         traceback.print_exc()
         return None
 
+def parse_word_salad_score(message_content: str) -> Optional[Dict[str, Any]]:
+    """Parses a Word Salad score from a message."""
+    print(f"Attempting to parse Word Salad content: {message_content}")
+
+    number_match = WORD_SALAD_NUMBER_PATTERN.search(message_content)
+    time_match = WORD_SALAD_TIME_PATTERN.search(message_content)
+    hints_match = WORD_SALAD_HINTS_PATTERN.search(message_content)
+
+    if not (number_match and time_match and hints_match):
+        print("Word Salad - Could not match all basic patterns.")
+        return None
+
+    game_number = int(number_match.group(1))
+    time_str = time_match.group(1)
+    hints_used = int(hints_match.group(1))
+
+    # Convert time string (e.g., "2m 33s") to total seconds
+    total_seconds = 0
+    time_parts = time_str.replace('m', 'm ').replace('s', '').split()
+    for part in time_parts:
+        if 'm' in part:
+            total_seconds += int(part.replace('m', '')) * 60
+        elif part: # Handle seconds part
+             total_seconds += int(part)
+
+    print(f"Parsed Word Salad data: Game #{game_number}, Time: {total_seconds}s, Hints: {hints_used}")
+
+    return {
+        "game_number": game_number,
+        "completion_time_seconds": total_seconds,
+        "hints_used": hints_used,
+    }
+
 def is_bandle_message(message_content: str) -> bool:
     """Checks if a message contains a Bandle score."""
     return "bandle" in message_content.lower() and BANDLE_PATTERN.search(message_content) is not None
@@ -334,6 +370,12 @@ def is_minute_cryptic_message(message_content: str) -> bool:
     return "Minute Cryptic" in message_content and \
            MINUTE_CRYPTIC_HEADER_PATTERN.search(message_content) is not None and \
            MINUTE_CRYPTIC_SCORE_PATTERN.search(message_content) is not None
+
+def is_word_salad_message(message_content: str) -> bool:
+    """Checks if a message contains a Word Salad score."""
+    # Look for the game name and game number pattern
+    return "word salad #" in message_content.lower() and \
+           WORD_SALAD_NUMBER_PATTERN.search(message_content) is not None
     
 def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
