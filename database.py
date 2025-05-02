@@ -192,17 +192,38 @@ def save_gisnep_score(user_id, display_name, game_number, completion_time):
     conn.commit()
     conn.close()
 
-def save_bandle_score(user_id, display_name, game_number, attempts, total_score, bonus_completed, bonus_total):
-    """Save a new Bandle score, including bonus rounds separately."""
+def save_bandle_score(user_id, display_name, game_number, attempts, total_score, bonus_completed, bonus_total, bonus_categories: Dict[str, bool]):
+    """Save a new Bandle score, including individual bonus round results."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO bandle_scores (user_id, display_name, game_number, attempts, total_score, bonus_completed, bonus_total)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (user_id, display_name, game_number, attempts, total_score, bonus_completed, bonus_total))
-    conn.commit()
-    conn.close()
-
+    try:
+        cursor.execute("""
+            INSERT INTO bandle_scores (
+                user_id, display_name, game_number, attempts, total_score,
+                bonus_completed, bonus_total,
+                bonus_microphone, bonus_frame, bonus_person, bonus_globe, bonus_puzzle,
+                bonus_calendar, bonus_cd, bonus_timer, bonus_guitar
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            user_id, display_name, game_number, attempts, total_score,
+            bonus_completed, bonus_total,
+            bonus_categories.get("🎤", False), # Get status for each emoji
+            bonus_categories.get("🖼️", False),
+            bonus_categories.get("🧑", False),
+            bonus_categories.get("🌍", False),
+            bonus_categories.get("🧩", False),
+            bonus_categories.get("📅", False),
+            bonus_categories.get("💿", False),
+            bonus_categories.get("⏱️", False),
+            bonus_categories.get("🎸", False),
+        ))
+        conn.commit()
+        print(f"DB: Saved Bandle score for {display_name} - Game #{game_number}")
+    except sqlite3.Error as e:
+        print(f"Database error in save_bandle_score: {e}")
+    finally:
+        conn.close()
+        
 def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, clue: str, word_length: int, score_description: str):
     """Saves a Minute Cryptic score to the database."""
     conn = sqlite3.connect(DB_NAME)
