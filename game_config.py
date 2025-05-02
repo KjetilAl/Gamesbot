@@ -89,5 +89,19 @@ GAME_CONFIGS = {
     "create_acknowledgement": score_parser.create_minute_cryptic_acknowledgement,
     "create_introduction": score_parser.create_minute_cryptic_introduction,
     "game_number_key": "game_date"
+    },
+"word_salad": {
+    "name": "Word Salad",
+    "chat_channel_name": "word-salad-chat",
+    "player_role_name": "word-salad-player",
+    "parse_function": score_parser.parse_word_salad_score,
+    "is_game_message": score_parser.is_word_salad_message,
+    "save_score_function": database.save_word_salad_score,
+    "get_leaderboard_function": database.get_word_salad_leaderboard,
+    "get_latest_game_number_function": database.get_latest_game_number_from_db,
+    "update_latest_game_number_function": database.update_latest_game_number_in_db,
+    "create_acknowledgement": score_parser.create_word_salad_acknowledgement,
+    "create_introduction": score_parser.create_word_salad_introduction,
+    "game_number_key": "game_number"
     }
 }
