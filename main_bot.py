@@ -102,12 +102,13 @@ async def on_message(message):
                     )
                 elif game_key == "bandle":
                     config["save_score_function"](
-                        message.author.id, message.author.display_name, 
+                        message.author.id, message.author.display_name,
                         game_info["game_number"],
-                        game_info["attempts"], 
+                        game_info["attempts"],
                         game_info["total_score"],
-                        game_info["bonus_completed"], 
-                        game_info["bonus_total"]
+                        game_info["bonus_completed"],
+                        game_info["bonus_total"],
+                        game_info.get("bonus_categories", {}) # Pass the bonus categories dictionary
                     )
                 elif game_key == "minute_cryptic":
                     config["save_score_function"](
