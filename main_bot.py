@@ -129,32 +129,50 @@ async def on_message(message):
                 # Create acknowledgement and handle roles
                 response = config["create_acknowledgement"](message.author.display_name, game_info)
                 
-                # Get the latest game number (date) from the database
+                # Get the latest game number/date from the database
                 game_number_key = config["game_number_key"]
-                latest_game_date_str = config["get_latest_game_number_function"](game_key)
-                current_game_date_str = game_info[game_number_key]
+                latest_game_identifier = config["get_latest_game_number_function"](game_key)
+                current_game_identifier = game_info[game_number_key]
 
-                if current_game_date_str:
+                if current_game_identifier:
+                    # Handle database update for latest game number
+                    should_update_db = False
+    
                     # For Minute Cryptic (dates)
                     if game_key == "minute_cryptic":
-                        if latest_game_date_str is None or current_game_date_str > latest_game_date_str:
-                            config["update_latest_game_number_function"](game_key, current_game_date_str)
-                    # For all other games (numbers)
+                        if latest_game_identifier is None:
+                            should_update_db = True
+                        else:
+                            try:
+                                current_date = date.fromisoformat(str(current_game_identifier))
+                                latest_date = date.fromisoformat(str(latest_game_identifier))
+                                if current_date > latest_date:
+                                    should_update_db = True
+                            except ValueError as e:
+                                print(f"Date parsing error in main_bot: {e}")
+                    # For Word Salad and all other number-based games
                     else:
-                        current_num = int(current_game_date_str)
-                        latest_num = int(latest_game_date_str) if latest_game_date_str is not None else 0
-                        if latest_game_date_str is None or current_num > latest_num:
-                            config["update_latest_game_number_function"](game_key, str(current_num))
-
-                    # Handle role assignment
+                        current_num = int(current_game_identifier)
+                        latest_num = int(latest_game_identifier) if latest_game_identifier is not None else 0
+                        if latest_game_identifier is None or current_num > latest_num:
+                            should_update_db = True
+    
+                    # Update database if needed
+                    if should_update_db:
+                        config["update_latest_game_number_function"](game_key, str(current_game_identifier))
+                        print(f"Updated latest {game_key} number to {current_game_identifier}")
+    
+                    # Handle role assignment - pass the identifiers as they are
                     success = await role_manager.handle_game_role_assignment(
                         message.guild,
                         message.author,
                         game_key,
                         config,
-                        current_game_date_str,
-                        latest_game_date_str
+                        current_game_identifier,
+                        latest_game_identifier
                     )
+    
+                    # If role was assigned successfully, introduce the player in the game channel
                     if success:
                         await role_manager.introduce_player_in_game_channel(
                             message.guild,
