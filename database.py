@@ -36,6 +36,14 @@ def initialize_db():
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        # Word Salad
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS word_salad_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
+                game_number INTEGER, completion_time_seconds INTEGER, hints_used INTEGER,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         # Framed
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS framed_scores (
@@ -219,7 +227,23 @@ def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, c
         print(f"Database error in save_minute_cryptic_score: {e}")
     finally:
         conn.close()
-        
+
+def save_word_salad_score(user_id: int, display_name: str, game_number: int, completion_time_seconds: int, hints_used: int):
+    """Saves a Word Salad score to the database."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO word_salad_scores (user_id, display_name, game_number, completion_time_seconds, hints_used)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_id, display_name, game_number, completion_time_seconds, hints_used))
+        conn.commit()
+        print(f"DB: Saved Word Salad score for {display_name} - Game #{game_number}")
+    except sqlite3.Error as e:
+        print(f"Database error in save_word_salad_score: {e}")
+    finally:
+        conn.close()
+
 def get_wordle_leaderboard(period: str = 'overall'):
     """Fetch the top players for Wordle leaderboard, supporting different periods."""
     conn = sqlite3.connect(DB_NAME)
