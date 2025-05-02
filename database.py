@@ -192,7 +192,7 @@ def save_gisnep_score(user_id, display_name, game_number, completion_time):
     conn.commit()
     conn.close()
 
-def save_bandle_score(user_id, display_name, game_number, attempts, total_score, bonus_completed, bonus_total, bonus_categories: Dict[str, bool]):
+def save_bandle_score(user_id, display_name, game_number, attempts, total_score, bonus_completed, bonus_total, bonus_categories: dict[str, bool]):
     """Save a new Bandle score, including individual bonus round results."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
