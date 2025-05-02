@@ -117,6 +117,13 @@ async def on_message(message):
                         game_info["word_length"],
                         game_info["score_description"]
                     )
+                elif game_key == "word_salad":
+                    config["save_score_function"](
+                        message.author.id, message.author.display_name,
+                        game_info["game_number"],
+                        game_info["completion_time_seconds"],
+                        game_info["hints_used"]
+                    )
                 
                 # Create acknowledgement and handle roles
                 response = config["create_acknowledgement"](message.author.display_name, game_info)
