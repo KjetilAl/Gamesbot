@@ -55,7 +55,16 @@ Roadmap
 ==================================================
 
 1. Expand and refine weekly and monthly posts
-2. Clean up bot messages (acknowledgements and introductions)
-3. Parse Bandle bonus scores in a better way (individually)
-4. New games?
-5. Invite people
+2. Parse Bandle bonus scores in a better way (individually)
+3. New games?
+4. Invite people
+
+ALTER TABLE bandle_scores ADD COLUMN bonus_microphone BOOLEAN DEFAULT FALSE;
+ALTER TABLE bandle_scores ADD COLUMN bonus_frame BOOLEAN DEFAULT FALSE;
+ALTER TABLE bandle_scores ADD COLUMN bonus_person BOOLEAN DEFAULT FALSE;
+ALTER TABLE bandle_scores ADD COLUMN bonus_globe BOOLEAN DEFAULT FALSE;
+ALTER TABLE bandle_scores ADD COLUMN bonus_puzzle BOOLEAN DEFAULT FALSE;
+ALTER TABLE bandle_scores ADD COLUMN bonus_calendar BOOLEAN DEFAULT FALSE;
+ALTER TABLE bandle_scores ADD COLUMN bonus_cd BOOLEAN DEFAULT FALSE;
+ALTER TABLE bandle_scores ADD COLUMN bonus_timer BOOLEAN DEFAULT FALSE;
+ALTER TABLE bandle_scores ADD COLUMN bonus_guitar BOOLEAN DEFAULT FALSE;
