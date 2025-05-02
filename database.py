@@ -458,6 +458,13 @@ def get_minute_cryptic_leaderboard(period: str = 'weekly') -> list[tuple[str, in
         conn.close()
     # Return list of (display_name, solved_count)
     return leaderboard
+    
+def get_word_salad_leaderboard(period: str = 'overall'):
+    """Placeholder function for fetching Word Salad leaderboard data."""
+    print(f"DB: Called placeholder get_word_salad_leaderboard for period: {period}")
+    # This function will need to be implemented to query the word_salad_scores table
+    # and return leaderboard data based on completion time and hints used.
+    return [] # Return an empty list for now
 
 # Database functions for tracking roles
 def save_user_role(user_id, role_name, game_number, expires_at):
