@@ -213,7 +213,7 @@ async def leaderboard(ctx, game="wordle"):
     await ctx.send(leaderboard_message)
 
 async def post_scores(period: str):
-    """Fetches and posts leaderboard scores for all games."""
+    """Fetches and posts leaderboard scores for all games with detailed stats."""
     scores_by_game = {}
     leaderboard_channel_name = "leaderboards" # Or fetch from a central config
 
@@ -221,11 +221,15 @@ async def post_scores(period: str):
     for game_key, config in game_config.GAME_CONFIGS.items():
         if "get_leaderboard_function" in config:
             try:
+                # Pass the period to the leaderboard function
                 scores = config["get_leaderboard_function"](period=period)
                 if scores: # Only add if there are scores
+                    # Store the raw fetched data
                     scores_by_game[config["name"]] = scores
             except Exception as e:
                 print(f"Error fetching {period} leaderboard for {config['name']}: {e}")
+                import traceback
+                traceback.print_exc() # Print traceback for better debugging
 
     # Find the 'leaderboards' channel
     leaderboard_channel = discord.utils.get(bot.get_all_channels(), name=leaderboard_channel_name)
@@ -233,40 +237,95 @@ async def post_scores(period: str):
         print(f"Warning: Could not find the '{leaderboard_channel_name}' channel.")
         return
 
-    # Iterate over each game and post scores
+    # Iterate over each game and format/post scores
     if not scores_by_game:
         print(f"No {period} leaderboard data found for any game.")
+        # Optional: Post a message indicating no scores found
+        # await leaderboard_channel.send(f"No {period.capitalize()} leaderboard data found for any game this period.")
         return
 
     for game_name, scores in scores_by_game.items():
-        message = f"**📅 {period.capitalize()} {game_name} Leaderboard**\n"
-        rank = 1
-        for player_data in scores:
-            # Adapt formatting based on data structure returned by leaderboard function
-            if game_name == "Minute Cryptic": # Specific formatting for Minute Cryptic (solved count)
-                player, score = player_data # Expecting (display_name, solved_count)
-                message += f"{rank}. {player}: {score} solved\n"
-            # Add elif for other games with non-standard score formats if needed
-            else: # Default formatting (assuming score is points or similar)
-                try:
-                    player, score = player_data # Expecting (display_name, score)
-                    message += f"{rank}. {player}: {score} points\n" # Or adjust unit
-                except ValueError:
-                    print(f"Warning: Could not unpack score data for {game_name}: {player_data}")
-                    message += f"{rank}. {player_data[0]}: Score format error\n" # Fallback
+        message = f"🏆 **📅 {period.capitalize()} {game_name} Leaderboard** 🏆\n\n"
 
-            rank += 1
+        if not scores:
+             message += "No scores recorded for this period.\n\n"
+        else:
+            # Dynamically format based on game name and fetched columns
+            if game_name == "Wordle":
+                message += "**Rank | Player | Played | Avg Attempts | Solved | Hard Mode | Best Score**\n"
+                message += "------- | -------- | -------- | -------- | -------- | -------- | --------\n"
+                for i, row in enumerate(scores, 1):
+                    (display_name, games_played, avg_attempts, solved_count, hard_mode_count, best_score) = row
+                    message += f"{i}. {display_name} | {games_played} | {avg_attempts:.2f} | {solved_count} | {hard_mode_count} | {best_score}\n"
+            elif game_name == "Connections":
+                message += "**Rank | Player | Played | Total Score | Avg Score | Solved | Purple First | Blue First**\n"
+                message += "------- | -------- | -------- | -------- | -------- | -------- | -------- | --------\n"
+                for i, row in enumerate(scores, 1):
+                    (display_name, games_played, total_score, avg_score, solved_count, purple_first_count, blue_first_count) = row
+                    message += f"{i}. {display_name} | {games_played} | {total_score} | {avg_score:.2f} | {solved_count} | {purple_first_count} | {blue_first_count}\n"
+            elif game_name == "Framed":
+                 message += "**Rank | Player | Played | Total Score | Avg Attempts | Solved**\n"
+                 message += "------- | -------- | -------- | -------- | -------- | --------\n"
+                 for i, row in enumerate(scores, 1):
+                     (display_name, games_played, total_score, avg_attempts, solved_count) = row
+                     message += f"{i}. {display_name} | {games_played} | {total_score} | {avg_attempts:.2f} | {solved_count}\n"
+            elif game_name == "Gisnep":
+                message += "**Rank | Player | Played | Avg Time | Best Time**\n"
+                message += "------- | -------- | -------- | -------- | --------\n"
+                for i, row in enumerate(scores, 1):
+                    (display_name, games_played, avg_time, best_time) = row
+                    # Format time from seconds to M:SS
+                    avg_minutes, avg_seconds = divmod(int(avg_time), 60)
+                    best_minutes, best_seconds = divmod(int(best_time), 60)
+                    message += f"{i}. {display_name} | {games_played} | {avg_minutes:02d}:{avg_seconds:02d} | {best_minutes:02d}:{best_seconds:02d}\n"
+            elif game_name == "Bandle":
+                 message += "**Rank | Player | Played | Total Score | Avg Attempts | Solved | Bonus (🎤🖼️🧑🌍🧩📅💿⏱️🎸)**\n"
+                 message += "------- | -------- | -------- | -------- | -------- | -------- | -------------------------\n"
+                 for i, row in enumerate(scores, 1):
+                     (display_name, games_played, total_score, avg_attempts, solved_count,
+                      bonus_microphone_count, bonus_frame_count, bonus_person_count, bonus_globe_count, bonus_puzzle_count,
+                      bonus_calendar_count, bonus_cd_count, bonus_timer_count, bonus_guitar_count) = row
+                     bonus_counts = [bonus_microphone_count, bonus_frame_count, bonus_person_count, bonus_globe_count,
+                                     bonus_puzzle_count, bonus_calendar_count, bonus_cd_count, bonus_timer_count, bonus_guitar_count]
+                     bonus_display = " ".join([str(count) for count in bonus_counts])
+                     message += f"{i}. {display_name} | {games_played} | {total_score} | {avg_attempts:.2f} | {solved_count} | {bonus_display}\n"
+            elif game_name == "Minute Cryptic":
+                message += "**Rank | Player | Played | Solved | Avg Score**\n"
+                message += "------- | -------- | -------- | -------- | --------\n"
+                for i, row in enumerate(scores, 1):
+                    (display_name, games_played, solved_count, avg_score) = row
+                    message += f"{i}. {display_name} | {games_played} | {solved_count} | {avg_score:.2f}\n"
+            elif game_name == "Word Salad":
+                message += "**Rank | Player | Played | Avg Time | Best Time | Avg Hints**\n"
+                message += "------- | -------- | -------- | -------- | -------- | --------\n"
+                for i, row in enumerate(scores, 1):
+                    (display_name, games_played, avg_time, best_time, avg_hints) = row
+                    # Format time from seconds to M:SS
+                    avg_minutes, avg_seconds = divmod(int(avg_time), 60)
+                    best_minutes, best_seconds = divmod(int(best_time), 60)
+                    message += f"{i}. {display_name} | {games_played} | {avg_minutes:02d}:{avg_seconds:02d} | {best_minutes:02d}:{best_seconds:02d} | {avg_hints:.2f}\n"
 
-        if rank > 1: # Only send if there was data
+        # Send the formatted leaderboard message
+        if scores or "No scores recorded" in message: # Send even if no scores for the period
             try:
-                await leaderboard_channel.send(message)
+                # Use code blocks for better formatting of the table-like structure
+                await leaderboard_channel.send(f"```markdown\n{message}\n```")
                 print(f"{period.capitalize()} {game_name} leaderboard posted.")
             except discord.errors.HTTPException as e:
                 print(f"Error posting {period} {game_name} leaderboard (message too long?): {e}")
+                print(f"Attempting to send as multiple messages for {game_name}...")
+                # Handle message too long - split and send
+                messages = [message[i:i+2000] for i in range(0, len(message), 2000)] # Simple split
+                for msg in messages:
+                    try:
+                        await leaderboard_channel.send(f"```markdown\n{msg}\n```")
+                        await asyncio.sleep(1) # Add a small delay
+                    except Exception as inner_e:
+                         print(f"Error sending part of message for {game_name}: {inner_e}")
             except Exception as e:
                 print(f"Error posting {period} {game_name} leaderboard: {e}")
         else:
-            print(f"No valid scores formatted for {period} {game_name} leaderboard.")
+            print(f"No scores fetched for {period} {game_name}.")
 
 @tasks.loop(time=datetime.time(hour=23, minute=59, second=50, tzinfo=CET_TIMEZONE))
 async def check_weekly_scores():
