@@ -213,37 +213,40 @@ def parse_gisnep_score(message_content: str) -> Optional[Dict[str, Any]]:
     }
 
 def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
-    """Parses a Bandle score from a message."""
+    """Parses a Bandle score from a message, including individual bonus rounds."""
     match = BANDLE_PATTERN.search(message_content)
-    bonus_match = BONUS_PATTERN.search(message_content)  # Restore bonus round matching
+    bonus_match = BONUS_PATTERN.search(message_content)
 
     if not match:
-        return None  # If no match, return nothing
+        return None
 
     game_number = int(match.group(1))
-    attempts_str = match.group(2).lower()  # Normalize to lowercase
+    attempts_str = match.group(2).lower()
     max_attempts = int(match.group(3))
-
-    # Determine if the puzzle was solved
     solved = attempts_str != "x"
-    attempts = int(attempts_str) if solved else max_attempts + 1  # Assign max+1 if failed
-
-    # Score calculation
+    attempts = int(attempts_str) if solved else max_attempts + 1
     score = max(6 - attempts, 0) if solved else 0
 
-    # ✅ Extract bonus rounds
-    bonus_completed = int(bonus_match.group(1)) if bonus_match else 0
-    bonus_total = int(bonus_match.group(2)) if bonus_match else 0
+    bonus_completed = int(bonus_match.group(1)) if bonus_match and bonus_match.group(1) else 0
+    bonus_total = int(bonus_match.group(2)) if bonus_match and bonus_match.group(2) else 0
+    bonus_emojis_str = bonus_match.group(3).strip() if bonus_match and bonus_match.group(3) else ""
 
-    print(f"Bandle: Game #{game_number}, Attempts: {attempts}, Solved: {solved}, Score: {score}, Bonus Completed: {bonus_completed}/{bonus_total}")  # Debug logging
+    # Define the bonus category emojis
+    bonus_category_emojis = ["🎤", "🖼️", "🧑", "🌍", "🧩", "📅", "💿", "⏱️", "🎸"]
+
+    # Check for the presence of each bonus emoji
+    bonus_categories_completed = {emoji: emoji in bonus_emojis_str for emoji in bonus_category_emojis}
+
+    print(f"Bandle: Game #{game_number}, Attempts: {attempts}, Solved: {solved}, Score: {score}, Bonus Completed: {bonus_completed}/{bonus_total}, Bonus Categories: {bonus_categories_completed}")
 
     return {
         "game_number": game_number,
         "attempts": attempts,
         "solved": solved,
         "total_score": score,
-        "bonus_completed": bonus_completed,  # ✅ Fix KeyError
-        "bonus_total": bonus_total          # ✅ Fix KeyError
+        "bonus_completed": bonus_completed,
+        "bonus_total": bonus_total,
+        "bonus_categories": bonus_categories_completed, # Dictionary of individual category completion
     }
     
 def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]:
