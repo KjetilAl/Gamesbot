@@ -35,17 +35,6 @@ async def on_ready():
     check_weekly_scores.start()
     check_monthly_scores.start()
 
-    # Check if we should post scores immediately
-    now = datetime.datetime.now(CET_TIMEZONE)
-    if now.weekday() == 6:  # Sunday
-        print("Bot started on Sunday, posting weekly scores immediately.")
-        await post_scores("weekly") # <-- Corrected call
-    if now.day == 1:
-        print("Bot started on the 1st of the month, posting monthly scores immediately.")
-        await post_scores("monthly") # <-- Corrected call
-
-    print("Bot is ready.")
-
 @bot.event
 async def on_message(message):
     """Handler for new messages."""
