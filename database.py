@@ -312,7 +312,7 @@ def get_connections_leaderboard(period: str = 'overall'):
                COUNT(*) AS games_played,
                SUM(total_score) AS total_score,
                AVG(total_score) AS avg_score,
-               SUM(CASE WHEN finished_game THEN 1 ELSE 0 END) AS solved_count, -- Assuming finished_game column exists based on parse
+               COUNT(*) AS solved_count,
                SUM(CASE WHEN solved_purple_first THEN 1 ELSE 0 END) AS purple_first_count,
                SUM(CASE WHEN solved_blue_first THEN 1 ELSE 0 END) AS blue_first_count
         FROM connections_scores
