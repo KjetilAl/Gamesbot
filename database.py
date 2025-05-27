@@ -440,7 +440,7 @@ def get_word_salad_leaderboard(period: str = 'overall'):
                COUNT(*) AS games_played,
                AVG(completion_time_seconds) AS avg_time,
                MIN(completion_time_seconds) AS best_time,
-               AVG(hints_used) AS avg_hints,
+               AVG(hints_used) AS avg_hints
         FROM word_salad_scores
         {where_clause}
         GROUP BY user_id, display_name
