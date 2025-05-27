@@ -316,7 +316,7 @@ async def post_scores(period: str):
             "Minute Cryptic": discord.Color.dark_teal(),
             "Word Salad": discord.Color.green(),
         }
-        embed_color = game_colors.get(game_name, discord.Color.gray())
+        embed_color = game_colors.get(game_name, discord.Color.from_rgb(128, 128, 128)) # Corrected gray color
 
         # Build the embed using the helper function
         leaderboard_embed = await build_leaderboard_embed(
