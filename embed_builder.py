@@ -39,11 +39,15 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
 
         # Customize the details based on the game name
         if game_name == "Wordle":
-            avg_attempts = row.get("avg_attempts", 0)
+            avg_attempts = row.get("avg_attempts") # Removed default, will check None explicitly
             solved_count = row.get("solved_count", 0)
             hard_mode_count = row.get("hard_mode_count", 0)
-            best_score = row.get("best_score", 0)
-            details.append(f"⏱️ Avg Attempts: **{avg_attempts:.2f}**")
+            best_score = row.get("best_score", 0) # Best score might be None if no solved games
+            
+            # Format average attempts, providing a fallback display
+            avg_attempts_display = f"**{avg_attempts:.2f}**" if avg_attempts is not None else "N/A"
+
+            details.append(f"⏱️ Avg Attempts: {avg_attempts_display}")
             details.append(f"🔓 Solved: **{solved_count}**")
             details.append(f"🛠️ Hard Mode: **{hard_mode_count}**")
             # Best Score might be less relevant for weekly/monthly, consider if you want to show it
@@ -51,36 +55,47 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
 
         elif game_name == "Connections":
              total_score = row.get("total_score", 0)
-             avg_score = row.get("avg_score", 0)
+             avg_score = row.get("avg_score") # Removed default
              solved_count = row.get("solved_count", 0)
              purple_first_count = row.get("purple_first_count", 0)
              blue_first_count = row.get("blue_first_count", 0)
+             
+             avg_score_display = f"**{avg_score:.2f}**" if avg_score is not None else "N/A"
+
              details.append(f"⭐ Total Score: **{total_score}**")
-             details.append(f"📊 Avg Score: **{avg_score:.2f}**")
+             details.append(f"📊 Avg Score: {avg_score_display}")
              details.append(f"🔓 Solved: **{solved_count}**")
              details.append(f"🟪 Purple First: **{purple_first_count}**")
              details.append(f"🟦 Blue First: **{blue_first_count}**")
 
         elif game_name == "Framed":
              total_score = row.get("total_score", 0)
-             avg_attempts = row.get("avg_attempts", 0)
+             avg_attempts = row.get("avg_attempts") # Removed default
              solved_count = row.get("solved_count", 0)
+
+             avg_attempts_display = f"**{avg_attempts:.2f}**" if avg_attempts is not None else "N/A"
+
              details.append(f"⭐ Total Score: **{total_score}**")
-             details.append(f"⏱️ Avg Attempts: **{avg_attempts:.2f}**")
+             details.append(f"⏱️ Avg Attempts: {avg_attempts_display}")
              details.append(f"🔓 Solved: **{solved_count}**")
 
         elif game_name == "Gisnep":
-             avg_time = row.get("avg_time", 0)
-             best_time = row.get("best_time", 0)
+             avg_time = row.get("avg_time") # Removed default
+             best_time = row.get("best_time") # Removed default
+
              # Ensure times are not None before converting
              avg_minutes, avg_seconds = divmod(int(avg_time) if avg_time is not None else 0, 60)
              best_minutes, best_seconds = divmod(int(best_time) if best_time is not None else 0, 60)
-             details.append(f"⏱️ Avg Time: **{avg_minutes:02d}:{avg_seconds:02d}**")
-             details.append(f"🥇 Best Time: **{best_minutes:02d}:{best_seconds:02d}**")
+
+             avg_time_display = f"**{avg_minutes:02d}:{avg_seconds:02d}**" if avg_time is not None else "N/A"
+             best_time_display = f"**{best_minutes:02d}:{best_seconds:02d}**" if best_time is not None else "N/A"
+
+             details.append(f"⏱️ Avg Time: {avg_time_display}")
+             details.append(f"🥇 Best Time: {best_time_display}")
 
         elif game_name == "Bandle":
              total_score = row.get("total_score", 0)
-             avg_attempts = row.get("avg_attempts", 0)
+             avg_attempts = row.get("avg_attempts") # Removed default
              solved_count = row.get("solved_count", 0)
              bonus_counts = [
                  row.get("bonus_microphone_count", 0), row.get("bonus_frame_count", 0), row.get("bonus_person_count", 0),
@@ -88,35 +103,49 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
                  row.get("bonus_cd_count", 0), row.get("bonus_timer_count", 0), row.get("bonus_guitar_count", 0)
              ]
              bonus_emojis = ["🎤", "🖼️", "🧑", "🌍", "🧩", "📅", "💿", "⏱️", "🎸"]
-             # Format bonus counts, only show if count > 0 or if you want to show 0s
+             
              bonus_display_parts = []
              for emoji, count in zip(bonus_emojis, bonus_counts):
-                 if count > 0: # Only show if completed at least once in the period
+                 if count > 0:
                      bonus_display_parts.append(f"{emoji} {count}")
              bonus_display = " ".join(bonus_display_parts) if bonus_display_parts else "None"
 
+             avg_attempts_display = f"**{avg_attempts:.2f}**" if avg_attempts is not None else "N/A"
+
              details.append(f"⭐ Total Score: **{total_score}**")
-             details.append(f"⏱️ Avg Attempts: **{avg_attempts:.2f}**")
+             details.append(f"⏱️ Avg Attempts: {avg_attempts_display}")
              details.append(f"🔓 Solved: **{solved_count}**")
              details.append(f"🎁 Bonus:\n{bonus_display}")
 
 
         elif game_name == "Minute Cryptic":
              solved_count = row.get("solved_count", 0)
-             avg_score = row.get("avg_score", 0)
+             avg_score = row.get("avg_score") # <--- Removed default `0`, will check for None explicitly
+             
+             # Handle None for avg_score formatting
+             avg_score_display = f"**{avg_score:.2f}**" if avg_score is not None else "N/A"
+
              details.append(f"🔓 Solved: **{solved_count}**")
-             details.append(f"📊 Avg Score: **{avg_score:.2f}**")
+             details.append(f"📊 Avg Score: {avg_score_display}") # <--- Use the display variable
+
 
         elif game_name == "Word Salad":
-             avg_time = row.get("avg_time", 0)
-             best_time = row.get("best_time", 0)
-             avg_hints = row.get("avg_hints", 0)
-              # Ensure times are not None before converting
+             avg_time = row.get("avg_time") # <--- Removed default `0`
+             best_time = row.get("best_time") # <--- Removed default `0`
+             avg_hints = row.get("avg_hints") # <--- Removed default `0`
+
+             # Ensure times are not None before converting to int and formatting
              avg_minutes, avg_seconds = divmod(int(avg_time) if avg_time is not None else 0, 60)
              best_minutes, best_seconds = divmod(int(best_time) if best_time is not None else 0, 60)
-             details.append(f"⏱️ Avg Time: **{avg_minutes:02d}:{avg_seconds:02d}**")
-             details.append(f"🥇 Best Time: **{best_minutes:02d}:{best_seconds:02d}**")
-             details.append(f"❓ Avg Hints: **{avg_hints:.2f}**")
+             
+             # Handle None for time and hints formatting
+             avg_time_display = f"**{avg_minutes:02d}:{avg_seconds:02d}**" if avg_time is not None else "N/A"
+             best_time_display = f"**{best_minutes:02d}:{best_seconds:02d}**" if best_time is not None else "N/A"
+             avg_hints_display = f"**{avg_hints:.2f}**" if avg_hints is not None else "N/A"
+
+             details.append(f"⏱️ Avg Time: {avg_time_display}") # <--- Use the display variable
+             details.append(f"🥇 Best Time: {best_time_display}") # <--- Use the display variable
+             details.append(f"❓ Avg Hints: {avg_hints_display}") # <--- Use the display variable
 
 
         field_value = "\n".join(details)
