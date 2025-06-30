@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime, timedelta, date
+from datetime import timedelta, date
 
 DB_NAME = "wordle.db"
 
