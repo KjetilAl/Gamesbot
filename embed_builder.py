@@ -27,26 +27,19 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
     
     # SORT THE ROWS BASED ON GAME TYPE AND PERFORMANCE
     if game_name == "Wordle":
-        # For Wordle: Lower average attempts is better
         rows.sort(key=lambda x: x.get("avg_attempts", float('inf')))
     elif game_name == "Connections":
-        # For Connections: Higher average score is better
         rows.sort(key=lambda x: x.get("avg_score", 0), reverse=True)
     elif game_name == "Framed":
-        # For Framed: Lower average attempts is better
         rows.sort(key=lambda x: x.get("avg_attempts", float('inf')))
     elif game_name == "Gisnep":
-        # For Gisnep: Lower average time is better
         rows.sort(key=lambda x: x.get("avg_time", float('inf')))
     elif game_name == "Bandle":
-        # For Bandle: Lower average attempts is better
         rows.sort(key=lambda x: x.get("avg_attempts", float('inf')))
     elif game_name == "Minute Cryptic":
-        # For Minute Cryptic: Higher average score is better
         rows.sort(key=lambda x: x.get("avg_score", 0), reverse=True)
     elif game_name == "Word Salad":
-        # For Word Salad: Lower average time is better
-        rows.sort(key=lambda x: x.get("avg_time", float('inf')))
+        rows.sort(key=lambda x: x.get("avg_score", 0) if x.get("avg_score") is not None else -float('inf'), reverse=True) # Sort by avg_score, None at bottom
     
     for i, row in enumerate(rows, start=1):
         medal = medals[i-1] if i <= len(medals) else f"#{i}"
@@ -133,26 +126,34 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
              details.append(f"📊 Avg Score: {avg_score_display}")
              
         elif game_name == "Word Salad":
-             avg_time = row.get("avg_time")
-             best_time = row.get("best_time")
-             avg_hints = row.get("avg_hints")
-             avg_minutes, avg_seconds = divmod(int(avg_time) if avg_time is not None else 0, 60)
-             best_minutes, best_seconds = divmod(int(best_time) if best_time is not None else 0, 60)
-             
-             avg_time_display = f"**{avg_minutes:02d}:{avg_seconds:02d}**" if avg_time is not None else "N/A"
-             best_time_display = f"**{best_minutes:02d}:{best_seconds:02d}**" if best_time is not None else "N/A"
-             avg_hints_display = f"**{avg_hints:.2f}**" if avg_hints is not None else "N/A"
-             details.append(f"⏱️ Avg Time: {avg_time_display}")
-             details.append(f"🥇 Best Time: {best_time_display}")
-             details.append(f"❓ Avg Hints: {avg_hints_display}")
-             
+            avg_time = row.get("avg_time")
+            best_time = row.get("best_time")
+            avg_hints = row.get("avg_hints")
+            total_score = row.get("total_score", 0) # Total calculated score
+            avg_score = row.get("avg_score")       # Average calculated score
+
+            avg_minutes, avg_seconds = divmod(int(avg_time) if avg_time is not None else 0, 60)
+            best_minutes, best_seconds = divmod(int(best_time) if best_time is not None else 0, 60)
+
+            avg_time_display = f"**{avg_minutes:02d}:{avg_seconds:02d}**" if avg_time is not None else "N/A"
+            best_time_display = f"**{best_minutes:02d}:{best_seconds:02d}**" if best_time is not None else "N/A"
+            avg_hints_display = f"**{avg_hints:.2f}**" if avg_hints is not None else "N/A"
+            avg_score_display = f"**{avg_score:.2f}**" if avg_score is not None else "N/A" # Display for new avg score
+
+            # Reorder or emphasize based on the new scoring
+            details.append(f"🧠 Avg Score: {avg_score_display}") # New primary metric
+            details.append(f"⭐ Total Score: **{total_score}**")
+            details.append(f"⏱️ Avg Time: {avg_time_display}") # Still show time for context
+            details.append(f"🥇 Best Time: {best_time_display}")
+            details.append(f"❓ Avg Hints: {avg_hints_display}")
+
         field_value = "\n".join(details)
         embed.add_field(
             name=f"{medal} {name}",
             value=field_value,
             inline=True
         )
-        
+
     emit_footer = f"Posted: {discord.utils.utcnow().strftime('%Y-%m-%d')}"
     embed.set_footer(text=emit_footer)
     return embed
