@@ -313,37 +313,58 @@ def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]
         traceback.print_exc()
         return None
 
-def parse_word_salad_score(message_content: str) -> Optional[Dict[str, Any]]:
-    """Parses a Word Salad score from a message."""
-    print(f"Attempting to parse Word Salad content: {message_content}")
+def score_wordsalad(time_seconds: int, hints_used: int) -> int:
+    """
+    Calculates the Word Salad score based on completion time and hints used.
+    Higher score is better.
+    """
+    tiers = [
+        (30, 12), (60, 11), (120, 10), (300, 9), (600, 8),
+        (900, 7), (1200, 6), (1500, 5), (1800, 4), (3600, 3),
+        (5400, 2), (float('inf'), 1)
+    ]
+    # Find the base score for the given time_seconds
+    base_score = next(score for limit, score in tiers if time_seconds < limit)
+    
+    # Deduct points for hints used
+    total_score = base_score - hints_used
+    
+    # Ensure the score does not go below zero
+    return max(total_score, 0)
 
-    number_match = WORD_SALAD_NUMBER_PATTERN.search(message_content)
-    time_match = WORD_SALAD_TIME_PATTERN.search(message_content)
-    hints_match = WORD_SALAD_HINTS_PATTERN.search(message_content)
+def parse_word_salad_score(message_content: str) -> dict | None:
+    # Example format:
+    # Word Salad
+    # Puzzle #123
+    # Time: 0:45
+    # Hints: 2
 
-    if not (number_match and time_match and hints_match):
-        print("Word Salad - Could not match all basic patterns.")
+    if "Word Salad" not in message_content:
         return None
 
-    game_number = int(number_match.group(1))
-    time_str = time_match.group(1)
-    hints_used = int(hints_match.group(1))
+    puzzle_match = re.search(r"Word Salad\nPuzzle #(\d+)", message_content)
+    if not puzzle_match:
+        return None
+    puzzle_number = int(puzzle_match.group(1))
 
-    # Convert time string (e.g., "2m 33s") to total seconds
-    total_seconds = 0
-    time_parts = time_str.replace('m', 'm ').replace('s', '').split()
-    for part in time_parts:
-        if 'm' in part:
-            total_seconds += int(part.replace('m', '')) * 60
-        elif part: # Handle seconds part
-             total_seconds += int(part)
+    time_match = re.search(r"Time: (\d+):(\d+)", message_content)
+    if not time_match:
+        return None # Time is mandatory for scoring
+    minutes = int(time_match.group(1))
+    seconds = int(time_match.group(2))
+    completion_time_seconds = minutes * 60 + seconds
 
-    print(f"Parsed Word Salad data: Game #{game_number}, Time: {total_seconds}s, Hints: {hints_used}")
+    hints_match = re.search(r"Hints: (\d+)", message_content)
+    hints_used = int(hints_match.group(1)) if hints_match else 0 # Default to 0 hints if not found
+
+    # Calculate the new Word Salad score using the defined function
+    calculated_score = score_wordsalad(completion_time_seconds, hints_used)
 
     return {
-        "game_number": game_number,
-        "completion_time_seconds": total_seconds,
-        "hints_used": hints_used,
+        "puzzle_number": puzzle_number,
+        "completion_time_seconds": completion_time_seconds, # Keep for display if desired
+        "hints_used": hints_used,                           # Keep for display if desired
+        "score": calculated_score,                          # The new calculated score
     }
 
 def is_bandle_message(message_content: str) -> bool:
