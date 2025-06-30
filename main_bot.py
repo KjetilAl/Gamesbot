@@ -115,7 +115,7 @@ async def on_message(message):
                 elif game_key == "word_salad":
                     config["save_score_function"](
                         message.author.id, message.author.display_name,
-                        game_info["game_number"],
+                        game_info["puzzle_number"],
                         game_info["completion_time_seconds"],
                         game_info["hints_used"],
                         calculated_score = game_info["score"]
