@@ -118,7 +118,7 @@ async def on_message(message):
                         game_info["game_number"],
                         game_info["completion_time_seconds"],
                         game_info["hints_used"],
-                        calculated_score = parsed_score["score"] # Retrieve the calculated score
+                        calculated_score = score # Retrieve the calculated score
                     )
                 
                 # Create acknowledgement and handle roles
