@@ -332,7 +332,7 @@ def score_wordsalad(time_seconds: int, hints_used: int) -> int:
     # Ensure the score does not go below zero
     return max(total_score, 0)
 
-def parse_word_salad_score(message_content: str) -> dict | None:
+def parse_word_salad_score(message_content: str) -> Optional[Dict[str, Any]]:
 
     if "word salad" not in message_content.lower():
         print("DEBUG: 'Word Salad' keyword not found in message_content.")
@@ -342,8 +342,8 @@ def parse_word_salad_score(message_content: str) -> dict | None:
     if not puzzle_match:
         print("DEBUG: Failed to match 'Word Salad #' pattern (e.g., 'Word Salad #123').")
         return None
-    puzzle_number = int(puzzle_match.group(1))
-    print(f"DEBUG: Puzzle number found: {puzzle_number}")
+    game_number = int(puzzle_match.group(1))
+    print(f"DEBUG: Game number found: {game_number}")
 
     time_match = re.search(r"⌛(\d+)m\s*(\d+)s", message_content)
     if not time_match:
