@@ -255,8 +255,8 @@ def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, c
     finally:
         conn.close()
 
-def save_word_salad_score(user_id: int, display_name: str, puzzle_number: int,
-                         completion_time_seconds: int, hints_used: int, score: int): # <--- Make sure 'score: int' is here!
+def save_word_salad_score(user_id: int, display_name: str, game_number: int,
+                         completion_time_seconds: int, hints_used: int, score: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
@@ -264,8 +264,8 @@ def save_word_salad_score(user_id: int, display_name: str, puzzle_number: int,
     # Check if a score for this user and puzzle already exists
     cursor.execute("""
         SELECT 1 FROM word_salad_scores
-        WHERE user_id = ? AND puzzle_number = ?
-    """, (user_id, puzzle_number))
+        WHERE user_id = ? AND game_number = ?
+    """, (user_id, game_number))
     existing_score = cursor.fetchone()
 
     if existing_score:
@@ -273,17 +273,17 @@ def save_word_salad_score(user_id: int, display_name: str, puzzle_number: int,
         cursor.execute("""
             UPDATE word_salad_scores
             SET display_name = ?, completion_time_seconds = ?, hints_used = ?, score = ?, timestamp = ?
-            WHERE user_id = ? AND puzzle_number = ?
-        """, (display_name, completion_time_seconds, hints_used, score, timestamp, # <--- Ensure 'score' is in this tuple
-              user_id, puzzle_number))
-        print(f"Updated Word Salad score for {display_name} (Puzzle #{puzzle_number}).")
+            WHERE user_id = ? AND game_number = ?
+        """, (display_name, completion_time_seconds, hints_used, score, timestamp,
+              user_id, game_number))
+        print(f"Updated Word Salad score for {display_name} (Game #{game_number}).")
     else:
         cursor.execute("""
             INSERT INTO word_salad_scores
-            (user_id, display_name, puzzle_number, completion_time_seconds, hints_used, score, timestamp) # <--- Ensure 'score' column is listed here
-            VALUES (?, ?, ?, ?, ?, ?, ?) # <--- Ensure there's a '?' for the score here
-        """, (user_id, display_name, puzzle_number, completion_time_seconds, hints_used, score, timestamp)) # <--- Ensure 'score' value is here
-        print(f"Added Word Salad score for {display_name} (Puzzle #{puzzle_number}).")
+            (user_id, display_name, game_number, completion_time_seconds, hints_used, score, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (user_id, display_name, game_number, completion_time_seconds, hints_used, score, timestamp))
+        print(f"Added Word Salad score for {display_name} (Game #{game_number}).")
 
     conn.commit()
     conn.close()
