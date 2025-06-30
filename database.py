@@ -467,7 +467,7 @@ def get_word_salad_leaderboard(period: str = 'overall'):
         FROM word_salad_scores
         {where_clause}
         GROUP BY user_id, display_name
-        ORDER BY avg_score DESC, total_score DESC, games_played DESC -- Rank by average score (HIGHER is better), then total score, then games played
+        ORDER BY avg_score DESC, total_score DESC, games_played DESC
         LIMIT 10
     """, params)
     leaderboard = cursor.fetchall()
