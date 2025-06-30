@@ -364,7 +364,7 @@ def parse_word_salad_score(message_content: str) -> dict | None:
 
     print("DEBUG: Word Salad parsing successful.")
     return {
-        "puzzle_number": puzzle_number,
+        "game_number": game_number,
         "completion_time_seconds": completion_time_seconds,
         "hints_used": hints_used,
         "score": calculated_score,
