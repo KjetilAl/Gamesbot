@@ -333,16 +333,11 @@ def score_wordsalad(time_seconds: int, hints_used: int) -> int:
     return max(total_score, 0)
 
 def parse_word_salad_score(message_content: str) -> dict | None:
-    print(f"DEBUG: Attempting to parse Word Salad score for content:\n---\n{message_content}\n---")
 
-    # Make the initial check more flexible (case-insensitive)
     if "word salad" not in message_content.lower():
         print("DEBUG: 'Word Salad' keyword not found in message_content.")
         return None
 
-    # REVISED: Match "Word Salad #NUM"
-    # It looks for "Word Salad" followed by optional whitespace, then '#', then digits.
-    # re.IGNORECASE ensures it matches "Word Salad", "word salad", etc.
     puzzle_match = re.search(r"Word Salad\s*#(\d+)", message_content, re.IGNORECASE)
     if not puzzle_match:
         print("DEBUG: Failed to match 'Word Salad #' pattern (e.g., 'Word Salad #123').")
@@ -350,8 +345,6 @@ def parse_word_salad_score(message_content: str) -> dict | None:
     puzzle_number = int(puzzle_match.group(1))
     print(f"DEBUG: Puzzle number found: {puzzle_number}")
 
-    # REVISED: Match "⌛0m 43s"
-    # It looks for the hourglass emoji, then digits + 'm', optional space, digits + 's'.
     time_match = re.search(r"⌛(\d+)m\s*(\d+)s", message_content)
     if not time_match:
         print("DEBUG: Failed to match 'Time' pattern (e.g., '⌛0m 43s').")
@@ -361,10 +354,7 @@ def parse_word_salad_score(message_content: str) -> dict | None:
     completion_time_seconds = minutes * 60 + seconds
     print(f"DEBUG: Time found: {minutes}m {seconds}s ({completion_time_seconds} seconds)")
 
-    # REVISED: Match "❓0"
-    # It looks for the question mark emoji, then digits.
     hints_match = re.search(r"❓(\d+)", message_content)
-    # hints_used will be 0 if the pattern isn't found (e.g., if there are no hints line)
     hints_used = int(hints_match.group(1)) if hints_match else 0
     print(f"DEBUG: Hints found: {hints_used}")
 
