@@ -40,9 +40,14 @@ def initialize_db():
         # Word Salad
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS word_salad_scores (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
-                game_number INTEGER, completion_time_seconds INTEGER, hints_used INTEGER,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                user_id INTEGER NOT NULL,
+                display_name TEXT NOT NULL,
+                game_number INTEGER NOT NULL,
+                completion_time_seconds INTEGER NOT NULL,
+                hints_used INTEGER NOT NULL,
+                score INTEGER NOT NULL,
+                timestamp TEXT NOT NULL,
+                PRIMARY KEY (user_id, game_number)
             )
         """)
         # Framed
