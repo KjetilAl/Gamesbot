@@ -249,21 +249,38 @@ def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, c
     finally:
         conn.close()
 
-def save_word_salad_score(user_id: int, display_name: str, game_number: int, completion_time_seconds: int, hints_used: int):
-    """Saves a Word Salad score to the database."""
+def save_word_salad_score(user_id: int, display_name: str, puzzle_number: int,
+                         completion_time_seconds: int, hints_used: int, score: int): # Added 'score' parameter
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    try:
+    timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+
+    # Check if a score for this user and puzzle already exists
+    cursor.execute("""
+        SELECT 1 FROM word_salad_scores
+        WHERE user_id = ? AND puzzle_number = ?
+    """, (user_id, puzzle_number))
+    existing_score = cursor.fetchone()
+
+    if existing_score:
+        # Update existing score to include the new calculated 'score'
         cursor.execute("""
-            INSERT INTO word_salad_scores (user_id, display_name, game_number, completion_time_seconds, hints_used)
-            VALUES (?, ?, ?, ?, ?)
-        """, (user_id, display_name, game_number, completion_time_seconds, hints_used))
-        conn.commit()
-        print(f"DB: Saved Word Salad score for {display_name} - Game #{game_number}")
-    except sqlite3.Error as e:
-        print(f"Database error in save_word_salad_score: {e}")
-    finally:
-        conn.close()
+            UPDATE word_salad_scores
+            SET display_name = ?, completion_time_seconds = ?, hints_used = ?, score = ?, timestamp = ?
+            WHERE user_id = ? AND puzzle_number = ?
+        """, (display_name, completion_time_seconds, hints_used, score, timestamp,
+              user_id, puzzle_number))
+        print(f"Updated Word Salad score for {display_name} (Puzzle #{puzzle_number}).")
+    else:
+        cursor.execute("""
+            INSERT INTO word_salad_scores
+            (user_id, display_name, puzzle_number, completion_time_seconds, hints_used, score, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (user_id, display_name, puzzle_number, completion_time_seconds, hints_used, score, timestamp))
+        print(f"Added Word Salad score for {display_name} (Puzzle #{puzzle_number}).")
+
+    conn.commit()
+    conn.close()
 
 def get_scores_by_period(table_name: str, period: str) -> tuple[str, ...]:
     """Helper function to get the WHERE clause and parameters for a given period."""
@@ -429,27 +446,27 @@ def get_minute_cryptic_leaderboard(period: str = 'weekly') -> list[tuple[str, in
     return leaderboard # Returns list of tuples
 
 def get_word_salad_leaderboard(period: str = 'overall'):
-    """Fetch Word Salad leaderboard data, supporting different periods and stats."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     where_clause, params = get_scores_by_period("word_salad_scores", period)
 
-    # Fetch relevant stats for Word Salad
     cursor.execute(f"""
         SELECT display_name,
                COUNT(*) AS games_played,
-               AVG(completion_time_seconds) AS avg_time,
-               MIN(completion_time_seconds) AS best_time,
-               AVG(hints_used) AS avg_hints
+               AVG(completion_time_seconds) AS avg_time,  -- Keep for display if needed
+               MIN(completion_time_seconds) AS best_time,  -- Keep for display if needed
+               AVG(hints_used) AS avg_hints,               -- Keep for display if needed
+               SUM(score) AS total_score,                  -- New: Total calculated score
+               AVG(score) AS avg_score                     -- New: Average calculated score
         FROM word_salad_scores
         {where_clause}
         GROUP BY user_id, display_name
-        ORDER BY avg_time ASC, avg_hints ASC, games_played DESC -- Rank by average time, then average hints, then games played
+        ORDER BY avg_score DESC, total_score DESC, games_played DESC -- Rank by average score (HIGHER is better), then total score, then games played
         LIMIT 10
     """, params)
     leaderboard = cursor.fetchall()
     conn.close()
-    return leaderboard # Returns list of tuples
+    return leaderboard
 
 # Database functions for tracking roles
 def save_user_role(user_id, role_name, game_number, expires_at):
