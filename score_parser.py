@@ -333,38 +333,47 @@ def score_wordsalad(time_seconds: int, hints_used: int) -> int:
     return max(total_score, 0)
 
 def parse_word_salad_score(message_content: str) -> dict | None:
-    # Example format:
-    # Word Salad
-    # Puzzle #123
-    # Time: 0:45
-    # Hints: 2
+    print(f"DEBUG: Attempting to parse Word Salad score for content:\n---\n{message_content}\n---")
 
-    if "Word Salad" not in message_content:
+    # Make the initial check more flexible (case-insensitive)
+    if "word salad" not in message_content.lower():
+        print("DEBUG: 'Word Salad' keyword not found in message_content.")
         return None
 
-    puzzle_match = re.search(r"Word Salad\nPuzzle #(\d+)", message_content)
+    # Regex improvements:
+    # \s* : allows for zero or more whitespace characters (including newlines)
+    # re.IGNORECASE : makes the search case-insensitive for "Word Salad" and "Puzzle"
+    puzzle_match = re.search(r"Word Salad\s*Puzz?le #(\d+)", message_content, re.IGNORECASE)
     if not puzzle_match:
+        print("DEBUG: Failed to match 'Puzzle #' pattern.")
         return None
     puzzle_number = int(puzzle_match.group(1))
+    print(f"DEBUG: Puzzle number found: {puzzle_number}")
 
-    time_match = re.search(r"Time: (\d+):(\d+)", message_content)
+    # Allow optional space after "Time:" and "Hints:"
+    time_match = re.search(r"Time:\s*(\d+):(\d+)", message_content)
     if not time_match:
-        return None # Time is mandatory for scoring
+        print("DEBUG: Failed to match 'Time:' pattern.")
+        return None
     minutes = int(time_match.group(1))
     seconds = int(time_match.group(2))
     completion_time_seconds = minutes * 60 + seconds
+    print(f"DEBUG: Time found: {minutes}:{seconds} ({completion_time_seconds} seconds)")
 
-    hints_match = re.search(r"Hints: (\d+)", message_content)
-    hints_used = int(hints_match.group(1)) if hints_match else 0 # Default to 0 hints if not found
+    hints_match = re.search(r"Hints:\s*(\d+)", message_content)
+    hints_used = int(hints_match.group(1)) if hints_match else 0 # Still handles missing hints line
+    print(f"DEBUG: Hints found: {hints_used}")
 
-    # Calculate the new Word Salad score using the defined function
+    # Calculate the new Word Salad score
     calculated_score = score_wordsalad(completion_time_seconds, hints_used)
+    print(f"DEBUG: Calculated score: {calculated_score}")
 
+    print("DEBUG: Word Salad parsing successful.")
     return {
         "puzzle_number": puzzle_number,
-        "completion_time_seconds": completion_time_seconds, # Keep for display if desired
-        "hints_used": hints_used,                           # Keep for display if desired
-        "score": calculated_score,                          # The new calculated score
+        "completion_time_seconds": completion_time_seconds,
+        "hints_used": hints_used,
+        "score": calculated_score,
     }
 
 def is_bandle_message(message_content: str) -> bool:
