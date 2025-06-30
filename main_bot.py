@@ -118,6 +118,7 @@ async def on_message(message):
                         game_info["game_number"],
                         game_info["completion_time_seconds"],
                         game_info["hints_used"]
+                        calculated_score = parsed_score["score"] # Retrieve the calculated score
                     )
                 
                 # Create acknowledgement and handle roles
@@ -270,7 +271,7 @@ async def post_scores(period: str):
                        "bonus_microphone_count", "bonus_frame_count", "bonus_person_count", "bonus_globe_count", "bonus_puzzle_count",
                        "bonus_calendar_count", "bonus_cd_count", "bonus_timer_count", "bonus_guitar_count"],
             "Minute Cryptic": ["display_name", "games_played", "solved_count", "avg_score"],
-            "Word Salad": ["display_name", "games_played", "avg_time", "best_time", "avg_hints"]
+            "Word Salad": ["display_name", "games_played", "avg_time", "best_time", "avg_hints", "total_score", "avg_score"], # Updated keys to include total_score and avg_score
         }
 
         if game_name in game_data_mapping:
@@ -297,8 +298,8 @@ async def post_scores(period: str):
                       player_data["avg"] = player_data["avg_score"]
                       player_data["solved"] = player_data["solved_count"]
                  elif game_name == "Word Salad":
-                      player_data["avg"] = player_data["avg_time"] # Avg time
-                      player_data["solved"] = player_data["games_played"] # Using games played as a 'solved' proxy for time games
+                      player_data["avg"] = player_data["avg_score"] # Now using avg_score as the generic average
+                      player_data["total"] = player_data["total_score"] # Add total score
 
                  formatted_scores_for_embed.append(player_data)
         else:
