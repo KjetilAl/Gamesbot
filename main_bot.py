@@ -118,7 +118,7 @@ async def on_message(message):
                         game_info["puzzle_number"],
                         game_info["completion_time_seconds"],
                         game_info["hints_used"],
-                        calculated_score = ["score"]
+                        game_info["score"]
                     )
                 
                 # Create acknowledgement and handle roles
