@@ -340,28 +340,32 @@ def parse_word_salad_score(message_content: str) -> dict | None:
         print("DEBUG: 'Word Salad' keyword not found in message_content.")
         return None
 
-    # Regex improvements:
-    # \s* : allows for zero or more whitespace characters (including newlines)
-    # re.IGNORECASE : makes the search case-insensitive for "Word Salad" and "Puzzle"
-    puzzle_match = re.search(r"Word Salad\s*Puzz?le #(\d+)", message_content, re.IGNORECASE)
+    # REVISED: Match "Word Salad #NUM"
+    # It looks for "Word Salad" followed by optional whitespace, then '#', then digits.
+    # re.IGNORECASE ensures it matches "Word Salad", "word salad", etc.
+    puzzle_match = re.search(r"Word Salad\s*#(\d+)", message_content, re.IGNORECASE)
     if not puzzle_match:
-        print("DEBUG: Failed to match 'Puzzle #' pattern.")
+        print("DEBUG: Failed to match 'Word Salad #' pattern (e.g., 'Word Salad #123').")
         return None
     puzzle_number = int(puzzle_match.group(1))
     print(f"DEBUG: Puzzle number found: {puzzle_number}")
 
-    # Allow optional space after "Time:" and "Hints:"
-    time_match = re.search(r"Time:\s*(\d+):(\d+)", message_content)
+    # REVISED: Match "⌛0m 43s"
+    # It looks for the hourglass emoji, then digits + 'm', optional space, digits + 's'.
+    time_match = re.search(r"⌛(\d+)m\s*(\d+)s", message_content)
     if not time_match:
-        print("DEBUG: Failed to match 'Time:' pattern.")
+        print("DEBUG: Failed to match 'Time' pattern (e.g., '⌛0m 43s').")
         return None
     minutes = int(time_match.group(1))
     seconds = int(time_match.group(2))
     completion_time_seconds = minutes * 60 + seconds
-    print(f"DEBUG: Time found: {minutes}:{seconds} ({completion_time_seconds} seconds)")
+    print(f"DEBUG: Time found: {minutes}m {seconds}s ({completion_time_seconds} seconds)")
 
-    hints_match = re.search(r"Hints:\s*(\d+)", message_content)
-    hints_used = int(hints_match.group(1)) if hints_match else 0 # Still handles missing hints line
+    # REVISED: Match "❓0"
+    # It looks for the question mark emoji, then digits.
+    hints_match = re.search(r"❓(\d+)", message_content)
+    # hints_used will be 0 if the pattern isn't found (e.g., if there are no hints line)
+    hints_used = int(hints_match.group(1)) if hints_match else 0
     print(f"DEBUG: Hints found: {hints_used}")
 
     # Calculate the new Word Salad score
