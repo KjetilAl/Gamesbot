@@ -1,6 +1,6 @@
 import sqlite3
 import datetime
-from datetime import timedelta, date
+from datetime import timedelta, date, timezone # Added timezone
 
 DB_NAME = "wordle.db"
 
@@ -82,7 +82,7 @@ def initialize_db():
                 latest_number TEXT -- Storing as TEXT for dates/numbers
             )
         """)
-        
+
         # Table for tracking user roles if needed
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS user_roles (
@@ -93,11 +93,11 @@ def initialize_db():
                 PRIMARY KEY (user_id, role_name)
             )
         """)
-        
+
         # Commit all schema changes together
         conn.commit()
         print("DB: All tables created or verified.")
-        
+
         # --- Initialize latest_game_numbers Data ---
         initial_games = [
             ('Wordle', '0'), ('Connections', '0'), ('Framed', '0'),
@@ -110,9 +110,9 @@ def initialize_db():
             print("DB: Initial latest game numbers inserted or verified.")
         except sqlite3.Error as e:
             print(f"Database error during initial game number insertion: {e}")
-            
+
         print("Database initialized successfully.")
-        
+
     except sqlite3.Error as e:
         # This block catches errors from anywhere within the 'try' block above
         print(f"DATABASE INITIALIZATION FAILED: {e}")
@@ -149,7 +149,7 @@ def save_wordle_score(user_id, display_name, game_number, attempts, skill=None, 
     """, (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score))
     conn.commit()
     conn.close()
-    
+
 def get_recent_scores(user_id, limit=5):
     """Retrieve the last `limit` games played by a user."""
     conn = sqlite3.connect(DB_NAME)
@@ -229,7 +229,7 @@ def save_bandle_score(user_id, display_name, game_number, attempts, total_score,
         print(f"Database error in save_bandle_score: {e}")
     finally:
         conn.close()
-        
+
 def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, clue: str, word_length: int, score_description: str):
     """Saves a Minute Cryptic score to the database."""
     conn = sqlite3.connect(DB_NAME)
@@ -259,7 +259,7 @@ def save_word_salad_score(user_id: int, display_name: str, game_number: int,
                          completion_time_seconds: int, hints_used: int, score: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S') # Changed to now(timezone.utc)
 
     # Check if a score for this user and puzzle already exists
     cursor.execute("""
@@ -291,10 +291,10 @@ def save_word_salad_score(user_id: int, display_name: str, game_number: int,
 def get_scores_by_period(table_name: str, period: str) -> tuple[str, ...]:
     """Helper function to get the WHERE clause and parameters for a given period."""
     if period == 'weekly':
-        start_time = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        start_time = (datetime.datetime.now(timezone.utc) - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S') # Changed to now(timezone.utc)
         return "WHERE timestamp >= ?", (start_time,)
     elif period == 'monthly':
-        first_day_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+        first_day_of_month = datetime.datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S') # Changed to now(timezone.utc)
         return "WHERE timestamp >= ?", (first_day_of_month,)
     else: # overall
         return "", ()
@@ -480,8 +480,8 @@ def save_user_role(user_id, role_name, game_number, expires_at):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT OR REPLACE INTO user_roles 
-        (user_id, role_name, game_number, expires_at) 
+        INSERT OR REPLACE INTO user_roles
+        (user_id, role_name, game_number, expires_at)
         VALUES (?, ?, ?, ?)
     ''', (user_id, role_name, game_number, expires_at))
     conn.commit()
@@ -489,7 +489,7 @@ def save_user_role(user_id, role_name, game_number, expires_at):
 
 def get_expired_roles():
     """Get all expired roles that need to be removed."""
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = datetime.datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S") # Changed to now(timezone.utc)
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
@@ -502,7 +502,7 @@ def get_expired_roles():
 
 def delete_expired_roles():
     """Delete records of expired roles from the database."""
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = datetime.datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S") # Changed to now(timezone.utc)
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
