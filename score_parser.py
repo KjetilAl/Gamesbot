@@ -319,7 +319,7 @@ def score_wordsalad(time_seconds: int, hints_used: int) -> int:
     Higher score is better.
     """
     tiers = [
-        (30, 12), (60, 11), (120, 10), (300, 9), (600, 8),
+        (30, 20), (60, 18), (120, 15), (300, 10), (600, 8),
         (900, 7), (1200, 6), (1500, 5), (1800, 4), (3600, 3),
         (5400, 2), (float('inf'), 1)
     ]
