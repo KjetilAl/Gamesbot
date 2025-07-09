@@ -48,31 +48,21 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
         
         # Build field value depending on game type and available stats
         details = []
-        details.append(f"▶️ Played: **{played}**")
         
         # Customize the details based on the game name
         if game_name == "Wordle":
             avg_attempts = row.get("avg_attempts")
-            solved_count = row.get("solved_count", 0)
-            hard_mode_count = row.get("hard_mode_count", 0)
-            best_score = row.get("best_score", 0)
             
             avg_attempts_display = f"**{avg_attempts:.2f}**" if avg_attempts is not None else "N/A"
             details.append(f"⏱️ Avg Attempts: {avg_attempts_display}")
-            details.append(f"🔓 Solved: **{solved_count}**")
-            details.append(f"🛠️ Hard Mode: **{hard_mode_count}**")
             
         elif game_name == "Connections":
              total_score = row.get("total_score", 0)
-             avg_score = row.get("avg_score")
-             solved_count = row.get("solved_count", 0)
              purple_first_count = row.get("purple_first_count", 0)
              blue_first_count = row.get("blue_first_count", 0)
              
              avg_score_display = f"**{avg_score:.2f}**" if avg_score is not None else "N/A"
              details.append(f"⭐ Total Score: **{total_score}**")
-             details.append(f"📊 Avg Score: {avg_score_display}")
-             details.append(f"🔓 Solved: **{solved_count}**")
              details.append(f"🟪 Purple First: **{purple_first_count}**")
              details.append(f"🟦 Blue First: **{blue_first_count}**")
              
@@ -83,7 +73,6 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
              avg_attempts_display = f"**{avg_attempts:.2f}**" if avg_attempts is not None else "N/A"
              details.append(f"⭐ Total Score: **{total_score}**")
              details.append(f"⏱️ Avg Attempts: {avg_attempts_display}")
-             details.append(f"🔓 Solved: **{solved_count}**")
              
         elif game_name == "Gisnep":
              avg_time = row.get("avg_time")
@@ -98,7 +87,6 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
         elif game_name == "Bandle":
              total_score = row.get("total_score", 0)
              avg_attempts = row.get("avg_attempts")
-             solved_count = row.get("solved_count", 0)
              bonus_counts = [
                  row.get("bonus_microphone_count", 0), row.get("bonus_frame_count", 0), row.get("bonus_person_count", 0),
                  row.get("bonus_globe_count", 0), row.get("bonus_puzzle_count", 0), row.get("bonus_calendar_count", 0),
@@ -114,7 +102,6 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
              avg_attempts_display = f"**{avg_attempts:.2f}**" if avg_attempts is not None else "N/A"
              details.append(f"⭐ Total Score: **{total_score}**")
              details.append(f"⏱️ Avg Attempts: {avg_attempts_display}")
-             details.append(f"🔓 Solved: **{solved_count}**")
              details.append(f"🎁 Bonus:\n{bonus_display}")
              
         elif game_name == "Minute Cryptic":
@@ -126,18 +113,14 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
              details.append(f"📊 Avg Score: {avg_score_display}")
              
         elif game_name == "Word Salad":
-            avg_time = row.get("avg_time")
             best_time = row.get("best_time")
-            avg_hints = row.get("avg_hints")
             total_score = row.get("total_score", 0) # Total calculated score
             avg_score = row.get("avg_score")       # Average calculated score
 
             avg_minutes, avg_seconds = divmod(int(avg_time) if avg_time is not None else 0, 60)
             best_minutes, best_seconds = divmod(int(best_time) if best_time is not None else 0, 60)
-
-            avg_time_display = f"**{avg_minutes:02d}:{avg_seconds:02d}**" if avg_time is not None else "N/A"
+            
             best_time_display = f"**{best_minutes:02d}:{best_seconds:02d}**" if best_time is not None else "N/A"
-            avg_hints_display = f"**{avg_hints:.2f}**" if avg_hints is not None else "N/A"
             avg_score_display = f"**{avg_score:.2f}**" if avg_score is not None else "N/A" # Display for new avg score
 
             # Reorder or emphasize based on the new scoring
@@ -145,7 +128,6 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
             details.append(f"⭐ Total Score: **{total_score}**")
             details.append(f"⏱️ Avg Time: {avg_time_display}") # Still show time for context
             details.append(f"🥇 Best Time: {best_time_display}")
-            details.append(f"❓ Avg Hints: {avg_hints_display}")
 
         field_value = "\n".join(details)
         embed.add_field(
