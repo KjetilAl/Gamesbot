@@ -60,8 +60,10 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
              total_score = row.get("total_score", 0)
              purple_first_count = row.get("purple_first_count", 0)
              blue_first_count = row.get("blue_first_count", 0)
+             avg_score = row.get("avg_score")
              
              avg_score_display = f"**{avg_score:.2f}**" if avg_score is not None else "N/A"
+             details.append(f"⭐ Avg Score: {avg_score_display}")
              details.append(f"⭐ Total Score: **{total_score}**")
              details.append(f"🟪 Purple First: **{purple_first_count}**")
              details.append(f"🟦 Blue First: **{blue_first_count}**")
@@ -116,6 +118,7 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
             best_time = row.get("best_time")
             total_score = row.get("total_score", 0) # Total calculated score
             avg_score = row.get("avg_score")       # Average calculated score
+            avg_time = row.get("avg_time")
 
             avg_minutes, avg_seconds = divmod(int(avg_time) if avg_time is not None else 0, 60)
             best_minutes, best_seconds = divmod(int(best_time) if best_time is not None else 0, 60)
