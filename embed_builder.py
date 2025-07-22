@@ -125,6 +125,7 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
             
             best_time_display = f"**{best_minutes:02d}:{best_seconds:02d}**" if best_time is not None else "N/A"
             avg_score_display = f"**{avg_score:.2f}**" if avg_score is not None else "N/A" # Display for new avg score
+            avg_time_display = f"**{avg_minutes:02d}:{avg_seconds:02d}**" if avg_time is not None else "N/A"
 
             # Reorder or emphasize based on the new scoring
             details.append(f"🧠 Avg Score: {avg_score_display}") # New primary metric
