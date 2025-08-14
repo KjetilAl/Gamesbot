@@ -226,42 +226,43 @@ async def leaderboard(ctx, game="wordle"):
     await ctx.send(leaderboard_message)
 
 async def post_scores(period: str):
-    """Fetches and posts leaderboard scores for all games using embeds."""
+    """Fetches and posts leaderboard scores for each game to its respective channel."""
     scores_by_game = {}
-    leaderboard_channel_name = "leaderboards"
 
     # Fetch scores for each game using functions from game_config
     for game_key, config in game_config.GAME_CONFIGS.items():
         if "get_leaderboard_function" in config:
             try:
-                # Pass the period to the leaderboard function
                 scores = config["get_leaderboard_function"](period=period)
-                if scores: # Only add if there are scores
-                    # Store the raw fetched data
-                    scores_by_game[config["name"]] = scores
+                if scores:
+                    # Store scores with the game_key to retain access to config
+                    scores_by_game[game_key] = scores
             except Exception as e:
                 print(f"Error fetching {period} leaderboard for {config['name']}: {e}")
                 import traceback
-                traceback.print_exc() # Print traceback for better debugging
+                traceback.print_exc()
 
-    # Find the 'leaderboards' channel
-    leaderboard_channel = discord.utils.get(bot.get_all_channels(), name=leaderboard_channel_name)
-    if not leaderboard_channel:
-        print(f"Warning: Could not find the '{leaderboard_channel_name}' channel.")
-        return
-
-    # Iterate over each game, format data for embed, build embed, and post
     if not scores_by_game:
         print(f"No {period} leaderboard data found for any game.")
-        # Optional: Post a message indicating no scores found
-        # await leaderboard_channel.send(f"No {period.capitalize()} leaderboard data found for any game this period.")
         return
 
-    for game_name, scores in scores_by_game.items():
-        # Format the fetched tuple data into a list of dictionaries for the embed function
+    # Iterate over each game with scores, build embed, and post to the respective channel
+    for game_key, scores in scores_by_game.items():
+        config = game_config.GAME_CONFIGS[game_key]
+        game_name = config["name"]
+        channel_name = config.get("chat_channel_name")
+
+        if not channel_name:
+            print(f"Warning: 'chat_channel_name' not configured for {game_name}. Skipping.")
+            continue
+
+        leaderboard_channel = discord.utils.get(bot.get_all_channels(), name=channel_name)
+        if not leaderboard_channel:
+            print(f"Warning: Could not find the '{channel_name}' channel for {game_name}.")
+            continue
+
+        # Format data for embed
         formatted_scores_for_embed = []
-        # Define the mapping of database tuple index to dictionary key for each game
-        # This makes the formatting cleaner
         game_data_mapping = {
             "Wordle": ["display_name", "games_played", "avg_attempts", "solved_count", "hard_mode_count", "best_score"],
             "Connections": ["display_name", "games_played", "total_score", "avg_score", "solved_count", "purple_first_count", "blue_first_count"],
@@ -271,85 +272,66 @@ async def post_scores(period: str):
                        "bonus_microphone_count", "bonus_frame_count", "bonus_person_count", "bonus_globe_count", "bonus_puzzle_count",
                        "bonus_calendar_count", "bonus_cd_count", "bonus_timer_count", "bonus_guitar_count"],
             "Minute Cryptic": ["display_name", "games_played", "solved_count", "avg_score"],
-            "Word Salad": ["display_name", "games_played", "avg_time", "best_time", "avg_hints", "total_score", "avg_score"], # Updated keys to include total_score and avg_score
+            "Word Salad": ["display_name", "games_played", "avg_time", "best_time", "avg_hints", "total_score", "avg_score"],
         }
 
         if game_name in game_data_mapping:
             keys = game_data_mapping[game_name]
             for row in scores:
-                 player_data = dict(zip(keys, row))
-                 # Add 'avg' and 'solved' keys for generic embed logic if needed, mapping to appropriate stats
-                 if game_name == "Wordle":
-                     player_data["avg"] = player_data["avg_attempts"]
-                     player_data["solved"] = player_data["solved_count"]
-                 elif game_name == "Connections":
-                     player_data["avg"] = player_data["avg_score"]
-                     player_data["solved"] = player_data["solved_count"]
-                 elif game_name == "Framed":
-                      player_data["avg"] = player_data["avg_attempts"]
-                      player_data["solved"] = player_data["solved_count"]
-                 elif game_name == "Gisnep":
-                      player_data["avg"] = player_data["avg_time"] # Avg time
-                      player_data["solved"] = player_data["games_played"] # Using games played as a 'solved' proxy for time games
-                 elif game_name == "Bandle":
-                      player_data["avg"] = player_data["avg_attempts"]
-                      player_data["solved"] = player_data["solved_count"]
-                 elif game_name == "Minute Cryptic":
-                      player_data["avg"] = player_data["avg_score"]
-                      player_data["solved"] = player_data["solved_count"]
-                 elif game_name == "Word Salad":
-                      player_data["avg"] = player_data["avg_score"] # Now using avg_score as the generic average
-                      player_data["total"] = player_data["total_score"] # Add total score
-
-                 formatted_scores_for_embed.append(player_data)
+                player_data = dict(zip(keys, row))
+                # Generic stats for embed
+                if game_name == "Wordle":
+                    player_data["avg"] = player_data["avg_attempts"]
+                    player_data["solved"] = player_data["solved_count"]
+                elif game_name == "Connections":
+                    player_data["avg"] = player_data["avg_score"]
+                    player_data["solved"] = player_data["solved_count"]
+                elif game_name == "Framed":
+                    player_data["avg"] = player_data["avg_attempts"]
+                    player_data["solved"] = player_data["solved_count"]
+                elif game_name == "Gisnep":
+                    player_data["avg"] = player_data["avg_time"]
+                    player_data["solved"] = player_data["games_played"]
+                elif game_name == "Bandle":
+                    player_data["avg"] = player_data["avg_attempts"]
+                    player_data["solved"] = player_data["solved_count"]
+                elif game_name == "Minute Cryptic":
+                    player_data["avg"] = player_data["avg_score"]
+                    player_data["solved"] = player_data["solved_count"]
+                elif game_name == "Word Salad":
+                    player_data["avg"] = player_data["avg_score"]
+                    player_data["total"] = player_data["total_score"]
+                formatted_scores_for_embed.append(player_data)
         else:
-            print(f"Warning: No data mapping defined for game '{game_name}'. Skipping embed creation.")
-            continue # Skip this game if mapping is missing
+            print(f"Warning: No data mapping for '{game_name}'. Skipping embed.")
+            continue
 
-
-        # Define example colors (customize as needed)
+        # Define colors
         game_colors = {
-            "Wordle": discord.Color.green(),
-            "Connections": discord.Color.purple(),
-            "Framed": discord.Color.red(),
-            "Gisnep": discord.Color.blue(),
-            "Bandle": discord.Color.gold(),
-            "Minute Cryptic": discord.Color.dark_teal(),
+            "Wordle": discord.Color.green(), "Connections": discord.Color.purple(), "Framed": discord.Color.red(),
+            "Gisnep": discord.Color.blue(), "Bandle": discord.Color.gold(), "Minute Cryptic": discord.Color.dark_teal(),
             "Word Salad": discord.Color.green(),
         }
-        embed_color = game_colors.get(game_name, discord.Color.from_rgb(128, 128, 128)) # Corrected gray color
+        embed_color = game_colors.get(game_name, discord.Color.from_rgb(128, 128, 128))
 
-        # Build the embed using the helper function
+        # Build embed
         leaderboard_embed = await build_leaderboard_embed(
-            game_name=game_name, # Pass the game name
-            title=f"{game_name} Leaderboard",
-            rows=formatted_scores_for_embed,
-            period=period.capitalize(),
-            color=embed_color
+            game_name=game_name, title=f"{game_name} Leaderboard",
+            rows=formatted_scores_for_embed, period=period.capitalize(), color=embed_color
         )
 
-        # Send the embed
+        # Send embed
         try:
-             await leaderboard_channel.send(embed=leaderboard_embed)
-             print(f"{period.capitalize()} {game_name} leaderboard embed posted.")
+            await leaderboard_channel.send(embed=leaderboard_embed)
+            print(f"{period.capitalize()} {game_name} leaderboard posted to #{channel_name}.")
         except discord.errors.HTTPException as e:
-             print(f"Error posting {period} {game_name} leaderboard embed: {e}")
-             print(f"Attempting to send as plain text for {game_name} due to embed error...")
-             # Fallback to plain text if embed fails (e.g., too many fields)
-             fallback_message = f"🏆 **📅 {period.capitalize()} {game_name} Leaderboard** 🏆\n\n"
-             if formatted_scores_for_embed:
-                 fallback_message += "Error displaying embed. Raw data:\n"
-                 for i, row in enumerate(formatted_scores_for_embed, 1):
-                      fallback_message += f"{i}. {row.get('display_name')}: {row}\n" # Print raw data
-             else:
-                  fallback_message += "No scores recorded for this period."
-             try:
-                 await leaderboard_channel.send(fallback_message)
-             except Exception as inner_e:
-                  print(f"Error sending fallback plain text for {game_name}: {inner_e}")
-
+            print(f"Error posting {game_name} embed: {e}. Sending as text.")
+            fallback_message = f"🏆 **📅 {period.capitalize()} {game_name} Leaderboard** 🏆\n\n(Error displaying embed, showing raw data)\n"
+            for i, row in enumerate(formatted_scores_for_embed, 1):
+                fallback_message += f"{i}. {row.get('display_name')}: {row}\n"
+            await leaderboard_channel.send(fallback_message)
         except Exception as e:
-             print(f"Error posting {period} {game_name} leaderboard embed: {e}")
+            print(f"An unexpected error occurred when posting {game_name} leaderboard: {e}")
 
 @tasks.loop(time=datetime.time(hour=23, minute=59, second=50, tzinfo=CET_TIMEZONE))
 async def check_weekly_scores():
