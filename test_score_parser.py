@@ -248,3 +248,75 @@ Full parsed object:
             sheet = self.sheets['Bandle'],
             parsefn = score_parser.parse_bandle_score,
             matchfields = ['game_number', 'attempts', 'solved', 'bonus_completed', 'bonus_total'])
+
+class TestPipsParser(unittest.TestCase):
+    def test_calculate_pips_score(self):
+        # Test cases for easy difficulty
+        self.assertEqual(score_parser.calculate_pips_score('easy', 10), 10)
+        self.assertEqual(score_parser.calculate_pips_score('easy', 20), 10)
+        self.assertEqual(score_parser.calculate_pips_score('easy', 21), 8)
+        self.assertEqual(score_parser.calculate_pips_score('easy', 40), 8)
+        self.assertEqual(score_parser.calculate_pips_score('easy', 60), 6)
+        self.assertEqual(score_parser.calculate_pips_score('easy', 120), 4)
+        self.assertEqual(score_parser.calculate_pips_score('easy', 180), 2)
+        self.assertEqual(score_parser.calculate_pips_score('easy', 181), 1)
+
+        # Test cases for medium difficulty
+        self.assertEqual(score_parser.calculate_pips_score('medium', 40), 10)
+        self.assertEqual(score_parser.calculate_pips_score('medium', 80), 8)
+        self.assertEqual(score_parser.calculate_pips_score('medium', 120), 6)
+        self.assertEqual(score_parser.calculate_pips_score('medium', 160), 4)
+        self.assertEqual(score_parser.calculate_pips_score('medium', 200), 2)
+        self.assertEqual(score_parser.calculate_pips_score('medium', 201), 1)
+
+        # Test cases for hard difficulty
+        self.assertEqual(score_parser.calculate_pips_score('hard', 60), 10)
+        self.assertEqual(score_parser.calculate_pips_score('hard', 120), 8)
+        self.assertEqual(score_parser.calculate_pips_score('hard', 180), 6)
+        self.assertEqual(score_parser.calculate_pips_score('hard', 240), 4)
+        self.assertEqual(score_parser.calculate_pips_score('hard', 300), 2)
+        self.assertEqual(score_parser.calculate_pips_score('hard', 301), 1)
+
+    def test_parse_pips_score(self):
+        # Test case 1: Easy, no cookie
+        message = "Pips #1 Easy 🟢\n0:36"
+        expected = {
+            "game_number": 1,
+            "difficulty": "easy",
+            "completion_time": 36,
+            "score": 8,
+            "cookie": False
+        }
+        self.assertEqual(score_parser.parse_pips_score(message), expected)
+
+        # Test case 2: Medium, with cookie
+        message = "Pips #1 Medium 🟡\n1:35 🍪"
+        expected = {
+            "game_number": 1,
+            "difficulty": "medium",
+            "completion_time": 95,
+            "score": 6,
+            "cookie": True
+        }
+        self.assertEqual(score_parser.parse_pips_score(message), expected)
+
+        # Test case 3: Hard, no cookie
+        message = "Pips #1 Hard 🔴\n3:37"
+        expected = {
+            "game_number": 1,
+            "difficulty": "hard",
+            "completion_time": 217,
+            "score": 4,
+            "cookie": False
+        }
+        self.assertEqual(score_parser.parse_pips_score(message), expected)
+
+        # Test case 4: Invalid message
+        message = "This is not a pips score"
+        self.assertIsNone(score_parser.parse_pips_score(message))
+
+    def test_is_pips_message(self):
+        self.assertTrue(score_parser.is_pips_message("Pips #1 Easy 🟢\n0:36"))
+        self.assertTrue(score_parser.is_pips_message("Pips #123 Hard 🔴\n10:00 🍪"))
+        self.assertFalse(score_parser.is_pips_message("This is not a pips score"))
+        self.assertFalse(score_parser.is_pips_message("Pips #1 Easy\n0:36")) # Missing emoji

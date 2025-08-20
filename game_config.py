@@ -103,5 +103,19 @@ GAME_CONFIGS = {
     "create_acknowledgement": score_parser.create_word_salad_acknowledgement,
     "create_introduction": score_parser.create_word_salad_introduction,
     "game_number_key": "game_number"
+    },
+    "pips": {
+        "name": "Pips",
+        "chat_channel_name": "pips-chat",
+        "player_role_name": "pips-player",
+        "parse_function": score_parser.parse_pips_score,
+        "is_game_message": score_parser.is_pips_message,
+        "save_score_function": database.save_pips_score,
+        "get_leaderboard_function": database.get_pips_leaderboard,
+        "get_latest_game_number_function": database.get_latest_game_number_from_db,
+        "update_latest_game_number_function": database.update_latest_game_number_in_db,
+        "create_acknowledgement": score_parser.create_pips_acknowledgement,
+        "create_introduction": score_parser.create_pips_introduction,
+        "game_number_key": "game_number"
     }
 }

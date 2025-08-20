@@ -120,6 +120,15 @@ async def on_message(message):
                         game_info["hints_used"],
                         game_info["score"]
                     )
+                elif game_key == "pips":
+                    config["save_score_function"](
+                        message.author.id, message.author.display_name,
+                        game_info["game_number"],
+                        game_info["difficulty"],
+                        game_info["completion_time"],
+                        game_info["score"],
+                        game_info["cookie"]
+                    )
                 
                 # Create acknowledgement and handle roles
                 response = config["create_acknowledgement"](message.author.display_name, game_info)
@@ -171,7 +180,7 @@ async def on_message(message):
                     if success:
                         await role_manager.introduce_player_in_game_channel(
                             message.guild,
-                            message.author.display_name,
+                            message.author,
                             config,
                             game_info
                         )
@@ -273,6 +282,7 @@ async def post_scores(period: str):
                        "bonus_calendar_count", "bonus_cd_count", "bonus_timer_count", "bonus_guitar_count"],
             "Minute Cryptic": ["display_name", "games_played", "solved_count", "avg_score"],
             "Word Salad": ["display_name", "games_played", "avg_time", "best_time", "avg_hints", "total_score", "avg_score"],
+            "Pips": ["display_name", "total_score", "games_played", "cookie_count"],
         }
 
         if game_name in game_data_mapping:
@@ -301,6 +311,9 @@ async def post_scores(period: str):
                 elif game_name == "Word Salad":
                     player_data["avg"] = player_data["avg_score"]
                     player_data["total"] = player_data["total_score"]
+                elif game_name == "Pips":
+                    player_data["total_score"] = player_data["total_score"]
+                    player_data["cookie_count"] = player_data["cookie_count"]
                 formatted_scores_for_embed.append(player_data)
         else:
             print(f"Warning: No data mapping for '{game_name}'. Skipping embed.")
@@ -311,6 +324,7 @@ async def post_scores(period: str):
             "Wordle": discord.Color.green(), "Connections": discord.Color.purple(), "Framed": discord.Color.red(),
             "Gisnep": discord.Color.blue(), "Bandle": discord.Color.gold(), "Minute Cryptic": discord.Color.dark_teal(),
             "Word Salad": discord.Color.green(),
+            "Pips": discord.Color.orange(),
         }
         embed_color = game_colors.get(game_name, discord.Color.from_rgb(128, 128, 128))
 
