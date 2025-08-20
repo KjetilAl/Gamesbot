@@ -40,6 +40,15 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
         rows.sort(key=lambda x: x.get("avg_score", 0), reverse=True)
     elif game_name == "Word Salad":
         rows.sort(key=lambda x: x.get("avg_score", 0) if x.get("avg_score") is not None else -float('inf'), reverse=True) # Sort by avg_score, None at bottom
+    elif game_name == "Pips":
+        rows.sort(key=lambda x: (x.get("cookie_count", 0), x.get("total_score", 0)), reverse=True)
+
+    if game_name == "Pips" and rows:
+        max_cookies = rows[0].get("cookie_count", 0)
+        if max_cookies > 0:
+            for row in rows:
+                if row.get("cookie_count") == max_cookies:
+                    row["is_cookie_monster"] = True
     
     for i, row in enumerate(rows, start=1):
         medal = medals[i-1] if i <= len(medals) else f"#{i}"
@@ -132,6 +141,16 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
             details.append(f"⭐ Total Score: **{total_score}**")
             details.append(f"⏱️ Avg Time: {avg_time_display}") # Still show time for context
             details.append(f"🥇 Best Time: {best_time_display}")
+
+        elif game_name == "Pips":
+            total_score = row.get("total_score", 0)
+            cookie_count = row.get("cookie_count", 0)
+            details.append(f"⭐ Total Score: **{total_score}**")
+            details.append(f"🍪 Cookies: **{cookie_count}**")
+            if row.get("is_cookie_monster"):
+                name = name.replace(" 🍪", "")
+                name = f"{name} 🍪 (Cookie Monster)"
+
 
         field_value = "\n".join(details)
         embed.add_field(

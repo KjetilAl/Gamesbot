@@ -1,6 +1,7 @@
 import re
 from typing import Dict, List, Tuple, Optional, Any, Union
 from datetime import datetime, timedelta, date
+import database
 
 # Regular expressions for game patterns
 WORDLE_PATTERN = re.compile(r'Wordle\s+(?:#?\s*)(\d+(?:,\d+)?)\s+([0-6X])/6(\*?)', re.IGNORECASE)
@@ -17,6 +18,7 @@ MINUTE_CRYPTIC_SCORE_PATTERN = re.compile(r"I scored: (.*)")
 WORD_SALAD_NUMBER_PATTERN = re.compile(r"Word Salad #(\d+)", re.IGNORECASE)
 WORD_SALAD_TIME_PATTERN = re.compile(r"⌛(\d+m\s*\d+s)", re.IGNORECASE)
 WORD_SALAD_HINTS_PATTERN = re.compile(r"❓(\d+)", re.IGNORECASE)
+PIPS_PATTERN = re.compile(r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|🔴)\s*\n(\d{1,2}:\d{2})\s*(🍪)?", re.IGNORECASE)
 
 def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
     wordle_match = WORDLE_PATTERN.search(message_content)
@@ -370,6 +372,76 @@ def parse_word_salad_score(message_content: str) -> Optional[Dict[str, Any]]:
         "score": calculated_score,
     }
 
+def calculate_pips_score(difficulty: str, time_seconds: int) -> int:
+    """Calculates the score for Pips based on difficulty and time."""
+    difficulty = difficulty.lower()
+    if difficulty == 'easy':
+        if time_seconds <= 20:
+            return 10
+        elif time_seconds <= 40:
+            return 8
+        elif time_seconds <= 60:
+            return 6
+        elif time_seconds <= 120:
+            return 4
+        elif time_seconds <= 180:
+            return 2
+        else:
+            return 1
+    elif difficulty == 'medium':
+        if time_seconds <= 40:
+            return 10
+        elif time_seconds <= 80:
+            return 8
+        elif time_seconds <= 120:
+            return 6
+        elif time_seconds <= 160:
+            return 4
+        elif time_seconds <= 200:
+            return 2
+        else:
+            return 1
+    elif difficulty == 'hard':
+        if time_seconds <= 60:
+            return 10
+        elif time_seconds <= 120:
+            return 8
+        elif time_seconds <= 180:
+            return 6
+        elif time_seconds <= 240:
+            return 4
+        elif time_seconds <= 300:
+            return 2
+        else:
+            return 1
+    return 0
+
+def parse_pips_score(message_content: str) -> Optional[Dict[str, Any]]:
+    """Parses a Pips score from a message."""
+    match = PIPS_PATTERN.search(message_content)
+    if not match:
+        return None
+
+    game_number = int(match.group(1))
+    difficulty = match.group(2).lower()
+    time_str = match.group(3)
+    cookie = match.group(4) is not None
+
+    # Convert time to seconds
+    minutes, seconds = map(int, time_str.split(':'))
+    completion_time = minutes * 60 + seconds
+
+    # Calculate score
+    score = calculate_pips_score(difficulty, completion_time)
+
+    return {
+        "game_number": game_number,
+        "difficulty": difficulty,
+        "completion_time": completion_time,
+        "score": score,
+        "cookie": cookie
+    }
+
 def is_bandle_message(message_content: str) -> bool:
     """Checks if a message contains a Bandle score."""
     return "bandle" in message_content.lower() and BANDLE_PATTERN.search(message_content) is not None
@@ -402,6 +474,10 @@ def is_word_salad_message(message_content: str) -> bool:
     # Look for the game name and game number pattern
     return "word salad #" in message_content.lower() and \
            WORD_SALAD_NUMBER_PATTERN.search(message_content) is not None
+
+def is_pips_message(message_content: str) -> bool:
+    """Checks if a message contains a Pips score."""
+    return "pips #" in message_content.lower() and PIPS_PATTERN.search(message_content) is not None
     
 def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
@@ -518,5 +594,40 @@ def create_word_salad_introduction(display_name: str, game_info: Dict[str, Any])
     hints_used = game_info.get("hints_used", "?")
 
     message = f"🥗 **{display_name}** just finished Word Salad #{game_number} in {completion_time_seconds} seconds with {hints_used} hints."
+
+    return message
+
+def create_pips_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
+    return "🤖"
+
+def create_pips_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create introduction message for Pips players."""
+    game_number = game_info.get("game_number", "?")
+    user_id = game_info.get("user_id")
+
+    if user_id is None:
+        return f"🏆 **{display_name}** just completed all Pips difficulties for game #{game_number}! Welcome to the channel!"
+
+    scores = database.get_pips_scores_for_game(user_id, game_number)
+
+    if not scores:
+         return f"🏆 **{display_name}** just completed all Pips difficulties for game #{game_number}! Welcome to the channel!"
+
+    total_score = sum(s['score'] for s in scores)
+    cookie_count = sum(s['cookie'] for s in scores)
+
+    message = f"🏆 **{display_name}** has completed all Pips difficulties for game #{game_number} with a total score of **{total_score}**! Welcome to the channel!\n\n"
+
+    for score in scores:
+        time_min = score['completion_time'] // 60
+        time_sec = score['completion_time'] % 60
+        time_str = f"{time_min}:{time_sec:02d}"
+        message += f"**{score['difficulty'].capitalize()}**: {time_str} ({score['score']} pts)"
+        if score['cookie']:
+            message += " 🍪"
+        message += "\n"
+
+    if cookie_count > 0:
+        message += f"\nWow, {cookie_count} cookie{'s' if cookie_count > 1 else ''}! You're a top performer! 🍪"
 
     return message

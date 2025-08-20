@@ -1,6 +1,7 @@
 import discord
 from typing import List, Dict, Any, Union
 from datetime import datetime, date
+import database
 
 async def get_members_with_role(guild: discord.Guild, role_name: str) -> List[discord.Member]:
     role = discord.utils.get(guild.roles, name=role_name)
@@ -78,6 +79,7 @@ async def handle_game_role_assignment(
     print(f"Role decision for {member.display_name} ({game_key}): is_newer={is_newer}, is_same={is_same}")
     
     # --- Role Logic ---
+    should_assign_role = False
     if is_newer:
         # New highest identifier: reset roles for everyone with the role
         members_with_role = await get_members_with_role(guild, role_name)
@@ -85,24 +87,36 @@ async def handle_game_role_assignment(
             if member_to_revoke.id != member.id: # Don't revoke from the current poster yet
                  await remove_role(member_to_revoke, role_name)
                  print(f"Revoked {role_name} from {member_to_revoke.display_name}")
-        
-        # Assign role to the current poster
-        newly_assigned = await assign_role(member, role_name)
-        if newly_assigned:
-            print(f"Assigned {role_name} to {member.display_name} (new high score)")
+        should_assign_role = True
+
     elif is_same:
         # Same as latest identifier: just assign role if needed
         if role_name not in [role.name for role in member.roles]:
+            should_assign_role = True
+
+    if should_assign_role:
+        can_receive_role = False
+        if game_key == 'pips':
+            # For Pips, role is granted only after completing all three difficulties for the current game number.
+            completed_difficulties = database.get_pips_completed_difficulties(member.id, int(current_identifier))
+            if {'easy', 'medium', 'hard'}.issubset(set(completed_difficulties)):
+                can_receive_role = True
+                print(f"Pips role condition met for {member.display_name} (completed all difficulties for #{current_identifier})")
+            else:
+                print(f"Pips role condition not met for {member.display_name} (difficulties completed: {completed_difficulties})")
+        else:
+            can_receive_role = True
+
+        if can_receive_role:
             newly_assigned = await assign_role(member, role_name)
             if newly_assigned:
-                print(f"Assigned {role_name} to {member.display_name} (same as current)")
-    # else: old identifier, do nothing
+                print(f"Assigned {role_name} to {member.display_name}")
     
-    return newly_assigned # Return True only if the role was newly assigned to *this* user
+    return newly_assigned
 
 async def introduce_player_in_game_channel(
     guild: discord.Guild,
-    display_name: str,
+    member: discord.Member,
     game_config: Dict[str, Any],
     game_info: Dict[str, Any]
 ) -> None:
@@ -112,7 +126,11 @@ async def introduce_player_in_game_channel(
     if not game_channel:
         print(f"Could not find {channel_name} channel")
         return
+
+    # Add user_id to game_info for Pips, so it can fetch all scores for the intro message
+    if game_config.get("name") == "Pips":
+        game_info['user_id'] = member.id
     
-    intro_message = game_config["create_introduction"](display_name, game_info)
+    intro_message = game_config["create_introduction"](member.display_name, game_info)
     await game_channel.send(intro_message)
-    print(f"Introduction posted for {display_name} in #{channel_name}")
+    print(f"Introduction posted for {member.display_name} in #{channel_name}")

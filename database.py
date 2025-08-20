@@ -83,6 +83,22 @@ def initialize_db():
             )
         """)
 
+        # Pips
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS pips_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                display_name TEXT NOT NULL,
+                game_number INTEGER NOT NULL,
+                difficulty TEXT NOT NULL,
+                completion_time INTEGER NOT NULL,
+                score INTEGER NOT NULL,
+                cookie BOOLEAN NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, game_number, difficulty)
+            )
+        """)
+
         # Table for tracking user roles if needed
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS user_roles (
@@ -101,7 +117,8 @@ def initialize_db():
         # --- Initialize latest_game_numbers Data ---
         initial_games = [
             ('Wordle', '0'), ('Connections', '0'), ('Framed', '0'),
-            ('Gisnep', '0'), ('Bandle', '0'), ('Minute Cryptic', '2000-01-01')
+            ('Gisnep', '0'), ('Bandle', '0'), ('Minute Cryptic', '2000-01-01'),
+            ('Pips', '0')
         ]
         try:
             cursor.executemany("INSERT OR IGNORE INTO latest_game_numbers (game_name, latest_number) VALUES (?, ?)", initial_games)
@@ -147,6 +164,36 @@ def save_wordle_score(user_id, display_name, game_number, attempts, skill=None, 
         INSERT INTO wordle_scores (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score))
+    conn.commit()
+    conn.close()
+
+def save_pips_score(user_id: int, display_name: str, game_number: int, difficulty: str, completion_time: int, score: int, cookie: bool):
+    """Saves or updates a Pips score in the database."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+
+    cursor.execute("""
+        SELECT id FROM pips_scores
+        WHERE user_id = ? AND game_number = ? AND difficulty = ?
+    """, (user_id, game_number, difficulty))
+    existing_score = cursor.fetchone()
+
+    if existing_score:
+        cursor.execute("""
+            UPDATE pips_scores
+            SET display_name = ?, completion_time = ?, score = ?, cookie = ?, timestamp = ?
+            WHERE user_id = ? AND game_number = ? AND difficulty = ?
+        """, (display_name, completion_time, score, cookie, timestamp, user_id, game_number, difficulty))
+        print(f"Updated Pips score for {display_name} (Game #{game_number}, {difficulty}).")
+    else:
+        cursor.execute("""
+            INSERT INTO pips_scores
+            (user_id, display_name, game_number, difficulty, completion_time, score, cookie, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (user_id, display_name, game_number, difficulty, completion_time, score, cookie, timestamp))
+        print(f"Added Pips score for {display_name} (Game #{game_number}, {difficulty}).")
+
     conn.commit()
     conn.close()
 
@@ -473,6 +520,58 @@ def get_word_salad_leaderboard(period: str = 'overall'):
     leaderboard = cursor.fetchall()
     conn.close()
     return leaderboard
+
+def get_pips_leaderboard(period: str = 'overall'):
+    """Fetch Pips leaderboard data, supporting different periods and stats."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    where_clause, params = get_scores_by_period("pips_scores", period)
+
+    # Fetch relevant stats for Pips
+    cursor.execute(f"""
+        SELECT display_name,
+               SUM(score) AS total_score,
+               COUNT(*) AS games_played,
+               SUM(cookie) AS cookie_count
+        FROM pips_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        ORDER BY cookie_count DESC, total_score DESC
+        LIMIT 10
+    """, params)
+    leaderboard = cursor.fetchall()
+    conn.close()
+    return leaderboard
+
+def get_pips_completed_difficulties(user_id: int, game_number: int) -> list[str]:
+    """
+    Retrieves the list of difficulties a user has completed for a specific Pips game.
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT difficulty FROM pips_scores
+        WHERE user_id = ? AND game_number = ?
+    """, (user_id, game_number))
+    rows = cursor.fetchall()
+    conn.close()
+    return [row[0] for row in rows]
+
+def get_pips_scores_for_game(user_id: int, game_number: int) -> list:
+    """
+    Retrieves all scores for a user for a specific Pips game number.
+    """
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT difficulty, completion_time, score, cookie FROM pips_scores
+        WHERE user_id = ? AND game_number = ?
+        ORDER BY CASE difficulty WHEN 'easy' THEN 1 WHEN 'medium' THEN 2 WHEN 'hard' THEN 3 END
+    """, (user_id, game_number))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
 
 # Database functions for tracking roles
 def save_user_role(user_id, role_name, game_number, expires_at):
