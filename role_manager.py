@@ -16,10 +16,10 @@ async def remove_role(member: discord.Member, role_name: str) -> bool:
 
 async def assign_role(member: discord.Member, role_name: str) -> bool:
     role = discord.utils.get(member.guild.roles, name=role_name)
-    if role:
+    if role and role not in member.roles:
         await member.add_roles(role)
-        return True
-    return False
+        return True # Role was newly assigned
+    return False # Role not assigned (or already present)
 
 async def handle_game_role_assignment(
     guild: discord.Guild,
@@ -90,9 +90,10 @@ async def handle_game_role_assignment(
         should_assign_role = True
 
     elif is_same:
-        # Same as latest identifier: just assign role if needed
-        if role_name not in [role.name for role in member.roles]:
-            should_assign_role = True
+        # Always run the role check if the identifier is the same.
+        # The assign_role function will handle not re-assigning a role,
+        # but this allows players who complete a game's criteria to be recognized.
+        should_assign_role = True
 
     if should_assign_role:
         can_receive_role = False
