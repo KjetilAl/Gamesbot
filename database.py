@@ -573,6 +573,122 @@ def get_pips_scores_for_game(user_id: int, game_number: int) -> list:
     conn.close()
     return rows
 
+def get_wordle_stats(user_id: int) -> dict:
+    """Fetches Wordle statistics for a given user."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*), AVG(attempts), AVG(total_score)
+        FROM wordle_scores
+        WHERE user_id = ?
+    """, (user_id,))
+    stats = cursor.fetchone()
+    conn.close()
+    return {
+        "games_played": stats[0] or 0,
+        "avg_attempts": stats[1] or 0,
+        "avg_score": stats[2] or 0
+    }
+
+def get_connections_stats(user_id: int) -> dict:
+    """Fetches Connections statistics for a given user."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*), AVG(total_score)
+        FROM connections_scores
+        WHERE user_id = ?
+    """, (user_id,))
+    stats = cursor.fetchone()
+    conn.close()
+    return {
+        "games_played": stats[0] or 0,
+        "avg_score": stats[1] or 0
+    }
+
+def get_framed_stats(user_id: int) -> dict:
+    """Fetches Framed statistics for a given user."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*), AVG(attempts), AVG(total_score)
+        FROM framed_scores
+        WHERE user_id = ?
+    """, (user_id,))
+    stats = cursor.fetchone()
+    conn.close()
+    return {
+        "games_played": stats[0] or 0,
+        "avg_attempts": stats[1] or 0,
+        "avg_score": stats[2] or 0
+    }
+
+def get_gisnep_stats(user_id: int) -> dict:
+    """Fetches Gisnep statistics for a given user."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*), AVG(completion_time)
+        FROM gisnep_scores
+        WHERE user_id = ?
+    """, (user_id,))
+    stats = cursor.fetchone()
+    conn.close()
+    return {
+        "games_played": stats[0] or 0,
+        "avg_time": stats[1] or 0
+    }
+
+def get_bandle_stats(user_id: int) -> dict:
+    """Fetches Bandle statistics for a given user."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*), AVG(attempts), SUM(bonus_completed)
+        FROM bandle_scores
+        WHERE user_id = ?
+    """, (user_id,))
+    stats = cursor.fetchone()
+    conn.close()
+    return {
+        "games_played": stats[0] or 0,
+        "avg_attempts": stats[1] or 0,
+        "total_bonus": stats[2] or 0
+    }
+
+def get_minute_cryptic_stats(user_id: int) -> dict:
+    """Fetches Minute Cryptic statistics for a given user."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*), AVG(score_value)
+        FROM minute_cryptic_scores
+        WHERE user_id = ?
+    """, (user_id,))
+    stats = cursor.fetchone()
+    conn.close()
+    return {
+        "games_played": stats[0] or 0,
+        "avg_score": stats[1] or 0
+    }
+
+def get_word_salad_stats(user_id: int) -> dict:
+    """Fetches Word Salad statistics for a given user."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*), AVG(completion_time_seconds), AVG(score)
+        FROM word_salad_scores
+        WHERE user_id = ?
+    """, (user_id,))
+    stats = cursor.fetchone()
+    conn.close()
+    return {
+        "games_played": stats[0] or 0,
+        "avg_time": stats[1] or 0,
+        "avg_score": stats[2] or 0
+    }
+
 # Database functions for tracking roles
 def save_user_role(user_id, role_name, game_number, expires_at):
     """Save information about a role granted to a user."""
