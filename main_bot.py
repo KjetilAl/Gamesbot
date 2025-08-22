@@ -166,8 +166,8 @@ async def on_message(message):
                         config["update_latest_game_number_function"](game_key, str(current_game_identifier))
                         print(f"Updated latest {game_key} number to {current_game_identifier}")
     
-                    # Handle role assignment - pass the identifiers as they are
-                    success = await role_manager.handle_game_role_assignment(
+                    # Handle role assignment and determine if an introduction is needed
+                    should_introduce = await role_manager.handle_game_role_assignment(
                         message.guild,
                         message.author,
                         game_key,
@@ -176,8 +176,8 @@ async def on_message(message):
                         latest_game_identifier
                     )
     
-                    # If role was assigned successfully, introduce the player in the game channel
-                    if success:
+                    # Post introduction message if required
+                    if should_introduce:
                         await role_manager.introduce_player_in_game_channel(
                             message.guild,
                             message.author,

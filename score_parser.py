@@ -483,118 +483,108 @@ def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) 
     return "🤖"
   
 def create_wordle_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create a compact acknowledgement message for Wordle scores."""
+    """Create an informative introduction message for Wordle scores."""
+    user_id = game_info.get("user_id")
+    stats = database.get_wordle_stats(user_id)
     
     game_number = game_info.get("game_number", "?")
     attempts = game_info.get("attempts", "?")
-    skill = game_info.get("skill", "?")
-    luck = game_info.get("luck", "?")
-    grid = game_info.get("grid", "⬜⬜⬜⬜⬜")  # Placeholder if no grid available
     hard_mode = game_info.get("hard_mode", False)
-    
-    # Add hard mode indicator
     hard_mode_text = " (Hard Mode)" if hard_mode else ""
 
-    # Handle missing skill and luck
-    skill_text = f"Skill: {skill}/99" if skill is not None else "Skill: N/A"
-    luck_text = f"Luck: {luck}/99" if luck is not None else "Luck: N/A"
-
-    # Build the message
-    message = f"@{display_name} just posted Wordle {game_number} {attempts}/6{hard_mode_text}\n"
-    message += f"{grid}\n"
-    message += f"{skill_text} | {luck_text}"
-
+    message = (f"**{display_name}** just finished Wordle {game_number} in {attempts}/6{hard_mode_text}!\n"
+               f"They have played {stats['games_played']} games with an average score of {stats['avg_score']:.2f}.")
     return message
 
 def create_connections_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
 
 def create_connections_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create a compact acknowledgement message for Connections scores."""
-    
+    """Create an informative introduction message for Connections scores."""
+    user_id = game_info.get("user_id")
+    stats = database.get_connections_stats(user_id)
+
     puzzle_number = game_info.get("puzzle_number", "?")
     total_score = game_info.get("total_score", "?")
-    guesses = game_info.get("num_guesses", "?")
-    solved_purple_first = game_info.get("solved_purple_first", False)
-    solved_blue_first = game_info.get("solved_blue_first", False)
-    
-    # Construct difficulty sequence
-    difficulty_text = "🟪" if solved_purple_first else "🟦" if solved_blue_first else "🟨🟩"
-    
-    message = f"{difficulty_text} @{display_name} just posted Connections Puzzle #{puzzle_number}\n"
-    message += f"Total Score: {total_score}\n"
-    message += f"Guesses: {guesses}"
-    
+
+    message = (f"**{display_name}** just finished Connections #{puzzle_number} with a score of {total_score}!\n"
+               f"They have played {stats['games_played']} games with an average score of {stats['avg_score']:.2f}.")
     return message
 
 def create_framed_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
 
 def create_framed_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create introduction message for Framed players."""
+    """Create an informative introduction message for Framed players."""
+    user_id = game_info.get("user_id")
+    stats = database.get_framed_stats(user_id)
+
     game_number = game_info.get("game_number", "?")
     attempts = game_info.get("attempts", "?")
-    solved = game_info.get("solved", False)
     
-    if solved:
-        return f"🎥 **{display_name}** solved Framed #{game_number} in {attempts} guess{'es' if attempts != 1 else ''}!"
-    else:
-        return f"🎥 **{display_name}** just played Framed #{game_number} but couldn't figure it out!"
+    message = (f"**{display_name}** solved Framed #{game_number} in {attempts} guesses!\n"
+               f"They have played {stats['games_played']} games with an average score of {stats['avg_score']:.2f}.")
+    return message
 
 def create_gisnep_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
 
 def create_gisnep_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create introduction message for Gisnep players."""
-    game_number = game_info.get("game_number", "?")
-    completion_time = game_info.get("completion_time", "?")
+    """Create an informative introduction message for Gisnep players."""
+    user_id = game_info.get("user_id")
+    stats = database.get_gisnep_stats(user_id)
 
-    return f"🎬 **{display_name}** just completed Gisnep #{game_number} in {completion_time} seconds!"
+    game_number = game_info.get("game_number", "?")
+    completion_time = game_info.get("completion_time", 0)
+    time_str = f"{completion_time // 60}:{completion_time % 60:02d}"
+
+    message = (f"**{display_name}** finished Gisnep #{game_number} in {time_str}!\n"
+               f"They have played {stats['games_played']} games with an average time of {stats['avg_time']:.2f}s.")
+    return message
 
 def create_bandle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
 
 def create_bandle_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create introduction message for Bandle players."""
+    """Create an informative introduction message for Bandle players."""
+    user_id = game_info.get("user_id")
+    stats = database.get_bandle_stats(user_id)
+
     game_number = game_info.get("game_number", "?")
     attempts = game_info.get("attempts", "?")
-    solved = game_info.get("solved", False)
-    bonus_completed = game_info.get("bonus_completed", "?")
-    bonus_total = game_info.get("bonus_total", "?")
     
-    if solved:
-        message = f"🎵 **{display_name}** just played Bandle #{game_number} and got it in {attempts}!"
-    else:
-        message = f"🎵 **{display_name}** just played Bandle #{game_number} but didn't get it!"
-    
-    if bonus_total > 0:
-        message += f"\nBonus score: {bonus_completed}/{bonus_total}"
+    message = (f"**{display_name}** finished Bandle #{game_number} in {attempts} attempts!\n"
+               f"They have played {stats['games_played']} games and earned a total of {stats['total_bonus']} bonus points.")
     return message
 
 def create_minute_cryptic_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
     
 def create_minute_cryptic_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create introduction message for Minute Cryptic players."""
+    """Create an informative introduction message for Minute Cryptic players."""
+    user_id = game_info.get("user_id")
+    stats = database.get_minute_cryptic_stats(user_id)
+
     game_date = game_info.get("game_date", "?")
     score_desc = game_info.get("score_description", "?")
-    grid = game_info.get("grid", "")
 
-    return (f"🤔 **{display_name}** just finished the Minute Cryptic for {game_date}!\n"
-            f"Score: {score_desc}\n"
-            f"{grid}")
+    message = (f"**{display_name}** finished the Minute Cryptic for {game_date} with a score of {score_desc}!\n"
+               f"They have played {stats['games_played']} games with an average score of {stats['avg_score']:.2f}.")
+    return message
 
 def create_word_salad_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
 
 def create_word_salad_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create introduction message for Word Salad players."""
+    """Create an informative introduction message for Word Salad players."""
+    user_id = game_info.get("user_id")
+    stats = database.get_word_salad_stats(user_id)
+
     game_number = game_info.get("game_number", "?")
-    completion_time_seconds = game_info.get("completion_time_seconds", "?")
-    hints_used = game_info.get("hints_used", "?")
+    score = game_info.get("score", "?")
 
-    message = f"🥗 **{display_name}** just finished Word Salad #{game_number} in {completion_time_seconds} seconds with {hints_used} hints."
-
+    message = (f"**{display_name}** finished Word Salad #{game_number} with a score of {score}!\n"
+               f"They have played {stats['games_played']} games with an average score of {stats['avg_score']:.2f}.")
     return message
 
 def create_pips_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
