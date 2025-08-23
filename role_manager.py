@@ -70,29 +70,34 @@ async def handle_game_role_assignment(
         return False
 
     # --- Role Assignment Logic ---
-    should_assign_role = is_newer or is_same
+    should_process = is_newer or is_same
+    if not should_process:
+        return False
 
-    if should_assign_role:
-        # For Pips, role is only granted after all difficulties are completed.
-        if game_key == 'pips':
-            completed_difficulties = database.get_pips_completed_difficulties(member.id, int(current_identifier))
-            if not {'easy', 'medium', 'hard'}.issubset(set(completed_difficulties)):
-                # If Pips conditions aren't met, don't assign the role
-                should_assign_role = False
+    # For Pips, role is only granted after all difficulties are completed.
+    if game_key == 'pips':
+        completed_difficulties = database.get_pips_completed_difficulties(member.id, int(current_identifier))
+        if {'easy', 'medium', 'hard'}.issubset(set(completed_difficulties)):
+            # If conditions are met, assign role and return True if it was newly assigned (for intro)
+            was_newly_assigned = await assign_role(member, role_name)
+            return was_newly_assigned
+        else:
+            # If conditions aren't met, do nothing and don't introduce.
+            return False
 
-        if should_assign_role:
-            if is_newer:
-                # Revoke role from others only if it's a new high score
-                members_with_role = await get_members_with_role(guild, role_name)
-                for m in members_with_role:
-                    if m.id != member.id:
-                        await remove_role(m, role_name)
+    # --- Logic for all other games ---
+    if is_newer:
+        # Revoke role from others only if it's a new high score
+        members_with_role = await get_members_with_role(guild, role_name)
+        for m in members_with_role:
+            if m.id != member.id:
+                await remove_role(m, role_name)
 
-            # Assign the role to the current member
-            await assign_role(member, role_name)
+    # Assign the role to the current member
+    await assign_role(member, role_name)
 
-    # Return true if an intro message should be posted, regardless of whether role was assigned
-    return is_newer or is_same
+    # For other games, introduction is based on posting a new or same score.
+    return True
 
 async def introduce_player_in_game_channel(
     guild: discord.Guild,
