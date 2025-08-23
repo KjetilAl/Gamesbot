@@ -78,9 +78,20 @@ async def handle_game_role_assignment(
     if game_key == 'pips':
         completed_difficulties = database.get_pips_completed_difficulties(member.id, int(current_identifier))
         if {'easy', 'medium', 'hard'}.issubset(set(completed_difficulties)):
-            # If conditions are met, assign role and return True if it was newly assigned (for intro)
-            was_newly_assigned = await assign_role(member, role_name)
-            return was_newly_assigned
+            # Check if player already has the role to determine if introduction is needed
+            player_already_has_role = discord.utils.get(member.guild.roles, name=role_name) in member.roles
+            
+            # Remove role from all other members (Pips is exclusive to one player at a time)
+            members_with_role = await get_members_with_role(guild, role_name)
+            for m in members_with_role:
+                if m.id != member.id:
+                    await remove_role(m, role_name)
+            
+            # Assign the role to current member
+            await assign_role(member, role_name)
+            
+            # Return True for introduction only if player didn't already have the role
+            return not player_already_has_role
         else:
             # If conditions aren't met, do nothing and don't introduce.
             return False
@@ -95,7 +106,7 @@ async def handle_game_role_assignment(
 
     # Assign the role to the current member
     await assign_role(member, role_name)
-
+    
     # For other games, introduction is based on posting a new or same score.
     return True
 
