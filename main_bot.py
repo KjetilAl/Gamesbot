@@ -142,11 +142,46 @@ async def on_message(message):
                         game_info["total_score"]
                     )
                 elif game_key == "gisnep":
+                    # Save score
                     config["save_score_function"](
-                        message.author.id, message.author.display_name, 
+                        str(message.author.id), message.author.display_name,
                         game_info["game_number"],
                         game_info["completion_time"]
                     )
+
+                    # Update puzzle stats
+                    database.update_gisnep_puzzle_stats(
+                        game_info["game_number"],
+                        game_info["completion_time"]
+                    )
+
+                    # Update player stats
+                    player_stats = database.update_gisnep_player_stats(
+                        str(message.author.id),
+                        message.author.display_name,
+                        game_info["completion_time"]
+                    )
+
+                    # Get server stats for the puzzle
+                    server_stats = database.get_gisnep_puzzle_stats(game_info["game_number"])
+
+                    # Generate commentary
+                    post_message = post_generator.generate_gisnep_post(
+                        message.author.display_name,
+                        game_info["game_number"],
+                        game_info["completion_time"],
+                        player_stats,
+                        server_stats
+                    )
+
+                    # Post commentary to the dedicated channel
+                    channel_name = config.get("chat_channel_name")
+                    game_channel = discord.utils.get(message.guild.channels, name=channel_name)
+                    if game_channel:
+                        await game_channel.send(post_message)
+                    else:
+                        print(f"Warning: Could not find channel '{channel_name}' for {config['name']}. Posting in original channel.")
+                        await message.channel.send(post_message)
                 elif game_key == "bandle":
                     config["save_score_function"](
                         message.author.id, message.author.display_name,
@@ -316,6 +351,15 @@ async def leaderboard(ctx, game="wordle", period="weekly"):
             leaderboard_data=leaderboard_data,
             period=period,
             color=discord.Color.purple()
+        )
+        await ctx.send(embed=embed)
+    elif game == "gisnep":
+        leaderboard_data = database.get_gisnep_leaderboard(period=period)
+        embed = await embed_builder.build_gisnep_leaderboard_embed(
+            title=f"📖 The Gisnep Gazette {period.capitalize()} 📖",
+            leaderboard_data=leaderboard_data,
+            period=period,
+            color=discord.Color.blue()
         )
         await ctx.send(embed=embed)
     else:

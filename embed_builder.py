@@ -48,6 +48,57 @@ async def build_wordle_leaderboard_embed(title: str, leaderboard_data: dict, per
     embed.set_footer(text=emit_footer)
     return embed
 
+async def build_gisnep_leaderboard_embed(title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
+    """
+    Builds a Discord embed for the enhanced Gisnep leaderboard.
+    """
+    embed = discord.Embed(
+        title=title,
+        description=f"Period: {period.capitalize()} (Ranked by Average Solve Time)",
+        color=color
+    )
+
+    # --- Utility function for time formatting ---
+    def format_time(seconds):
+        if seconds is None:
+            return "N/A"
+        minutes = int(seconds // 60)
+        secs = int(seconds % 60)
+        return f"{minutes:02d}:{secs:02d}"
+
+    # Top Players
+    top_players = leaderboard_data.get("top_players")
+    if top_players:
+        medals = ["🥇", "🥈", "🥉"]
+        player_list = []
+        for i, (player, avg_seconds) in enumerate(top_players):
+            medal = medals[i] if i < len(medals) else f"**#{i+1}**"
+            player_list.append(f"{medal} **{player}** - ⏱️ Avg Time: {format_time(avg_seconds)}")
+        embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
+    else:
+        embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
+
+
+    # Weekly Accolades
+    if period == 'weekly':
+        accolades = []
+        mercury_award = leaderboard_data.get("mercury_award")
+        if mercury_award:
+            player, fastest_time = mercury_award
+            accolades.append(f"The Mercury Award 🏃💨: to **{player}** for the single fastest solve of the week at a blazing {format_time(fastest_time)}!")
+
+        scholar_award = leaderboard_data.get("scholar_award")
+        if scholar_award:
+            player, puzzles_solved = scholar_award
+            accolades.append(f"The Scholar Award 📚: to **{player}** for completing all {puzzles_solved} puzzles this week.")
+
+        if accolades:
+            embed.add_field(name="✨ Weekly Accolades", value="\n".join(accolades), inline=False)
+
+    emit_footer = f"Posted: {discord.utils.utcnow().strftime('%Y-%m-%d')}"
+    embed.set_footer(text=emit_footer)
+    return embed
+
 async def build_connections_leaderboard_embed(title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
     """
     Builds a Discord embed for the enhanced Connections leaderboard.

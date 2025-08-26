@@ -48,6 +48,72 @@ def generate_wordle_post(display_name, game_number, attempts, skill, luck, updat
     # Combine and return the final message
     return f"{opening_line}\n{stat_spotlight}"
 
+def generate_gisnep_post(display_name, game_number, completion_time, player_stats, server_stats):
+    """Generates a dynamic Gisnep post based on the player's score and stats."""
+
+    import random
+
+    # --- Utility function for time formatting ---
+    def format_time(seconds):
+        if seconds is None:
+            return "N/A"
+        minutes = int(seconds // 60)
+        secs = int(seconds % 60)
+        return f"{minutes:02d}:{secs:02d}"
+
+    time_str = format_time(completion_time)
+    player_avg_str = format_time(player_stats.get('avg_seconds'))
+
+    # --- Part A: The Opening Line (Thematic) ---
+    openers = [
+        "Another chapter closed!",
+        "The plot thickens!",
+        "A quote for the ages, solved by",
+        "Right on the page!",
+        "The author would be proud."
+    ]
+    opening_line = f"{random.choice(openers)} {display_name} solved today's Gisnep in **{time_str}**."
+
+    # --- Part B: The Time Analysis (The Dynamic Element) ---
+    analysis_lines = []
+    is_new_pb = player_stats.get('is_new_pb', False)
+    player_avg = player_stats.get('avg_seconds', 0.0)
+    server_avg = server_stats.get('avg_seconds', 0.0)
+
+    # Prioritize the most exciting event: a new Personal Best.
+    if is_new_pb:
+        analysis_lines.append(f"🚀 **New Personal Best!** They absolutely shattered their old record!")
+    else:
+        # Compare to the server average for THIS puzzle
+        if server_avg > 0:
+            time_diff_server = server_avg - completion_time
+            if time_diff_server > 60:  # More than a minute faster
+                diff_m = int(time_diff_server / 60)
+                diff_s = int(time_diff_server % 60)
+                analysis_lines.append(f"⚡ They were **{diff_m}m {diff_s}s faster** than the server average today! A true speed reader!")
+
+        # Compare to the player's OWN average
+        if player_avg > 0:
+            time_diff_player = player_avg - completion_time
+            if time_diff_player > 45:
+                analysis_lines.append(f"🔥 That's significantly faster than their usual pace. They were in the zone!")
+
+    # Add a general comment based on absolute time
+    if completion_time < 180:  # Under 3 minutes
+        analysis_lines.append("An incredibly quick solve!")
+    elif completion_time > 600:  # Over 10 minutes
+        analysis_lines.append("That was a real head-scratcher of a quote, a thoughtful solve. 🧐")
+
+    # If no other conditions met, provide a default summary
+    if not analysis_lines:
+        analysis_lines.append(f"Their average time is now **{player_avg_str}**.")
+
+    # Choose one line of analysis to post
+    time_analysis = random.choice(analysis_lines)
+
+    # Combine and return the final message
+    return f"{opening_line}\n{time_analysis}"
+
 def generate_connections_post(display_name, game_number, game_info, updated_stats):
     """Generates a dynamic Connections post based on the player's score and stats."""
 
