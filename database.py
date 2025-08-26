@@ -35,7 +35,6 @@ def initialize_db():
                 connections_perfect_games INTEGER DEFAULT 0,
                 connections_purple_firsts INTEGER DEFAULT 0,
                 connections_avg_mistakes REAL DEFAULT 0.0
-                avg_luck REAL DEFAULT 0.0
             )
         """)
         # Connections
@@ -204,19 +203,22 @@ def update_player_stats(user_id, display_name, game_number, attempts, skill, luc
     cursor = conn.cursor()
 
     # Get the player's current stats
-    cursor.execute("SELECT * FROM player_stats WHERE user_id = ?", (str(user_id),))
+    cursor.execute("""
+        SELECT display_name, total_plays, total_wins, current_streak, max_streak, avg_skill, avg_luck
+        FROM player_stats
+        WHERE user_id = ?
+    """, (str(user_id),))
     stats = cursor.fetchone()
 
     # If player is new, initialize their stats
     if not stats:
         cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (str(user_id), display_name))
-        conn.commit() # Commit the insert
-        # Fetch the newly created row to work with
-        cursor.execute("SELECT * FROM player_stats WHERE user_id = ?", (str(user_id),))
-        stats = cursor.fetchone()
+        conn.commit()  # Commit the insert
+        # Set stats to a default tuple for a new player
+        stats = (display_name, 0, 0, 0, 0, 0.0, 0.0)
 
     # Unpack stats for easier use
-    (user_id_str, name, total_plays, total_wins, win_pct, current_streak, max_streak, avg_skill, avg_luck) = stats
+    (name, total_plays, total_wins, current_streak, max_streak, avg_skill, avg_luck) = stats
 
     # --- Streak Logic ---
     was_a_win = (attempts <= 6)

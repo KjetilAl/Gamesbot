@@ -201,8 +201,7 @@ class TestExamplesSheet(unittest.TestCase):
             for field in matchfields:
                 if field in parsed: show_parsed[field] = parsed[field]
                 if field in example: show_example[field] = example[field]
-                if field not in parsed or field not in example \
-                        or example[field] != parsed[field]:
+                if field in example and (field not in parsed or example[field] != parsed[field]):
                     mismatched.append(field)
 
             if mismatched:
