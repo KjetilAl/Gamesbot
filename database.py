@@ -106,13 +106,23 @@ def initialize_db():
             )
         """)
         # Bandle
+        cursor.execute("DROP TABLE IF EXISTS bandle_scores")
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS bandle_scores (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
-                game_number INTEGER, attempts INTEGER, total_score INTEGER,
-                bonus_completed INTEGER, bonus_total INTEGER,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                display_name TEXT,
+                game_number INTEGER NOT NULL,
+                attempts INTEGER,
+                found_total INTEGER,
+                found_percentage REAL,
+                current_streak INTEGER,
+                max_streak INTEGER,
+                bonus_rounds_completed INTEGER,
+                bonus_rounds_total INTEGER,
+                bonus_emojis TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         """)
         # Latest Game Numbers/Identifiers
         cursor.execute("""
@@ -152,6 +162,19 @@ def initialize_db():
         # Commit all schema changes together
         conn.commit()
         print("DB: All tables created or verified.")
+
+        # --- Add Bandle columns to player_stats (migration) ---
+        try:
+            cursor.execute("ALTER TABLE player_stats ADD COLUMN bandle_total_plays INTEGER DEFAULT 0;")
+            cursor.execute("ALTER TABLE player_stats ADD COLUMN bandle_avg_attempts REAL DEFAULT 0.0;")
+            cursor.execute("ALTER TABLE player_stats ADD COLUMN bandle_avg_bonus_rounds REAL DEFAULT 0.0;")
+            conn.commit()
+            print("DB: Added Bandle columns to player_stats.")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" in str(e):
+                print("DB: Bandle columns already exist in player_stats.")
+            else:
+                raise e
 
         # --- Initialize latest_game_numbers Data ---
         initial_games = [
@@ -473,30 +496,21 @@ def update_gisnep_player_stats(user_id, display_name, completion_time):
         "total_plays": new_total_plays
     }
 
-def save_bandle_score(user_id, display_name, game_number, attempts, total_score, bonus_completed, bonus_total, bonus_categories: dict[str, bool]):
-    """Save a new Bandle score, including individual bonus round results."""
+def save_bandle_score(user_id, display_name, game_number, attempts, found_total, found_percentage, current_streak, max_streak, bonus_rounds_completed, bonus_rounds_total, bonus_emojis):
+    """Save a new Bandle score."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
         cursor.execute("""
             INSERT INTO bandle_scores (
-                user_id, display_name, game_number, attempts, total_score,
-                bonus_completed, bonus_total,
-                bonus_microphone, bonus_frame, bonus_person, bonus_globe, bonus_puzzle,
-                bonus_calendar, bonus_cd, bonus_timer, bonus_guitar
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                user_id, display_name, game_number, attempts, found_total,
+                found_percentage, current_streak, max_streak,
+                bonus_rounds_completed, bonus_rounds_total, bonus_emojis
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            user_id, display_name, game_number, attempts, total_score,
-            bonus_completed, bonus_total,
-            bonus_categories.get("🎤", False), # Get status for each emoji
-            bonus_categories.get("🖼️", False),
-            bonus_categories.get("🧑", False),
-            bonus_categories.get("🌍", False),
-            bonus_categories.get("🧩", False),
-            bonus_categories.get("📅", False),
-            bonus_categories.get("💿", False),
-            bonus_categories.get("⏱️", False),
-            bonus_categories.get("🎸", False),
+            user_id, display_name, game_number, attempts, found_total,
+            found_percentage, current_streak, max_streak,
+            bonus_rounds_completed, bonus_rounds_total, bonus_emojis
         ))
         conn.commit()
         print(f"DB: Saved Bandle score for {display_name} - Game #{game_number}")
@@ -504,6 +518,51 @@ def save_bandle_score(user_id, display_name, game_number, attempts, total_score,
         print(f"Database error in save_bandle_score: {e}")
     finally:
         conn.close()
+
+def update_bandle_player_stats(user_id, display_name, attempts, bonus_rounds_completed):
+    """Update player stats for Bandle after a new score is submitted."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT bandle_total_plays, bandle_avg_attempts, bandle_avg_bonus_rounds FROM player_stats WHERE user_id = ?", (str(user_id),))
+    stats = cursor.fetchone()
+
+    if not stats or stats[0] is None:
+        # If stats are not found or total_plays is NULL, initialize them
+        total_plays, avg_attempts, avg_bonus_rounds = 0, 0.0, 0.0
+        # Ensure the player exists in the table
+        cursor.execute("SELECT user_id FROM player_stats WHERE user_id = ?", (str(user_id),))
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (str(user_id), display_name))
+    else:
+        total_plays, avg_attempts, avg_bonus_rounds = stats
+
+    # --- Calculate new stats ---
+    new_total_plays = total_plays + 1
+    # Recalculate average attempts
+    new_avg_attempts = ((avg_attempts * total_plays) + attempts) / new_total_plays
+    # Recalculate average bonus rounds
+    new_avg_bonus_rounds = ((avg_bonus_rounds * total_plays) + bonus_rounds_completed) / new_total_plays
+
+    # --- Commit changes to the database ---
+    cursor.execute("""
+        UPDATE player_stats
+        SET display_name = ?,
+            bandle_total_plays = ?,
+            bandle_avg_attempts = ?,
+            bandle_avg_bonus_rounds = ?
+        WHERE user_id = ?
+    """, (display_name, new_total_plays, new_avg_attempts, new_avg_bonus_rounds, str(user_id)))
+
+    conn.commit()
+    conn.close()
+
+    # Return key stats for the post
+    return {
+        "total_plays": new_total_plays,
+        "avg_attempts": new_avg_attempts,
+        "avg_bonus_rounds": new_avg_bonus_rounds
+    }
 
 def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, clue: str, word_length: int, score_description: str):
     """Saves a Minute Cryptic score to the database."""
@@ -810,37 +869,101 @@ def get_gisnep_leaderboard(period: str = 'weekly'):
         "scholar_award": scholar_award
     }
 
-def get_bandle_leaderboard(period: str = 'overall'):
-    """Fetch Bandle leaderboard data, supporting different periods and stats."""
+def get_bandle_leaderboard(period: str = 'weekly'):
+    """Fetch enhanced Bandle leaderboard data with superlatives."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    where_clause, params = get_scores_by_period("bandle_scores", period)
 
-    # Fetch relevant stats for Bandle, including individual bonus counts
+    # Use a different where clause for created_at
+    if period == 'weekly':
+        start_time = (datetime.datetime.now(timezone.utc) - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        where_clause = "WHERE created_at >= ?"
+        params = (start_time,)
+    elif period == 'monthly':
+        first_day_of_month = datetime.datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+        where_clause = "WHERE created_at >= ?"
+        params = (first_day_of_month,)
+    else: # overall
+        where_clause = ""
+        params = ()
+
+    # 1. Get top 3 players by average attempts
     cursor.execute(f"""
-        SELECT display_name,
-               COUNT(*) AS games_played,
-               SUM(total_score) AS total_score,
-               AVG(attempts) AS avg_attempts,
-               SUM(CASE WHEN attempts <= 6 THEN 1 ELSE 0 END) AS solved_count, -- Assuming attempts <= 6 means solved
-               SUM(CASE WHEN bonus_microphone THEN 1 ELSE 0 END) AS bonus_microphone_count,
-               SUM(CASE WHEN bonus_frame THEN 1 ELSE 0 END) AS bonus_frame_count,
-               SUM(CASE WHEN bonus_person THEN 1 ELSE 0 END) AS bonus_person_count,
-               SUM(CASE WHEN bonus_globe THEN 1 ELSE 0 END) AS bonus_globe_count,
-               SUM(CASE WHEN bonus_puzzle THEN 1 ELSE 0 END) AS bonus_puzzle_count,
-               SUM(CASE WHEN bonus_calendar THEN 1 ELSE 0 END) AS bonus_calendar_count,
-               SUM(CASE WHEN bonus_cd THEN 1 ELSE 0 END) AS bonus_cd_count,
-               SUM(CASE WHEN bonus_timer THEN 1 ELSE 0 END) AS bonus_timer_count,
-               SUM(CASE WHEN bonus_guitar THEN 1 ELSE 0 END) AS bonus_guitar_count
-        FROM bandle_scores
-        {where_clause}
-        GROUP BY user_id, display_name
-        ORDER BY total_score DESC
-        LIMIT 10
+        SELECT
+            p.display_name,
+            p.bandle_avg_attempts,
+            p.bandle_avg_bonus_rounds
+        FROM player_stats p
+        JOIN (SELECT DISTINCT user_id FROM bandle_scores {where_clause}) as period_players
+        ON p.user_id = period_players.user_id
+        WHERE p.bandle_total_plays > 0
+        ORDER BY p.bandle_avg_attempts ASC
+        LIMIT 3
     """, params)
-    leaderboard = cursor.fetchall()
+    top_players = cursor.fetchall()
+
+    # 2. Get all scores for the period to calculate superlatives
+    cursor.execute(f"SELECT user_id, display_name, bonus_emojis FROM bandle_scores {where_clause}", params)
+    scores = cursor.fetchall()
+
+    # 3. Calculate superlatives
+    player_emoji_counts = {}
+    for user_id, display_name, emojis in scores:
+        if user_id not in player_emoji_counts:
+            player_emoji_counts[user_id] = {"display_name": display_name, "counts": {}}
+
+        for emoji in emojis.split():
+            player_emoji_counts[user_id]["counts"][emoji] = player_emoji_counts[user_id]["counts"].get(emoji, 0) + 1
+
+    # Superlative logic
+    music_historian = None
+    ar_scout = None
+    producers_ear = None
+    superfan = None
+
+    max_hist_score = 0
+    max_ar_score = 0
+    max_prod_score = 0
+    max_fan_score = 0
+
+    for user_id, data in player_emoji_counts.items():
+        counts = data["counts"]
+        display_name = data["display_name"]
+
+        hist_score = counts.get("🧩", 0) + counts.get("📅", 0)
+        if hist_score > max_hist_score:
+            max_hist_score = hist_score
+            music_historian = (display_name, hist_score)
+
+        ar_score = counts.get("🧑", 0) + counts.get("🖼️", 0)
+        if ar_score > max_ar_score:
+            max_ar_score = ar_score
+            ar_scout = (display_name, ar_score)
+
+        prod_score = counts.get("🎸", 0) + counts.get("⏱️", 0)
+        if prod_score > max_prod_score:
+            max_prod_score = prod_score
+            producers_ear = (display_name, prod_score)
+
+        fan_score = counts.get("🎤", 0) + counts.get("💿", 0)
+        if fan_score > max_fan_score:
+            max_fan_score = fan_score
+            superfan = (display_name, fan_score)
+
+    # Get Rock God (highest max_streak)
+    cursor.execute("SELECT display_name, max_streak FROM player_stats ORDER BY max_streak DESC LIMIT 1")
+    rock_god = cursor.fetchone()
+
     conn.close()
-    return leaderboard # Returns list of tuples
+
+    return {
+        "top_players": top_players,
+        "music_historian": music_historian,
+        "ar_scout": ar_scout,
+        "producers_ear": producers_ear,
+        "superfan": superfan,
+        "rock_god": rock_god
+    }
 
 def get_minute_cryptic_leaderboard(period: str = 'weekly') -> list[tuple[str, int]]:
     """

@@ -227,37 +227,40 @@ def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
     """Parses a Bandle score from a message, including individual bonus rounds."""
     match = BANDLE_PATTERN.search(message_content)
     bonus_match = BONUS_PATTERN.search(message_content)
+    streak_match = re.search(r'Current Streak: (\d+)', message_content)
+    max_streak_match = re.search(r'Max Streak: (\d+)', message_content)
 
     if not match:
         return None
 
     game_number = int(match.group(1))
     attempts_str = match.group(2).lower()
-    max_attempts = int(match.group(3))
+    found_total = int(match.group(3))
     solved = attempts_str != "x"
-    attempts = int(attempts_str) if solved else max_attempts + 1
-    score = max(6 - attempts, 0) if solved else 0
+    attempts = int(attempts_str) if solved else found_total + 1
 
-    bonus_completed = int(bonus_match.group(1)) if bonus_match and bonus_match.group(1) else 0
-    bonus_total = int(bonus_match.group(2)) if bonus_match and bonus_match.group(2) else 0
-    bonus_emojis_str = bonus_match.group(3).strip() if bonus_match and bonus_match.group(3) else ""
+    found_percentage = 0
+    if found_total > 0:
+        found_percentage = (found_total - (attempts - 1)) / found_total if solved else 0
 
-    # Define the bonus category emojis
-    bonus_category_emojis = ["🎤", "🖼️", "🧑", "🌍", "🧩", "📅", "💿", "⏱️", "🎸"]
+    bonus_rounds_completed = int(bonus_match.group(1)) if bonus_match and bonus_match.group(1) else 0
+    bonus_rounds_total = int(bonus_match.group(2)) if bonus_match and bonus_match.group(2) else 0
+    bonus_emojis = bonus_match.group(3).strip() if bonus_match and bonus_match.group(3) else ""
 
-    # Check for the presence of each bonus emoji
-    bonus_categories_completed = {emoji: emoji in bonus_emojis_str for emoji in bonus_category_emojis}
-
-    print(f"Bandle: Game #{game_number}, Attempts: {attempts}, Solved: {solved}, Score: {score}, Bonus Completed: {bonus_completed}/{bonus_total}, Bonus Categories: {bonus_categories_completed}")
+    current_streak = int(streak_match.group(1)) if streak_match else 0
+    max_streak = int(max_streak_match.group(1)) if max_streak_match else 0
 
     return {
         "game_number": game_number,
         "attempts": attempts,
-        "solved": solved,
-        "total_score": score,
-        "bonus_completed": bonus_completed,
-        "bonus_total": bonus_total,
-        "bonus_categories": bonus_categories_completed, # Dictionary of individual category completion
+        "found_total": found_total,
+        "found_percentage": found_percentage,
+        "current_streak": current_streak,
+        "max_streak": max_streak,
+        "bonus_rounds_completed": bonus_rounds_completed,
+        "bonus_rounds_total": bonus_rounds_total,
+        "bonus_emojis": bonus_emojis,
+        "solved": solved
     }
     
 def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]:
