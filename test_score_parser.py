@@ -171,12 +171,12 @@ class TestExamplesSheet(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         script_dir = os.path.dirname(__file__)
-        cls.ods_name = EXAMPLES_ODS
-        cls.ods_path = os.path.join(script_dir, cls.ods_name)
+        cls.fods_name = "Minigame Scores Examples.fods"
+        cls.fods_path = os.path.join(script_dir, cls.fods_name)
 
-        soffice_refresh_fods(cls.ods_path)
+        # soffice_refresh_fods(cls.ods_path)
 
-        cls.doc = odf.opendocument.load(cls.ods_path)
+        cls.doc = odf.opendocument.load(cls.fods_path)
         cls.sheets = spreadsheet_xml_to_dict(cls.doc)
         # log.debug(pprint.pformat(cls.sheets))
 
@@ -246,7 +246,7 @@ Full parsed object:
         self.do_parse_test(
             sheet = self.sheets['Bandle'],
             parsefn = score_parser.parse_bandle_score,
-            matchfields = ['game_number', 'attempts', 'solved', 'bonus_completed', 'bonus_total'])
+            matchfields = ['game_number', 'attempts', 'solved', 'bonus_rounds_completed', 'bonus_rounds_total', 'bonus_emojis', 'current_streak', 'max_streak'])
 
 class TestPipsParser(unittest.TestCase):
     def test_calculate_pips_score(self):
