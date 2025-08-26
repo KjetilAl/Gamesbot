@@ -35,6 +35,7 @@ def initialize_db():
                 connections_perfect_games INTEGER DEFAULT 0,
                 connections_purple_firsts INTEGER DEFAULT 0,
                 connections_avg_mistakes REAL DEFAULT 0.0
+                avg_luck REAL DEFAULT 0.0
             )
         """)
         # Connections
@@ -263,7 +264,7 @@ def update_player_stats(user_id, display_name, game_number, attempts, skill, luc
         "total_plays": new_total_plays,
         "is_new_max_streak": new_streak > max_streak and new_streak > 1
     }
-
+  
 def update_connections_stats(user_id, display_name, mistake_count, perfect_game, solved_purple_first):
     """Update player stats for Connections after a new score is submitted."""
     conn = sqlite3.connect(DB_NAME)

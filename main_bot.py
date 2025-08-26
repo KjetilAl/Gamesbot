@@ -279,7 +279,6 @@ async def leaderboard(ctx, game="wordle", period="weekly"):
             message += "No players ranked this period.\n"
 
         message += "\n**Superlatives:**\n"
-
         if leaderboard_data["einstein"]:
             player, avg_skill = leaderboard_data["einstein"]
             message += f"The Einstein Award 🧠: to **{player}** for the highest average skill score this period ({avg_skill:.1f}).\n"
@@ -292,6 +291,7 @@ async def leaderboard(ctx, game="wordle", period="weekly"):
                 message += f"The Ironman Award 🦾: to **{player}** for maintaining a flawless {streak} game winning streak!\n"
 
         await ctx.send(message)
+        
     elif game == "connections":
         leaderboard_data = database.get_connections_leaderboard(period=period)
         embed = await embed_builder.build_connections_leaderboard_embed(
@@ -367,6 +367,7 @@ async def post_scores(period: str):
                 period=period,
                 color=embed_color
             )
+
         elif game_name == "Connections":
             leaderboard_embed = await embed_builder.build_connections_leaderboard_embed(
                 title=f"🧩 The Connections {period.capitalize()} Conundrum 🧩",
@@ -378,6 +379,7 @@ async def post_scores(period: str):
             # Format data for embed for other games
             formatted_scores_for_embed = []
             game_data_mapping = {
+                "Connections": ["display_name", "games_played", "total_score", "avg_score", "solved_count", "purple_first_count", "blue_first_count"],
                 "Framed": ["display_name", "games_played", "total_score", "avg_attempts", "solved_count"],
                 "Gisnep": ["display_name", "games_played", "avg_time", "best_time"],
                 "Bandle": ["display_name", "games_played", "total_score", "avg_attempts", "solved_count",
@@ -392,7 +394,10 @@ async def post_scores(period: str):
                 for row in scores:
                     player_data = dict(zip(keys, row))
                     # Generic stats for embed
-                    if game_name == "Framed":
+                    if game_name == "Connections":
+                        player_data["avg"] = player_data["avg_score"]
+                        player_data["solved"] = player_data["solved_count"]
+                    elif game_name == "Framed":
                         player_data["avg"] = player_data["avg_attempts"]
                         player_data["solved"] = player_data["solved_count"]
                     elif game_name == "Gisnep":
