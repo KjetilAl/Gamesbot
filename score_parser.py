@@ -96,6 +96,14 @@ def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
             skill_score = int(skill_match.group(1))
             break
 
+    # Extract uniqueness
+    uniqueness_text = None
+    for line in game_lines:
+        uniqueness_match = re.search(r"Uniqueness\s+(.+)", line, re.IGNORECASE)
+        if uniqueness_match:
+            uniqueness_text = uniqueness_match.group(1).strip()
+            break
+
     found_colors = set()
     mistakes = 0
     all_guesses = []
@@ -117,9 +125,10 @@ def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
     score_details = calculate_connections_score(all_guesses, found_colors, first_successful, mistakes, skill_score)
 
     return {
-        "puzzle_number": puzzle_number,
+        "game_number": puzzle_number,
         "guesses": all_guesses,
         "num_guesses": len(all_guesses),
+        "uniqueness": uniqueness_text,
         **score_details
     }
 
@@ -158,7 +167,8 @@ def calculate_connections_score(guesses, found_colors, first_successful, mistake
         "finished_game": all_groups_found,
         "correct_guesses": len(found_colors),
         "mistake_count": mistake_count,
-        "skill": skill_score
+        "skill": skill_score,
+        "perfect_game": all_groups_found and no_mistakes
     }
     
 def parse_framed_score(message_content: str) -> Optional[Dict[str, Any]]:

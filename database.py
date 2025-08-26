@@ -19,13 +19,38 @@ def initialize_db():
                 hard_mode BOOLEAN, total_score INTEGER, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        # Player Stats
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS player_stats (
+                user_id TEXT PRIMARY KEY,
+                display_name TEXT,
+                total_plays INTEGER DEFAULT 0,
+                total_wins INTEGER DEFAULT 0,
+                win_percentage REAL DEFAULT 0.0,
+                current_streak INTEGER DEFAULT 0,
+                max_streak INTEGER DEFAULT 0,
+                avg_skill REAL DEFAULT 0.0,
+                avg_luck REAL DEFAULT 0.0,
+                connections_total_plays INTEGER DEFAULT 0,
+                connections_perfect_games INTEGER DEFAULT 0,
+                connections_purple_firsts INTEGER DEFAULT 0,
+                connections_avg_mistakes REAL DEFAULT 0.0
+            )
+        """)
         # Connections
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS connections_scores (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
-                puzzle_number TEXT, total_score INTEGER, guesses INTEGER,
-                solved_purple_first BOOLEAN, solved_blue_first BOOLEAN,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                display_name TEXT,
+                game_number INTEGER NOT NULL,
+                total_score INTEGER,
+                mistake_count INTEGER,
+                perfect_game BOOLEAN,
+                solved_purple_first BOOLEAN,
+                skill INTEGER,
+                uniqueness_text TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         # Minute Cryptic
@@ -167,6 +192,122 @@ def save_wordle_score(user_id, display_name, game_number, attempts, skill=None, 
     conn.commit()
     conn.close()
 
+def update_player_stats(user_id, display_name, game_number, attempts, skill, luck):
+    """Update player stats after a new score is submitted."""
+    # Use 0 if skill or luck is None
+    skill = skill or 0
+    luck = luck or 0
+
+    # Connect to the database
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    # Get the player's current stats
+    cursor.execute("SELECT * FROM player_stats WHERE user_id = ?", (str(user_id),))
+    stats = cursor.fetchone()
+
+    # If player is new, initialize their stats
+    if not stats:
+        cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (str(user_id), display_name))
+        conn.commit() # Commit the insert
+        # Fetch the newly created row to work with
+        cursor.execute("SELECT * FROM player_stats WHERE user_id = ?", (str(user_id),))
+        stats = cursor.fetchone()
+
+    # Unpack stats for easier use
+    (user_id_str, name, total_plays, total_wins, win_pct, current_streak, max_streak, avg_skill, avg_luck) = stats
+
+    # --- Streak Logic ---
+    was_a_win = (attempts <= 6)
+
+    # Check if the previous day's game was played and won
+    cursor.execute("SELECT attempts FROM wordle_scores WHERE user_id = ? AND game_number = ?", (user_id, int(game_number) - 1))
+    previous_game = cursor.fetchone()
+
+    is_on_streak = previous_game and previous_game[0] <= 6
+
+    if was_a_win:
+        if is_on_streak:
+            new_streak = current_streak + 1
+        else:
+            new_streak = 1
+    else: # It was a loss (X/6) or more than 6 attempts
+        new_streak = 0
+
+    # --- Update All Stats ---
+    new_total_plays = total_plays + 1
+    new_total_wins = total_wins + (1 if was_a_win else 0)
+    new_win_percentage = (new_total_wins / new_total_plays) * 100 if new_total_plays > 0 else 0.0
+    new_max_streak = max(max_streak, new_streak)
+
+    # Recalculate average skill and luck
+    new_avg_skill = ((avg_skill * total_plays) + skill) / new_total_plays if new_total_plays > 0 else float(skill)
+    new_avg_luck = ((avg_luck * total_plays) + luck) / new_total_plays if new_total_plays > 0 else float(luck)
+
+    # --- Commit changes to the database ---
+    cursor.execute("""
+        UPDATE player_stats
+        SET display_name = ?, total_plays = ?, total_wins = ?, win_percentage = ?,
+            current_streak = ?, max_streak = ?, avg_skill = ?, avg_luck = ?
+        WHERE user_id = ?
+    """, (display_name, new_total_plays, new_total_wins, new_win_percentage, new_streak, new_max_streak, new_avg_skill, new_avg_luck, str(user_id)))
+
+    conn.commit()
+    conn.close()
+
+    # Return the updated stats for use in the Discord post
+    return {
+        "new_streak": new_streak,
+        "max_streak": new_max_streak,
+        "win_percentage": new_win_percentage,
+        "total_plays": new_total_plays,
+        "is_new_max_streak": new_streak > max_streak and new_streak > 1
+    }
+
+def update_connections_stats(user_id, display_name, mistake_count, perfect_game, solved_purple_first):
+    """Update player stats for Connections after a new score is submitted."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    # Get the player's current stats
+    cursor.execute("SELECT connections_total_plays, connections_perfect_games, connections_purple_firsts, connections_avg_mistakes FROM player_stats WHERE user_id = ?", (str(user_id),))
+    stats = cursor.fetchone()
+
+    # If player is new, initialize their stats
+    if not stats:
+        cursor.execute("SELECT user_id FROM player_stats WHERE user_id = ?", (str(user_id),))
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (str(user_id), display_name))
+            conn.commit()
+
+        # Now fetch the stats again
+        cursor.execute("SELECT connections_total_plays, connections_perfect_games, connections_purple_firsts, connections_avg_mistakes FROM player_stats WHERE user_id = ?", (str(user_id),))
+        stats = cursor.fetchone()
+
+    # Unpack stats
+    (total_plays, perfect_games, purple_firsts, avg_mistakes) = stats
+
+    # --- Calculate new stats ---
+    new_total_plays = total_plays + 1
+    new_perfect_games = perfect_games + (1 if perfect_game else 0)
+    new_purple_firsts = purple_firsts + (1 if solved_purple_first else 0)
+    # Recalculate average mistakes
+    new_avg_mistakes = ((avg_mistakes * total_plays) + mistake_count) / new_total_plays if new_total_plays > 0 else float(mistake_count)
+
+    # --- Commit changes to the database ---
+    cursor.execute("""
+        UPDATE player_stats
+        SET connections_total_plays = ?, connections_perfect_games = ?,
+            connections_purple_firsts = ?, connections_avg_mistakes = ?
+        WHERE user_id = ?
+    """, (new_total_plays, new_perfect_games, new_purple_firsts, new_avg_mistakes, str(user_id)))
+
+    conn.commit()
+    conn.close()
+
+    # Return key stats for the Discord post
+    return { "total_perfects": new_perfect_games, "total_purples": new_purple_firsts }
+
 def save_pips_score(user_id: int, display_name: str, game_number: int, difficulty: str, completion_time: int, score: int, cookie: bool):
     """Saves or updates a Pips score in the database."""
     conn = sqlite3.connect(DB_NAME)
@@ -212,14 +353,14 @@ def get_recent_scores(user_id, limit=5):
     conn.close()
     return results
 
-def save_connections_score(user_id, display_name, puzzle_number, total_score, guesses, solved_purple_first, solved_blue_first):
+def save_connections_score(user_id, display_name, game_number, total_score, mistake_count, perfect_game, solved_purple_first, skill, uniqueness_text):
     """Save a new Connections score."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO connections_scores (user_id, display_name, puzzle_number, total_score, guesses, solved_purple_first, solved_blue_first)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (user_id, display_name, puzzle_number, total_score, guesses, solved_purple_first, solved_blue_first))
+        INSERT INTO connections_scores (user_id, display_name, game_number, total_score, mistake_count, perfect_game, solved_purple_first, skill, uniqueness_text)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (str(user_id), display_name, game_number, total_score, mistake_count, perfect_game, solved_purple_first, skill, uniqueness_text))
     conn.commit()
     conn.close()
 
@@ -346,54 +487,160 @@ def get_scores_by_period(table_name: str, period: str) -> tuple[str, ...]:
     else: # overall
         return "", ()
 
-def get_wordle_leaderboard(period: str = 'overall'):
-    """Fetch Wordle leaderboard data, supporting different periods and stats."""
+def get_wordle_leaderboard(period: str = 'weekly'):
+    """Fetch enhanced Wordle leaderboard data with superlatives."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     where_clause, params = get_scores_by_period("wordle_scores", period)
 
-    # Fetch relevant stats for Wordle
+    # 1. Get top 3 players by SUM(total_score)
     cursor.execute(f"""
-        SELECT display_name,
-               COUNT(*) AS games_played,
-               AVG(attempts) AS avg_attempts,
-               SUM(CASE WHEN attempts <= 6 THEN 1 ELSE 0 END) AS solved_count,
-               SUM(CASE WHEN hard_mode THEN 1 ELSE 0 END) AS hard_mode_count,
-               MAX(total_score) AS best_score -- Still useful for overall ranking or context
+        SELECT display_name, SUM(total_score) as total_score
         FROM wordle_scores
         {where_clause}
         GROUP BY user_id, display_name
-        ORDER BY best_score DESC -- Or order by avg_attempts ASC for weekly/monthly?
-        LIMIT 10
+        ORDER BY total_score DESC
+        LIMIT 3
     """, params)
-    leaderboard = cursor.fetchall()
-    conn.close()
-    return leaderboard # Returns list of tuples
+    top_players = cursor.fetchall()
 
-def get_connections_leaderboard(period: str = 'overall'):
-    """Fetch Connections leaderboard data, supporting different periods and stats."""
+    # 2. Get superlatives
+    # Highest AVG(skill)
+    cursor.execute(f"""
+        SELECT display_name, AVG(skill) as avg_skill
+        FROM wordle_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        HAVING COUNT(user_id) > 3
+        ORDER BY avg_skill DESC
+        LIMIT 1
+    """, params)
+    einstein = cursor.fetchone()
+
+    # Highest AVG(luck)
+    cursor.execute(f"""
+        SELECT display_name, AVG(luck) as avg_luck
+        FROM wordle_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        HAVING COUNT(user_id) > 3
+        ORDER BY avg_luck DESC
+        LIMIT 1
+    """, params)
+    lucky_charm = cursor.fetchone()
+
+    # Highest current_streak from player_stats
+    cursor.execute("""
+        SELECT display_name, current_streak
+        FROM player_stats
+        ORDER BY current_streak DESC
+        LIMIT 1
+    """)
+    ironman = cursor.fetchone()
+
+    conn.close()
+
+    return {
+        "top_players": top_players,
+        "einstein": einstein,
+        "lucky_charm": lucky_charm,
+        "ironman": ironman
+    }
+
+def _parse_uniqueness_to_int(uniqueness_text: str) -> int:
+    if not uniqueness_text:
+        return 0
+    uniqueness_text = uniqueness_text.lower().replace(",", "")
+    if "million" in uniqueness_text:
+        return 1000000
+    if "in" in uniqueness_text:
+        parts = uniqueness_text.split(" in ")
+        if len(parts) == 2:
+            try:
+                return int(parts[1])
+            except (ValueError, IndexError):
+                return 0
+    return 0
+
+def get_connections_leaderboard(period: str = 'weekly'):
+    """Fetch enhanced Connections leaderboard data with superlatives."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    where_clause, params = get_scores_by_period("connections_scores", period)
 
-    # Fetch relevant stats for Connections
+    if period == 'weekly':
+        start_time = (datetime.datetime.now(timezone.utc) - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        where_clause = "WHERE created_at >= ?"
+        params = (start_time,)
+    elif period == 'monthly':
+        first_day_of_month = datetime.datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+        where_clause = "WHERE created_at >= ?"
+        params = (first_day_of_month,)
+    else: # overall
+        where_clause = ""
+        params = ()
+
+    # 1. Get top 3 players by SUM(total_score)
     cursor.execute(f"""
-        SELECT display_name,
-               COUNT(*) AS games_played,
-               SUM(total_score) AS total_score,
-               AVG(total_score) AS avg_score,
-               COUNT(*) AS solved_count,
-               SUM(CASE WHEN solved_purple_first THEN 1 ELSE 0 END) AS purple_first_count,
-               SUM(CASE WHEN solved_blue_first THEN 1 ELSE 0 END) AS blue_first_count
+        SELECT display_name, SUM(total_score) as total_score
         FROM connections_scores
         {where_clause}
         GROUP BY user_id, display_name
         ORDER BY total_score DESC
-        LIMIT 10
+        LIMIT 3
     """, params)
-    leaderboard = cursor.fetchall()
+    top_players = cursor.fetchall()
+
+    # 2. Get superlatives
+    # The Perfector
+    cursor.execute(f"""
+        SELECT display_name, SUM(perfect_game) as perfect_games
+        FROM connections_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        ORDER BY perfect_games DESC
+        LIMIT 1
+    """, params)
+    perfector = cursor.fetchone()
+
+    # The Grandmaster
+    cursor.execute(f"""
+        SELECT display_name, SUM(solved_purple_first) as purple_firsts
+        FROM connections_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        ORDER BY purple_firsts DESC
+        LIMIT 1
+    """, params)
+    grandmaster = cursor.fetchone()
+
+    # The Pathfinder
+    cursor.execute(f"""
+        SELECT display_name, uniqueness_text
+        FROM connections_scores
+        {where_clause}
+        WHERE uniqueness_text IS NOT NULL
+    """, params)
+    uniqueness_scores = cursor.fetchall()
+
+    pathfinder = None
+    if uniqueness_scores:
+        max_rarity = -1
+        best_score = None
+        for display_name, uniqueness_text in uniqueness_scores:
+            rarity = _parse_uniqueness_to_int(uniqueness_text)
+            if rarity > max_rarity:
+                max_rarity = rarity
+                best_score = (display_name, uniqueness_text)
+        pathfinder = best_score
+
     conn.close()
-    return leaderboard # Returns list of tuples
+
+    return {
+        "top_players": top_players,
+        "perfector": perfector,
+        "grandmaster": grandmaster,
+        "pathfinder": pathfinder
+    }
 
 def get_framed_leaderboard(period: str = 'overall'):
     """Fetch Framed leaderboard data, supporting different periods and stats."""

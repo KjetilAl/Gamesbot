@@ -229,7 +229,7 @@ Full parsed object:
         self.do_parse_test(
             sheet = self.sheets['Connections'],
             parsefn = score_parser.parse_connections_result,
-            matchfields = ['puzzle_number', 'num_guesses'])
+            matchfields = ['game_number', 'num_guesses'])
 
     def test_parse_framed_score(self):
         self.do_parse_test(

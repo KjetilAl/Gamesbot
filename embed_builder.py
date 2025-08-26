@@ -1,6 +1,98 @@
 import discord
 import discord.utils # Needed for utcnow
 
+async def build_wordle_leaderboard_embed(title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
+    """
+    Builds a Discord embed for the enhanced Wordle leaderboard.
+    """
+    embed = discord.Embed(
+        title=title,
+        description=f"Period: {period.capitalize()}",
+        color=color
+    )
+
+    # Top Players
+    top_players = leaderboard_data.get("top_players")
+    if top_players:
+        medals = ["🥇", "🥈", "🥉"]
+        player_list = []
+        for i, (player, score) in enumerate(top_players):
+            player_list.append(f"{medals[i]} **{player}** - ⭐ Total Score: {score}")
+        embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
+    else:
+        embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
+
+
+    # Superlatives
+    superlatives = []
+    einstein = leaderboard_data.get("einstein")
+    if einstein:
+        player, avg_skill = einstein
+        superlatives.append(f"The Einstein Award 🧠: to **{player}** for the highest average skill score this period ({avg_skill:.1f}).")
+
+    lucky_charm = leaderboard_data.get("lucky_charm")
+    if lucky_charm:
+        player, avg_luck = lucky_charm
+        superlatives.append(f"The Lucky Charm Award 🍀: to **{player}** for riding a wave of good fortune with the highest average luck this period ({avg_luck:.1f}).")
+
+    ironman = leaderboard_data.get("ironman")
+    if ironman:
+        player, streak = ironman
+        if streak > 1:
+            superlatives.append(f"The Ironman Award 🦾: to **{player}** for maintaining a flawless {streak} game winning streak!")
+
+    if superlatives:
+        embed.add_field(name="✨ Superlatives", value="\n".join(superlatives), inline=False)
+
+    emit_footer = f"Posted: {discord.utils.utcnow().strftime('%Y-%m-%d')}"
+    embed.set_footer(text=emit_footer)
+    return embed
+
+async def build_connections_leaderboard_embed(title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
+    """
+    Builds a Discord embed for the enhanced Connections leaderboard.
+    """
+    embed = discord.Embed(
+        title=title,
+        description=f"Period: {period.capitalize()}",
+        color=color
+    )
+
+    # Top Players
+    top_players = leaderboard_data.get("top_players")
+    if top_players:
+        medals = ["🥇", "🥈", "🥉"]
+        player_list = []
+        for i, (player, score) in enumerate(top_players):
+            player_list.append(f"{medals[i]} **{player}** - ⭐ Total Score: {score}")
+        embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
+    else:
+        embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
+
+    # Superlatives
+    superlatives = []
+    perfector = leaderboard_data.get("perfector")
+    if perfector and perfector[1] > 0:
+        player, count = perfector
+        superlatives.append(f"The Perfector 🧑‍🎨: to **{player}** for achieving {count} perfect game{'s' if count > 1 else ''} this period!")
+
+    grandmaster = leaderboard_data.get("grandmaster")
+    if grandmaster and grandmaster[1] > 0:
+        player, count = grandmaster
+        superlatives.append(f"The Grandmaster ♟️: to **{player}** for solving the purple group first {count} time{'s' if count > 1 else ''}!")
+
+    pathfinder = leaderboard_data.get("pathfinder")
+    if pathfinder:
+        player, uniqueness = pathfinder
+        superlatives.append(f"The Pathfinder 🗺️: to **{player}** for their mind-bending solve with a Uniqueness of {uniqueness}, the rarest of the period!")
+
+    if superlatives:
+        embed.add_field(name="✨ Superlatives", value="\n".join(superlatives), inline=False)
+
+    emit_footer = f"Posted: {discord.utils.utcnow().strftime('%Y-%m-%d')}"
+    embed.set_footer(text=emit_footer)
+    return embed
+
 async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], period: str, color: discord.Color) -> discord.Embed:
     """
     Builds a Discord embed for a game leaderboard, formatted based on game type.
