@@ -89,7 +89,16 @@ async def on_message(message):
                         game_info.get("luck"),
                         updated_stats
                     )
-                    await message.channel.send(post_message)
+
+                    # Find the game's chat channel and post the message there
+                    channel_name = config.get("chat_channel_name")
+                    game_channel = discord.utils.get(message.guild.channels, name=channel_name)
+                    if game_channel:
+                        await game_channel.send(post_message)
+                    else:
+                        print(f"Warning: Could not find channel '{channel_name}' for {config['name']}. Posting in original channel.")
+                        await message.channel.send(post_message)
+
                 elif game_key == "connections":
                     config["save_score_function"](
                         message.author.id,
@@ -115,10 +124,19 @@ async def on_message(message):
                         game_info,
                         updated_stats
                     )
-                    await message.channel.send(post_message)
+
+                    # Find the game's chat channel and post the message there
+                    channel_name = config.get("chat_channel_name")
+                    game_channel = discord.utils.get(message.guild.channels, name=channel_name)
+                    if game_channel:
+                        await game_channel.send(post_message)
+                    else:
+                        print(f"Warning: Could not find channel '{channel_name}' for {config['name']}. Posting in original channel.")
+                        await message.channel.send(post_message)
+
                 elif game_key == "framed":
                     config["save_score_function"](
-                        message.author.id, message.author.display_name, 
+                        message.author.id, message.author.display_name,
                         game_info["game_number"],
                         game_info["attempts"], 
                         game_info["total_score"]
@@ -219,11 +237,10 @@ async def on_message(message):
                             config,
                             game_info
                         )
-                    
-                # Replace message sending with emoji reaction
-                if game_key not in ["wordle", "connections"]:
-                    await message.add_reaction("🤖")
                 
+                # Acknowledge the score with an emoji
+                await message.add_reaction("🤖")
+
             except Exception as e:
                 print(f"Error processing {config['name']} score: {e}")
                 await message.channel.send(f"⚠️ There was an error processing your {config['name']} score.")
