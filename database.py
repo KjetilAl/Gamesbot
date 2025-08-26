@@ -34,7 +34,10 @@ def initialize_db():
                 connections_total_plays INTEGER DEFAULT 0,
                 connections_perfect_games INTEGER DEFAULT 0,
                 connections_purple_firsts INTEGER DEFAULT 0,
-                connections_avg_mistakes REAL DEFAULT 0.0
+                connections_avg_mistakes REAL DEFAULT 0.0,
+                gisnep_total_plays INTEGER DEFAULT 0,
+                gisnep_avg_seconds REAL DEFAULT 0.0,
+                gisnep_personal_best_seconds INTEGER -- Can be NULL
             )
         """)
         # Connections
@@ -85,11 +88,22 @@ def initialize_db():
         """)
         # Gisnep
         cursor.execute("""
-             CREATE TABLE IF NOT EXISTS gisnep_scores (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
-                game_number INTEGER, completion_time INTEGER,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-             )
+            CREATE TABLE IF NOT EXISTS gisnep_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                display_name TEXT,
+                game_number INTEGER NOT NULL,
+                completion_time INTEGER NOT NULL, -- Stored in seconds
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS gisnep_puzzle_stats (
+                game_number INTEGER PRIMARY KEY,
+                total_solves INTEGER DEFAULT 0,
+                total_seconds INTEGER DEFAULT 0,
+                avg_seconds REAL DEFAULT 0.0
+            )
         """)
         # Bandle
         cursor.execute("""
@@ -389,6 +403,76 @@ def save_gisnep_score(user_id, display_name, game_number, completion_time):
     conn.commit()
     conn.close()
 
+def update_gisnep_puzzle_stats(game_number, completion_time):
+    """Updates the server-wide stats for a specific Gisnep puzzle."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT total_solves, total_seconds FROM gisnep_puzzle_stats WHERE game_number = ?", (game_number,))
+    stats = cursor.fetchone()
+
+    if stats:
+        new_total_solves = stats[0] + 1
+        new_total_seconds = stats[1] + completion_time
+        new_avg_seconds = new_total_seconds / new_total_solves
+        cursor.execute("""
+            UPDATE gisnep_puzzle_stats
+            SET total_solves = ?, total_seconds = ?, avg_seconds = ?
+            WHERE game_number = ?
+        """, (new_total_solves, new_total_seconds, new_avg_seconds, game_number))
+    else:
+        cursor.execute("""
+            INSERT INTO gisnep_puzzle_stats (game_number, total_solves, total_seconds, avg_seconds)
+            VALUES (?, ?, ?, ?)
+        """, (game_number, 1, completion_time, float(completion_time)))
+    conn.commit()
+    conn.close()
+
+def update_gisnep_player_stats(user_id, display_name, completion_time):
+    """Updates a player's Gisnep stats and returns the new stats."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    # Ensure the player exists in the player_stats table
+    cursor.execute("SELECT user_id FROM player_stats WHERE user_id = ?", (user_id,))
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (user_id, display_name))
+        conn.commit()
+
+    cursor.execute("""
+        SELECT gisnep_total_plays, gisnep_avg_seconds, gisnep_personal_best_seconds
+        FROM player_stats WHERE user_id = ?
+    """, (user_id,))
+    stats = cursor.fetchone()
+
+    total_plays, avg_seconds, personal_best = stats
+
+    # Safely handle None values
+    total_plays = total_plays or 0
+    avg_seconds = avg_seconds or 0.0
+
+    new_total_plays = total_plays + 1
+    new_avg_seconds = ((avg_seconds * total_plays) + completion_time) / new_total_plays
+
+    is_new_pb = False
+    if personal_best is None or completion_time < personal_best:
+        personal_best = completion_time
+        is_new_pb = True
+
+    cursor.execute("""
+        UPDATE player_stats
+        SET gisnep_total_plays = ?, gisnep_avg_seconds = ?, gisnep_personal_best_seconds = ?, display_name = ?
+        WHERE user_id = ?
+    """, (new_total_plays, new_avg_seconds, personal_best, display_name, user_id))
+    conn.commit()
+    conn.close()
+
+    return {
+        "is_new_pb": is_new_pb,
+        "personal_best": personal_best,
+        "avg_seconds": new_avg_seconds,
+        "total_plays": new_total_plays
+    }
+
 def save_bandle_score(user_id, display_name, game_number, attempts, total_score, bonus_completed, bonus_total, bonus_categories: dict[str, bool]):
     """Save a new Bandle score, including individual bonus round results."""
     conn = sqlite3.connect(DB_NAME)
@@ -668,27 +752,63 @@ def get_framed_leaderboard(period: str = 'overall'):
     conn.close()
     return leaderboard # Returns list of tuples
 
-def get_gisnep_leaderboard(period: str = 'overall'):
-    """Fetch Gisnep leaderboard data, supporting different periods and stats."""
+def get_gisnep_leaderboard(period: str = 'weekly'):
+    """Fetch enhanced Gisnep leaderboard data with superlatives."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+
+    # 1. Get top 10 players by average solve time for the specified period
     where_clause, params = get_scores_by_period("gisnep_scores", period)
 
-    # Fetch relevant stats for Gisnep
     cursor.execute(f"""
-        SELECT display_name,
-               COUNT(*) AS games_played,
-               AVG(completion_time) AS avg_time,
-               MIN(completion_time) AS best_time
-        FROM gisnep_scores
-        {where_clause}
-        GROUP BY user_id, display_name
-        ORDER BY avg_time ASC, games_played DESC -- Rank by average time, then games played
+        SELECT
+            ps.display_name,
+            ps.gisnep_avg_seconds
+        FROM player_stats ps
+        JOIN (SELECT DISTINCT user_id FROM gisnep_scores {where_clause}) as period_players
+        ON ps.user_id = period_players.user_id
+        WHERE ps.gisnep_total_plays > 0
+        ORDER BY ps.gisnep_avg_seconds ASC
         LIMIT 10
     """, params)
-    leaderboard = cursor.fetchall()
+    top_players = cursor.fetchall()
+
+    # 2. Get superlatives for the week
+    mercury_award = None
+    scholar_award = None
+    if period == 'weekly':
+        weekly_where_clause, weekly_params = get_scores_by_period("gisnep_scores", 'weekly')
+
+        # The Mercury Award: Fastest single solve of the week
+        cursor.execute(f"""
+            SELECT display_name, MIN(completion_time) as fastest_time
+            FROM gisnep_scores
+            {weekly_where_clause}
+            GROUP BY user_id, display_name
+            ORDER BY fastest_time ASC
+            LIMIT 1
+        """, weekly_params)
+        mercury_award = cursor.fetchone()
+
+        # The Scholar Award: Completed all 7 puzzles this week
+        cursor.execute(f"""
+            SELECT display_name, COUNT(DISTINCT game_number) as puzzles_solved
+            FROM gisnep_scores
+            {weekly_where_clause}
+            GROUP BY user_id, display_name
+            HAVING puzzles_solved >= 7
+            ORDER BY puzzles_solved DESC
+            LIMIT 1
+        """, weekly_params)
+        scholar_award = cursor.fetchone()
+
     conn.close()
-    return leaderboard # Returns list of tuples
+
+    return {
+        "top_players": top_players,
+        "mercury_award": mercury_award,
+        "scholar_award": scholar_award
+    }
 
 def get_bandle_leaderboard(period: str = 'overall'):
     """Fetch Bandle leaderboard data, supporting different periods and stats."""
@@ -887,6 +1007,50 @@ def get_gisnep_stats(user_id: int) -> dict:
     return {
         "games_played": stats[0] or 0,
         "avg_time": stats[1] or 0
+    }
+
+def get_gisnep_puzzle_stats(game_number: int) -> dict:
+    """Fetches the stats for a specific Gisnep puzzle."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT total_solves, avg_seconds
+        FROM gisnep_puzzle_stats
+        WHERE game_number = ?
+    """, (game_number,))
+    stats = cursor.fetchone()
+    conn.close()
+    if stats:
+        return {
+            "total_solves": stats[0],
+            "avg_seconds": stats[1]
+        }
+    return {
+        "total_solves": 0,
+        "avg_seconds": 0.0
+    }
+
+def get_player_gisnep_stats(user_id: str) -> dict:
+    """Fetches Gisnep-specific stats for a given user from the player_stats table."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT gisnep_total_plays, gisnep_avg_seconds, gisnep_personal_best_seconds
+        FROM player_stats
+        WHERE user_id = ?
+    """, (user_id,))
+    stats = cursor.fetchone()
+    conn.close()
+    if stats:
+        return {
+            "total_plays": stats[0] or 0,
+            "avg_seconds": stats[1] or 0.0,
+            "personal_best": stats[2]
+        }
+    return {
+        "total_plays": 0,
+        "avg_seconds": 0.0,
+        "personal_best": None
     }
 
 def get_bandle_stats(user_id: int) -> dict:
