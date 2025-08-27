@@ -197,6 +197,24 @@ async def on_message(message):
                         game_info["bonus_emojis"],
                         game_info["total_score"]
                     )
+                    player_stats = database.update_bandle_player_stats(
+                        message.author.id,
+                        message.author.display_name,
+                        game_info["attempts"],
+                        game_info["bonus_rounds_completed"]
+                    )
+                    post_message = post_generator.generate_bandle_post(
+                        message.author.display_name,
+                        game_info,
+                        player_stats
+                    )
+                    channel_name = config.get("chat_channel_name")
+                    game_channel = discord.utils.get(message.guild.channels, name=channel_name)
+                    if game_channel:
+                        await game_channel.send(post_message)
+                    else:
+                        print(f"Warning: Could not find channel '{channel_name}' for {config['name']}. Posting in original channel.")
+                        await message.channel.send(post_message)
                 elif game_key == "minute_cryptic":
                     config["save_score_function"](
                         message.author.id, message.author.display_name,
@@ -270,7 +288,7 @@ async def on_message(message):
                     )
     
                     # Post introduction message if required
-                    if should_introduce:
+                    if should_introduce and game_key not in ["wordle", "connections", "gisnep", "bandle"]:
                         await role_manager.introduce_player_in_game_channel(
                             message.guild,
                             message.author,
