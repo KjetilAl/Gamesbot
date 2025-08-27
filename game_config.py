@@ -17,7 +17,6 @@ GAME_CONFIGS = {
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
         "create_acknowledgement": score_parser.create_wordle_acknowledgement,
-        "create_introduction": score_parser.create_wordle_introduction,
         "game_number_key": "game_number"  # Key for game number
     },
     "connections": {
@@ -31,7 +30,6 @@ GAME_CONFIGS = {
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
         "create_acknowledgement": score_parser.create_connections_acknowledgement,
-        "create_introduction": score_parser.create_connections_introduction,
         "game_number_key": "game_number"  # Key for game number
     },
 "framed": {

@@ -510,35 +510,9 @@ def is_pips_message(message_content: str) -> bool:
     
 def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
-  
-def create_wordle_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create an informative introduction message for Wordle scores."""
-    user_id = game_info.get("user_id")
-    stats = database.get_wordle_stats(user_id)
-    
-    game_number = game_info.get("game_number", "?")
-    attempts = game_info.get("attempts", "?")
-    hard_mode = game_info.get("hard_mode", False)
-    hard_mode_text = " (Hard Mode)" if hard_mode else ""
-
-    message = (f"**{display_name}** just finished Wordle {game_number} in {attempts}/6{hard_mode_text}!\n"
-               f"They have played {stats['games_played']} games with an average score of {stats['avg_score']:.2f}.")
-    return message
 
 def create_connections_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
-
-def create_connections_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create an informative introduction message for Connections scores."""
-    user_id = game_info.get("user_id")
-    stats = database.get_connections_stats(user_id)
-
-    puzzle_number = game_info.get("puzzle_number", "?")
-    total_score = game_info.get("total_score", "?")
-
-    message = (f"**{display_name}** just finished Connections #{puzzle_number} with a score of {total_score}!\n"
-               f"They have played {stats['games_played']} games with an average score of {stats['avg_score']:.2f}.")
-    return message
 
 def create_framed_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
