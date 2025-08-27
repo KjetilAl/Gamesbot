@@ -223,6 +223,18 @@ def parse_gisnep_score(message_content: str) -> Optional[Dict[str, Any]]:
         "completion_time": total_seconds
     }
 
+def calculate_bandle_score(attempts: int, bonus_rounds_completed: int) -> int:
+    """
+    Calculates the score for Bandle based on attempts and bonus rounds.
+    """
+    # Base score: 60 for 1 attempt, 50 for 2, ..., 10 for 6. 0 for failed (7 attempts).
+    base_score = max(0, (7 - attempts) * 10)
+
+    # Bonus points for each completed bonus round
+    bonus_score = bonus_rounds_completed * 5
+
+    return base_score + bonus_score
+
 def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
     """Parses a Bandle score from a message, including individual bonus rounds."""
     match = BANDLE_PATTERN.search(message_content)
@@ -250,6 +262,9 @@ def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
     current_streak = int(streak_match.group(1)) if streak_match else 0
     max_streak = int(max_streak_match.group(1)) if max_streak_match else 0
 
+    # Calculate the total score
+    total_score = calculate_bandle_score(attempts, bonus_rounds_completed)
+
     return {
         "game_number": game_number,
         "attempts": attempts,
@@ -260,7 +275,8 @@ def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
         "bonus_rounds_completed": bonus_rounds_completed,
         "bonus_rounds_total": bonus_rounds_total,
         "bonus_emojis": bonus_emojis,
-        "solved": solved
+        "solved": solved,
+        "total_score": total_score
     }
     
 def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]:

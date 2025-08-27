@@ -121,6 +121,7 @@ def initialize_db():
                 bonus_rounds_completed INTEGER,
                 bonus_rounds_total INTEGER,
                 bonus_emojis TEXT,
+                total_score INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
@@ -496,7 +497,7 @@ def update_gisnep_player_stats(user_id, display_name, completion_time):
         "total_plays": new_total_plays
     }
 
-def save_bandle_score(user_id, display_name, game_number, attempts, found_total, found_percentage, current_streak, max_streak, bonus_rounds_completed, bonus_rounds_total, bonus_emojis):
+def save_bandle_score(user_id, display_name, game_number, attempts, found_total, found_percentage, current_streak, max_streak, bonus_rounds_completed, bonus_rounds_total, bonus_emojis, total_score):
     """Save a new Bandle score."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -505,12 +506,12 @@ def save_bandle_score(user_id, display_name, game_number, attempts, found_total,
             INSERT INTO bandle_scores (
                 user_id, display_name, game_number, attempts, found_total,
                 found_percentage, current_streak, max_streak,
-                bonus_rounds_completed, bonus_rounds_total, bonus_emojis
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                bonus_rounds_completed, bonus_rounds_total, bonus_emojis, total_score
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             user_id, display_name, game_number, attempts, found_total,
             found_percentage, current_streak, max_streak,
-            bonus_rounds_completed, bonus_rounds_total, bonus_emojis
+            bonus_rounds_completed, bonus_rounds_total, bonus_emojis, total_score
         ))
         conn.commit()
         print(f"DB: Saved Bandle score for {display_name} - Game #{game_number}")
@@ -1181,7 +1182,7 @@ def get_bandle_stats(user_id: int) -> dict:
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT COUNT(*), AVG(attempts), SUM(bonus_completed)
+        SELECT COUNT(*), AVG(attempts), SUM(bonus_rounds_completed)
         FROM bandle_scores
         WHERE user_id = ?
     """, (user_id,))
