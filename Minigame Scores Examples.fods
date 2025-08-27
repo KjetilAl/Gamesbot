@@ -731,7 +731,10 @@
      <table:table-cell table:style-name="ce7" office:value-type="string" calcext:value-type="string">
       <text:p>badge</text:p>
      </table:table-cell>
-     <table:table-cell table:number-columns-repeated="1016"/>
+     <table:table-cell table:style-name="ce7" office:value-type="string" calcext:value-type="string">
+      <text:p>total_score</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="1015"/>
     </table:table-row>
     <table:table-row table:style-name="ro6">
      <table:table-cell table:style-name="ce7" office:value-type="string" calcext:value-type="string"><text:p>Bandle #932 6/6</text:p><text:p>🟥🟥🟥🟥🟥🟩</text:p><text:p>Found: 359/378 (95%)</text:p><text:p>Current Daily Streak: 78 (max 78)</text:p><text:p>Bonus Rounds: 6/8 🎤  🖼️  🌍  📅  💿  ⏱️  </text:p><text:p>#Bandle #Heardle </text:p><text:p>https://bandle.app</text:p>
@@ -754,7 +757,11 @@
      <table:table-cell table:style-name="ce7" office:value-type="float" office:value="78" calcext:value-type="float">
       <text:p>78</text:p>
      </table:table-cell>
-     <table:table-cell table:number-columns-repeated="1017"/>
+     <table:table-cell table:number-columns-repeated="1"/>
+     <table:table-cell table:style-name="ce7" office:value-type="float" office:value="40" calcext:value-type="float">
+      <text:p>40</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="1015"/>
     </table:table-row>
     <table:table-row table:style-name="ro7">
      <table:table-cell table:style-name="ce7" office:value-type="string" calcext:value-type="string"><text:p>Bandle #944 x/6</text:p><text:p>🟥⬛⬛⬛⬛🟥</text:p><text:p>Found: 155/172 (90.1%)</text:p><text:p>Current Daily Streak: 0 (max 71)</text:p>
@@ -771,7 +778,11 @@
      <table:table-cell table:number-columns-repeated="3" table:style-name="ce7" office:value-type="float" office:value="0" calcext:value-type="float">
       <text:p>0</text:p>
      </table:table-cell>
-     <table:table-cell table:number-columns-repeated="1017"/>
+     <table:table-cell table:number-columns-repeated="1"/>
+     <table:table-cell table:style-name="ce7" office:value-type="float" office:value="0" calcext:value-type="float">
+      <text:p>0</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="1015"/>
     </table:table-row>
     <table:table-row table:style-name="ro4">
      <table:table-cell table:style-name="ce7" office:value-type="string" calcext:value-type="string"><text:p>Bandle #947 3/6</text:p><text:p>🟥🟨🟩⬜⬜⬜</text:p><text:p>Found: 353/370 (95.4%)</text:p><text:p>Current Daily Streak: 163 (max 163)</text:p><text:p>#Bandle #Heardle </text:p><text:p>https://bandle.app</text:p>
@@ -794,7 +805,10 @@
      <table:table-cell table:style-name="ce7" office:value-type="string" calcext:value-type="string">
       <text:p>stoplight guesses</text:p>
      </table:table-cell>
-     <table:table-cell table:number-columns-repeated="1016"/>
+     <table:table-cell table:style-name="ce7" office:value-type="float" office:value="40" calcext:value-type="float">
+      <text:p>40</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="1015"/>
     </table:table-row>
     <table:table-row table:style-name="ro2" table:number-rows-repeated="1048571">
      <table:table-cell table:number-columns-repeated="1024"/>
