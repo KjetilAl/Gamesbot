@@ -599,17 +599,17 @@ def create_pips_introduction(display_name: str, game_info: Dict[str, Any]) -> st
     user_id = game_info.get("user_id")
 
     if user_id is None:
-        return f"🏆 **{display_name}** just completed all Pips difficulties for game #{game_number}! Welcome to the channel!"
+        return f"🏆 **{display_name}** just completed all Pips difficulties for game #{game_number}!"
 
     scores = database.get_pips_scores_for_game(user_id, game_number)
 
     if not scores:
-         return f"🏆 **{display_name}** just completed all Pips difficulties for game #{game_number}! Welcome to the channel!"
+         return f"🏆 **{display_name}** just completed all Pips difficulties for game #{game_number}!"
 
     total_score = sum(s['score'] for s in scores)
     cookie_count = sum(s['cookie'] for s in scores)
 
-    message = f"🏆 **{display_name}** has completed all Pips difficulties for game #{game_number} with a total score of **{total_score}**! Welcome to the channel!\n\n"
+    message = f"🏆 **{display_name}** has completed all Pips difficulties for game #{game_number} with a total score of **{total_score}**!\n\n"
 
     for score in scores:
         time_min = score['completion_time'] // 60
