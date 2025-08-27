@@ -1182,7 +1182,7 @@ def get_bandle_stats(user_id: int) -> dict:
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT COUNT(*), AVG(attempts), SUM(bonus_completed)
+        SELECT COUNT(*), AVG(attempts), SUM(bonus_rounds_completed)
         FROM bandle_scores
         WHERE user_id = ?
     """, (user_id,))
