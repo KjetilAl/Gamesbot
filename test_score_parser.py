@@ -175,8 +175,23 @@ class TestExamplesSheet(unittest.TestCase):
         cls.fods_path = os.path.join(script_dir, cls.fods_name)
 
         # soffice_refresh_fods(cls.ods_path)
+        import io
+        import zipfile
+        with open(cls.fods_path, 'rb') as f:
+            fods_content = f.read()
 
-        cls.doc = odf.opendocument.load(cls.fods_path)
+        in_memory_zip = io.BytesIO()
+        with zipfile.ZipFile(in_memory_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr('mimetype', 'application/vnd.oasis.opendocument.spreadsheet')
+            zf.writestr('META-INF/manifest.xml', '''<?xml version="1.0" encoding="UTF-8"?>
+<manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0">
+  <manifest:file-entry manifest:media-type="application/vnd.oasis.opendocument.spreadsheet" manifest:full-path="/"/>
+  <manifest:file-entry manifest:media-type="text/xml" manifest:full-path="content.xml"/>
+</manifest:manifest>''')
+            zf.writestr('content.xml', fods_content)
+        in_memory_zip.seek(0)
+
+        cls.doc = odf.opendocument.load(in_memory_zip)
         cls.sheets = spreadsheet_xml_to_dict(cls.doc)
         # log.debug(pprint.pformat(cls.sheets))
 
@@ -246,7 +261,7 @@ Full parsed object:
         self.do_parse_test(
             sheet = self.sheets['Bandle'],
             parsefn = score_parser.parse_bandle_score,
-            matchfields = ['game_number', 'attempts', 'solved', 'bonus_rounds_completed', 'bonus_rounds_total', 'bonus_emojis', 'current_streak', 'max_streak'])
+            matchfields = ['game_number', 'attempts', 'solved', 'bonus_rounds_completed', 'bonus_rounds_total', 'bonus_emojis', 'current_streak', 'max_streak', 'total_score'])
 
 class TestPipsParser(unittest.TestCase):
     def test_calculate_pips_score(self):

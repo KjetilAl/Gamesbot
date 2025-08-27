@@ -184,13 +184,18 @@ async def on_message(message):
                         await message.channel.send(post_message)
                 elif game_key == "bandle":
                     config["save_score_function"](
-                        message.author.id, message.author.display_name,
+                        message.author.id,
+                        message.author.display_name,
                         game_info["game_number"],
                         game_info["attempts"],
-                        game_info["total_score"],
-                        game_info["bonus_completed"],
-                        game_info["bonus_total"],
-                        game_info.get("bonus_categories", {}) # Pass the bonus categories dictionary
+                        game_info["found_total"],
+                        game_info["found_percentage"],
+                        game_info["current_streak"],
+                        game_info["max_streak"],
+                        game_info["bonus_rounds_completed"],
+                        game_info["bonus_rounds_total"],
+                        game_info["bonus_emojis"],
+                        game_info["total_score"]
                     )
                 elif game_key == "minute_cryptic":
                     config["save_score_function"](
