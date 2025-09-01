@@ -267,10 +267,13 @@ async def on_message(message):
                                 print(f"Date parsing error in main_bot: {e}")
                     # For Word Salad and all other number-based games
                     else:
-                        current_num = int(current_game_identifier)
-                        latest_num = int(latest_game_identifier) if latest_game_identifier is not None else 0
-                        if latest_game_identifier is None or current_num > latest_num:
-                            should_update_db = True
+                        try:
+                            current_num = int(current_game_identifier)
+                            latest_num = int(latest_game_identifier) if latest_game_identifier is not None else 0
+                            if latest_game_identifier is None or current_num > latest_num:
+                                should_update_db = True
+                        except (ValueError, TypeError):
+                            print(f"Could not compare game identifiers for {game_key}: '{current_game_identifier}' and '{latest_game_identifier}'. Skipping DB update for this game.")
     
                     # Update database if needed
                     if should_update_db:
