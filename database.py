@@ -657,13 +657,19 @@ def save_word_salad_score(user_id: int, display_name: str, game_number: int,
 
 def get_scores_by_period(period: str, column_name: str = 'timestamp') -> tuple[str, ...]:
     """Helper function to get the WHERE clause and parameters for a given period."""
+    # Use DATE() with localtime to correctly handle timezones for weekly/monthly cutoffs
+    today = datetime.date.today()
     if period == 'weekly':
-        start_time = (datetime.datetime.now(timezone.utc) - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
-        return f"WHERE {column_name} >= ?", (start_time,)
+        # Go back to the most recent Monday (weekday 0)
+        start_of_week = today - timedelta(days=today.weekday())
+        start_date = start_of_week.isoformat()
+        return f"WHERE DATE({column_name}, 'localtime') >= DATE(?)", (start_date,)
     elif period == 'monthly':
-        first_day_of_month = datetime.datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
-        return f"WHERE {column_name} >= ?", (first_day_of_month,)
-    else: # overall
+        # First day of the current month
+        start_of_month = today.replace(day=1)
+        start_date = start_of_month.isoformat()
+        return f"WHERE DATE({column_name}, 'localtime') >= DATE(?)", (start_date,)
+    else:  # overall
         return "", ()
 
 def get_wordle_leaderboard(period: str = 'weekly'):
@@ -746,7 +752,7 @@ def get_connections_leaderboard(period: str = 'weekly'):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    where_clause, params = get_scores_by_period(period, column_name='created_at')
+    where_clause, params = get_scores_by_period(period, "created_at")
 
     # 1. Get top 3 players by SUM(total_score)
     cursor.execute(f"""
@@ -840,7 +846,7 @@ def get_gisnep_leaderboard(period: str = 'weekly'):
     cursor = conn.cursor()
 
     # 1. Get top 10 players by average solve time for the specified period
-    where_clause, params = get_scores_by_period(period, column_name='created_at')
+    where_clause, params = get_scores_by_period(period, "created_at")
 
     cursor.execute(f"""
         SELECT
@@ -897,7 +903,7 @@ def get_bandle_leaderboard(period: str = 'weekly'):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    where_clause, params = get_scores_by_period(period, column_name='created_at')
+    where_clause, params = get_scores_by_period(period, "created_at")
 
     # 1. Get top 3 players by average attempts
     cursor.execute(f"""
