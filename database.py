@@ -160,24 +160,31 @@ def initialize_db():
             )
         """)
 
-        # Commit all schema changes together
         conn.commit()
         print("DB: All tables created or verified.")
 
-        # --- Add created_at columns to connections_scores and gisnep_scores (migration) ---
+        # --- Add created_at column to connections_scores (migration) ---
         try:
-            cursor.execute("ALTER TABLE connections_scores ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;")
+            cursor.execute("ALTER TABLE connections_scores ADD COLUMN created_at TIMESTAMP;")
             conn.commit()
             print("DB: Added created_at column to connections_scores.")
+            cursor.execute("UPDATE connections_scores SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL;")
+            conn.commit()
+            print("DB: Backfilled created_at values in connections_scores.")
         except sqlite3.OperationalError as e:
             if "duplicate column name" in str(e):
                 print("DB: created_at column already exists in connections_scores.")
             else:
                 raise e
+
+        # --- Add created_at column to gisnep_scores (migration) ---
         try:
-            cursor.execute("ALTER TABLE gisnep_scores ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;")
+            cursor.execute("ALTER TABLE gisnep_scores ADD COLUMN created_at TIMESTAMP;")
             conn.commit()
             print("DB: Added created_at column to gisnep_scores.")
+            cursor.execute("UPDATE gisnep_scores SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL;")
+            conn.commit()
+            print("DB: Backfilled created_at values in gisnep_scores.")
         except sqlite3.OperationalError as e:
             if "duplicate column name" in str(e):
                 print("DB: created_at column already exists in gisnep_scores.")
@@ -204,8 +211,10 @@ def initialize_db():
             ('Pips', '0')
         ]
         try:
-            cursor.executemany("INSERT OR IGNORE INTO latest_game_numbers (game_name, latest_number) VALUES (?, ?)", initial_games)
-            # Commit data insertion
+            cursor.executemany(
+                "INSERT OR IGNORE INTO latest_game_numbers (game_name, latest_number) VALUES (?, ?)",
+                initial_games
+            )
             conn.commit()
             print("DB: Initial latest game numbers inserted or verified.")
         except sqlite3.Error as e:
@@ -214,16 +223,10 @@ def initialize_db():
         print("Database initialized successfully.")
 
     except sqlite3.Error as e:
-        # This block catches errors from anywhere within the 'try' block above
         print(f"DATABASE INITIALIZATION FAILED: {e}")
-        # Optional: Rollback changes if an error occurred mid-transaction
-        # if conn:
-        #     conn.rollback()
     finally:
-        # --- This 'finally' block ensures the connection is closed ---
-        # It runs whether the 'try' block succeeded or an 'except' block was triggered.
         if conn:
-            conn.close() # This is where the database connection is closed
+            conn.close()
             print("DB: Connection closed.")
 
 def save_wordle_score(user_id, display_name, game_number, attempts, skill=None, luck=None, hard_mode=False):
