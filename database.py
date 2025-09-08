@@ -16,7 +16,7 @@ def initialize_db():
             CREATE TABLE IF NOT EXISTS wordle_scores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
                 game_number TEXT, attempts INTEGER, skill INTEGER NULL, luck INTEGER NULL,
-                hard_mode BOOLEAN, total_score INTEGER, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                hard_mode BOOLEAN, total_score INTEGER, timestamp DATETIME NOT NULL
             )
         """)
         # Player Stats
@@ -53,7 +53,7 @@ def initialize_db():
                 solved_purple_first BOOLEAN,
                 skill INTEGER,
                 uniqueness_text TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP NOT NULL
             )
         """)
         # Minute Cryptic
@@ -62,7 +62,7 @@ def initialize_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
                 game_date TEXT, clue TEXT, word_length INTEGER,
                 score_description TEXT, score_value INTEGER,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                timestamp DATETIME NOT NULL
             )
         """)
         # Word Salad
@@ -83,7 +83,7 @@ def initialize_db():
             CREATE TABLE IF NOT EXISTS framed_scores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
                 game_number INTEGER, attempts INTEGER, total_score INTEGER,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                timestamp DATETIME NOT NULL
             )
         """)
         # Gisnep
@@ -94,7 +94,7 @@ def initialize_db():
                 display_name TEXT,
                 game_number INTEGER NOT NULL,
                 completion_time INTEGER NOT NULL, -- Stored in seconds
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP NOT NULL
             )
         """)
         cursor.execute("""
@@ -122,7 +122,7 @@ def initialize_db():
                 bonus_rounds_total INTEGER,
                 bonus_emojis TEXT,
                 total_score INTEGER,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP NOT NULL
             );
         """)
         # Latest Game Numbers/Identifiers
@@ -144,7 +144,7 @@ def initialize_db():
                 completion_time INTEGER NOT NULL,
                 score INTEGER NOT NULL,
                 cookie BOOLEAN NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                timestamp DATETIME NOT NULL,
                 UNIQUE(user_id, game_number, difficulty)
             )
         """)
@@ -243,10 +243,11 @@ def save_wordle_score(user_id, display_name, game_number, attempts, skill=None, 
     total_score = (skill or 0) + attempt_score - (luck or 0)
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute("""
-        INSERT INTO wordle_scores (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score))
+        INSERT INTO wordle_scores (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score, timestamp))
     conn.commit()
     conn.close()
 
@@ -418,10 +419,11 @@ def save_connections_score(user_id, display_name, game_number, total_score, mist
     """Save a new Connections score."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute("""
-        INSERT INTO connections_scores (user_id, display_name, game_number, total_score, mistake_count, perfect_game, solved_purple_first, skill, uniqueness_text)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (str(user_id), display_name, game_number, total_score, mistake_count, perfect_game, solved_purple_first, skill, uniqueness_text))
+        INSERT INTO connections_scores (user_id, display_name, game_number, total_score, mistake_count, perfect_game, solved_purple_first, skill, uniqueness_text, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (str(user_id), display_name, game_number, total_score, mistake_count, perfect_game, solved_purple_first, skill, uniqueness_text, timestamp))
     conn.commit()
     conn.close()
 
@@ -429,10 +431,11 @@ def save_framed_score(user_id, display_name, game_number, attempts, total_score)
     """Save a new Framed score."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute("""
-        INSERT INTO framed_scores (user_id, display_name, game_number, attempts, total_score)
-        VALUES (?, ?, ?, ?, ?)
-    """, (user_id, display_name, game_number, attempts, total_score))
+        INSERT INTO framed_scores (user_id, display_name, game_number, attempts, total_score, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (user_id, display_name, game_number, attempts, total_score, timestamp))
     conn.commit()
     conn.close()
 
@@ -440,10 +443,11 @@ def save_gisnep_score(user_id, display_name, game_number, completion_time):
     """Save a new Gisnep score (only stores time)."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute("""
-        INSERT INTO gisnep_scores (user_id, display_name, game_number, completion_time)
-        VALUES (?, ?, ?, ?)
-    """, (user_id, display_name, game_number, completion_time))
+        INSERT INTO gisnep_scores (user_id, display_name, game_number, completion_time, created_at)
+        VALUES (?, ?, ?, ?, ?)
+    """, (user_id, display_name, game_number, completion_time, timestamp))
     conn.commit()
     conn.close()
 
@@ -521,17 +525,20 @@ def save_bandle_score(user_id, display_name, game_number, attempts, found_total,
     """Save a new Bandle score."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     try:
         cursor.execute("""
             INSERT INTO bandle_scores (
                 user_id, display_name, game_number, attempts, found_total,
                 found_percentage, current_streak, max_streak,
-                bonus_rounds_completed, bonus_rounds_total, bonus_emojis, total_score
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                bonus_rounds_completed, bonus_rounds_total, bonus_emojis, total_score,
+                created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             user_id, display_name, game_number, attempts, found_total,
             found_percentage, current_streak, max_streak,
-            bonus_rounds_completed, bonus_rounds_total, bonus_emojis, total_score
+            bonus_rounds_completed, bonus_rounds_total, bonus_emojis, total_score,
+            timestamp
         ))
         conn.commit()
         print(f"DB: Saved Bandle score for {display_name} - Game #{game_number}")
@@ -589,19 +596,21 @@ def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, c
     """Saves a Minute Cryptic score to the database."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     try:
         cursor.execute("""
             INSERT INTO minute_cryptic_scores (
                 user_id, display_name, game_date, clue, word_length,
-                score_description
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                score_description, timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
             user_id,
             display_name,
             game_date,
             clue,
             word_length,
-            score_description
+            score_description,
+            timestamp
         ))
         conn.commit()
         print(f"DB: Saved Minute Cryptic score for {display_name} on {game_date}")
