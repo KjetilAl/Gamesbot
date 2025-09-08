@@ -462,6 +462,14 @@ async def post_scores(period: str):
                 period=period,
                 color=embed_color
             )
+
+        elif game_name == "Gisnep":
+            leaderboard_embed = await embed_builder.build_gisnep_leaderboard_embed(
+                title=f"📖 The Gisnep Gazette {period.capitalize()} 📖",
+                leaderboard_data=scores,
+                period=period,
+                color=embed_color
+            )
         else:
             # Format data for embed for other games
             formatted_scores_for_embed = []
