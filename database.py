@@ -164,6 +164,26 @@ def initialize_db():
         conn.commit()
         print("DB: All tables created or verified.")
 
+        # --- Add created_at columns to connections_scores and gisnep_scores (migration) ---
+        try:
+            cursor.execute("ALTER TABLE connections_scores ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;")
+            conn.commit()
+            print("DB: Added created_at column to connections_scores.")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" in str(e):
+                print("DB: created_at column already exists in connections_scores.")
+            else:
+                raise e
+        try:
+            cursor.execute("ALTER TABLE gisnep_scores ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;")
+            conn.commit()
+            print("DB: Added created_at column to gisnep_scores.")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" in str(e):
+                print("DB: created_at column already exists in gisnep_scores.")
+            else:
+                raise e
+
         # --- Add Bandle columns to player_stats (migration) ---
         try:
             cursor.execute("ALTER TABLE player_stats ADD COLUMN bandle_total_plays INTEGER DEFAULT 0;")
