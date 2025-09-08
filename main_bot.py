@@ -507,9 +507,6 @@ async def post_scores(period: str):
                     elif game_name == "Word Salad":
                         player_data["avg"] = player_data["avg_score"]
                         player_data["total"] = player_data["total_score"]
-                    elif game_name == "Pips":
-                        player_data["total_score"] = player_data["total_score"]
-                        player_data["cookie_count"] = player_data["cookie_count"]
                     formatted_scores_for_embed.append(player_data)
 
             if formatted_scores_for_embed:
