@@ -16,7 +16,7 @@ def initialize_db():
             CREATE TABLE IF NOT EXISTS wordle_scores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
                 game_number TEXT, attempts INTEGER, skill INTEGER NULL, luck INTEGER NULL,
-                hard_mode BOOLEAN, total_score INTEGER, timestamp DATETIME NOT NULL
+                hard_mode BOOLEAN, total_score INTEGER, created_at DATETIME NOT NULL
             )
         """)
         # Player Stats
@@ -62,7 +62,7 @@ def initialize_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
                 game_date TEXT, clue TEXT, word_length INTEGER,
                 score_description TEXT, score_value INTEGER,
-                timestamp DATETIME NOT NULL
+                created_at DATETIME NOT NULL
             )
         """)
         # Word Salad
@@ -74,7 +74,7 @@ def initialize_db():
                 completion_time_seconds INTEGER NOT NULL,
                 hints_used INTEGER NOT NULL,
                 score INTEGER NOT NULL,
-                timestamp TEXT NOT NULL,
+                created_at DATETIME NOT NULL,
                 PRIMARY KEY (user_id, game_number)
             )
         """)
@@ -83,7 +83,7 @@ def initialize_db():
             CREATE TABLE IF NOT EXISTS framed_scores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
                 game_number INTEGER, attempts INTEGER, total_score INTEGER,
-                timestamp DATETIME NOT NULL
+                created_at DATETIME NOT NULL
             )
         """)
         # Gisnep
@@ -144,7 +144,7 @@ def initialize_db():
                 completion_time INTEGER NOT NULL,
                 score INTEGER NOT NULL,
                 cookie BOOLEAN NOT NULL,
-                timestamp DATETIME NOT NULL,
+                created_at DATETIME NOT NULL,
                 UNIQUE(user_id, game_number, difficulty)
             )
         """)
@@ -163,33 +163,32 @@ def initialize_db():
         conn.commit()
         print("DB: All tables created or verified.")
 
-        # --- Add created_at column to connections_scores (migration) ---
-        try:
-            cursor.execute("ALTER TABLE connections_scores ADD COLUMN created_at TIMESTAMP;")
-            conn.commit()
-            print("DB: Added created_at column to connections_scores.")
-            cursor.execute("UPDATE connections_scores SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL;")
-            conn.commit()
-            print("DB: Backfilled created_at values in connections_scores.")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" in str(e):
-                print("DB: created_at column already exists in connections_scores.")
-            else:
-                raise e
+        # --- Migration section for adding created_at columns ---
+        migrations = {
+            "wordle_scores": "timestamp",
+            "connections_scores": None, # Already has created_at
+            "gisnep_scores": None, # Already has created_at
+            "bandle_scores": None, # Already has created_at
+            "minute_cryptic_scores": "timestamp",
+            "word_salad_scores": "timestamp",
+            "framed_scores": "timestamp",
+            "pips_scores": "timestamp"
+        }
 
-        # --- Add created_at column to gisnep_scores (migration) ---
-        try:
-            cursor.execute("ALTER TABLE gisnep_scores ADD COLUMN created_at TIMESTAMP;")
-            conn.commit()
-            print("DB: Added created_at column to gisnep_scores.")
-            cursor.execute("UPDATE gisnep_scores SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL;")
-            conn.commit()
-            print("DB: Backfilled created_at values in gisnep_scores.")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" in str(e):
-                print("DB: created_at column already exists in gisnep_scores.")
-            else:
-                raise e
+        for table, old_column in migrations.items():
+            if old_column:
+                try:
+                    cursor.execute(f"ALTER TABLE {table} ADD COLUMN created_at TIMESTAMP;")
+                    conn.commit()
+                    print(f"DB: Added created_at column to {table}.")
+                    cursor.execute(f"UPDATE {table} SET created_at = {old_column} WHERE created_at IS NULL;")
+                    conn.commit()
+                    print(f"DB: Backfilled created_at values in {table} from {old_column}.")
+                except sqlite3.OperationalError as e:
+                    if "duplicate column name" in str(e):
+                        print(f"DB: created_at column already exists in {table}.")
+                    else:
+                        raise e
 
         # --- Add Bandle columns to player_stats (migration) ---
         try:
@@ -246,11 +245,11 @@ def save_wordle_score(user_id, display_name, game_number, attempts, skill=None, 
     total_score = (skill or 0) + attempt_score - (luck or 0)
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    created_at = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute("""
-        INSERT INTO wordle_scores (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score, timestamp)
+        INSERT INTO wordle_scores (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score, timestamp))
+    """, (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score, created_at))
     conn.commit()
     conn.close()
 
@@ -328,7 +327,7 @@ def update_player_stats(user_id, display_name, game_number, attempts, skill, luc
         "total_plays": new_total_plays,
         "is_new_max_streak": new_streak > max_streak and new_streak > 1
     }
-  
+
 def update_connections_stats(user_id, display_name, mistake_count, perfect_game, solved_purple_first):
     """Update player stats for Connections after a new score is submitted."""
     conn = sqlite3.connect(DB_NAME)
@@ -377,7 +376,7 @@ def save_pips_score(user_id: int, display_name: str, game_number: int, difficult
     """Saves or updates a Pips score in the database."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    created_at = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
 
     cursor.execute("""
         SELECT id FROM pips_scores
@@ -388,16 +387,16 @@ def save_pips_score(user_id: int, display_name: str, game_number: int, difficult
     if existing_score:
         cursor.execute("""
             UPDATE pips_scores
-            SET display_name = ?, completion_time = ?, score = ?, cookie = ?, timestamp = ?
+            SET display_name = ?, completion_time = ?, score = ?, cookie = ?, created_at = ?
             WHERE user_id = ? AND game_number = ? AND difficulty = ?
-        """, (display_name, completion_time, score, cookie, timestamp, user_id, game_number, difficulty))
+        """, (display_name, completion_time, score, cookie, created_at, user_id, game_number, difficulty))
         print(f"Updated Pips score for {display_name} (Game #{game_number}, {difficulty}).")
     else:
         cursor.execute("""
             INSERT INTO pips_scores
-            (user_id, display_name, game_number, difficulty, completion_time, score, cookie, timestamp)
+            (user_id, display_name, game_number, difficulty, completion_time, score, cookie, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (user_id, display_name, game_number, difficulty, completion_time, score, cookie, timestamp))
+        """, (user_id, display_name, game_number, difficulty, completion_time, score, cookie, created_at))
         print(f"Added Pips score for {display_name} (Game #{game_number}, {difficulty}).")
 
     conn.commit()
@@ -408,10 +407,10 @@ def get_recent_scores(user_id, limit=5):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT game_number, attempts, skill, luck, timestamp
+        SELECT game_number, attempts, skill, luck, created_at
         FROM wordle_scores
         WHERE user_id = ?
-        ORDER BY timestamp DESC
+        ORDER BY created_at DESC
         LIMIT ?
     """, (user_id, limit))
     results = cursor.fetchall()
@@ -422,11 +421,11 @@ def save_connections_score(user_id, display_name, game_number, total_score, mist
     """Save a new Connections score."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    created_at = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute("""
         INSERT INTO connections_scores (user_id, display_name, game_number, total_score, mistake_count, perfect_game, solved_purple_first, skill, uniqueness_text, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (str(user_id), display_name, game_number, total_score, mistake_count, perfect_game, solved_purple_first, skill, uniqueness_text, timestamp))
+    """, (str(user_id), display_name, game_number, total_score, mistake_count, perfect_game, solved_purple_first, skill, uniqueness_text, created_at))
     conn.commit()
     conn.close()
 
@@ -434,11 +433,11 @@ def save_framed_score(user_id, display_name, game_number, attempts, total_score)
     """Save a new Framed score."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    created_at = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute("""
-        INSERT INTO framed_scores (user_id, display_name, game_number, attempts, total_score, timestamp)
+        INSERT INTO framed_scores (user_id, display_name, game_number, attempts, total_score, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
-    """, (user_id, display_name, game_number, attempts, total_score, timestamp))
+    """, (user_id, display_name, game_number, attempts, total_score, created_at))
     conn.commit()
     conn.close()
 
@@ -446,11 +445,11 @@ def save_gisnep_score(user_id, display_name, game_number, completion_time):
     """Save a new Gisnep score (only stores time)."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    created_at = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute("""
         INSERT INTO gisnep_scores (user_id, display_name, game_number, completion_time, created_at)
         VALUES (?, ?, ?, ?, ?)
-    """, (user_id, display_name, game_number, completion_time, timestamp))
+    """, (user_id, display_name, game_number, completion_time, created_at))
     conn.commit()
     conn.close()
 
@@ -528,7 +527,7 @@ def save_bandle_score(user_id, display_name, game_number, attempts, found_total,
     """Save a new Bandle score."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    created_at = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     try:
         cursor.execute("""
             INSERT INTO bandle_scores (
@@ -541,7 +540,7 @@ def save_bandle_score(user_id, display_name, game_number, attempts, found_total,
             user_id, display_name, game_number, attempts, found_total,
             found_percentage, current_streak, max_streak,
             bonus_rounds_completed, bonus_rounds_total, bonus_emojis, total_score,
-            timestamp
+            created_at
         ))
         conn.commit()
         print(f"DB: Saved Bandle score for {display_name} - Game #{game_number}")
@@ -599,12 +598,12 @@ def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, c
     """Saves a Minute Cryptic score to the database."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    created_at = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     try:
         cursor.execute("""
             INSERT INTO minute_cryptic_scores (
                 user_id, display_name, game_date, clue, word_length,
-                score_description, timestamp
+                score_description, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
             user_id,
@@ -613,7 +612,7 @@ def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, c
             clue,
             word_length,
             score_description,
-            timestamp
+            created_at
         ))
         conn.commit()
         print(f"DB: Saved Minute Cryptic score for {display_name} on {game_date}")
@@ -626,7 +625,7 @@ def save_word_salad_score(user_id: int, display_name: str, game_number: int,
                          completion_time_seconds: int, hints_used: int, score: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    timestamp = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S') # Changed to now(timezone.utc)
+    created_at = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
 
     # Check if a score for this user and puzzle already exists
     cursor.execute("""
@@ -639,23 +638,23 @@ def save_word_salad_score(user_id: int, display_name: str, game_number: int,
         # Update all fields, including the new 'score'
         cursor.execute("""
             UPDATE word_salad_scores
-            SET display_name = ?, completion_time_seconds = ?, hints_used = ?, score = ?, timestamp = ?
+            SET display_name = ?, completion_time_seconds = ?, hints_used = ?, score = ?, created_at = ?
             WHERE user_id = ? AND game_number = ?
-        """, (display_name, completion_time_seconds, hints_used, score, timestamp,
+        """, (display_name, completion_time_seconds, hints_used, score, created_at,
               user_id, game_number))
         print(f"Updated Word Salad score for {display_name} (Game #{game_number}).")
     else:
         cursor.execute("""
             INSERT INTO word_salad_scores
-            (user_id, display_name, game_number, completion_time_seconds, hints_used, score, timestamp)
+            (user_id, display_name, game_number, completion_time_seconds, hints_used, score, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (user_id, display_name, game_number, completion_time_seconds, hints_used, score, timestamp))
+        """, (user_id, display_name, game_number, completion_time_seconds, hints_used, score, created_at))
         print(f"Added Word Salad score for {display_name} (Game #{game_number}).")
 
     conn.commit()
     conn.close()
 
-def get_scores_by_period(period: str, column_name: str = 'timestamp') -> tuple[str, ...]:
+def get_scores_by_period(period: str, column_name: str = 'created_at') -> tuple[str, ...]:
     """Helper function to get the WHERE clause and parameters for a given period."""
     # Use DATE() with localtime to correctly handle timezones for weekly/monthly cutoffs
     today = datetime.date.today()
@@ -676,7 +675,7 @@ def get_wordle_leaderboard(period: str = 'weekly'):
     """Fetch enhanced Wordle leaderboard data with superlatives."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    where_clause, params = get_scores_by_period(period)
+    where_clause, params = get_scores_by_period(period, 'created_at')
 
     # 1. Get top 3 players by SUM(total_score)
     cursor.execute(f"""
@@ -821,7 +820,7 @@ def get_framed_leaderboard(period: str = 'overall'):
     """Fetch Framed leaderboard data, supporting different periods and stats."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    where_clause, params = get_scores_by_period(period)
+    where_clause, params = get_scores_by_period(period, 'created_at')
 
     # Fetch relevant stats for Framed
     cursor.execute(f"""
@@ -991,7 +990,7 @@ def get_minute_cryptic_leaderboard(period: str = 'weekly') -> list[tuple[str, in
     """
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    where_clause, params = get_scores_by_period(period)
+    where_clause, params = get_scores_by_period(period, 'created_at')
 
     # Fetch relevant stats for Minute Cryptic
     cursor.execute(f"""
@@ -1012,7 +1011,7 @@ def get_minute_cryptic_leaderboard(period: str = 'weekly') -> list[tuple[str, in
 def get_word_salad_leaderboard(period: str = 'overall'):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    where_clause, params = get_scores_by_period(period)
+    where_clause, params = get_scores_by_period(period, 'created_at')
 
     cursor.execute(f"""
         SELECT display_name,
@@ -1036,7 +1035,7 @@ def get_pips_leaderboard(period: str = 'overall'):
     """Fetch Pips leaderboard data, supporting different periods and stats."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    where_clause, params = get_scores_by_period(period)
+    where_clause, params = get_scores_by_period(period, 'created_at')
 
     # Fetch relevant stats for Pips
     cursor.execute(f"""
@@ -1283,16 +1282,16 @@ def delete_expired_roles():
 
 def get_overall_recent_wordle_scores(limit=5):
     """
-    Fetches the most recent Wordle scores from all users, ordered by timestamp descending,
+    Fetches the most recent Wordle scores from all users, ordered by created_at descending,
     limited to the specified number.
     """
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            SELECT game_number, attempts, skill, luck, timestamp
+            SELECT game_number, attempts, skill, luck, created_at
             FROM wordle_scores
-            ORDER BY timestamp DESC
+            ORDER BY created_at DESC
             LIMIT ?
         """, (limit,))
         scores = cursor.fetchall()
@@ -1306,16 +1305,16 @@ def get_overall_recent_wordle_scores(limit=5):
 def get_overall_recent_connections_puzzle_number(limit=5):
     """
     Fetches the most recent Connections puzzle numbers from all users,
-    ordered by timestamp descending, limited to the specified number.
-    Returns a list of tuples, each containing (puzzle_number, timestamp).
+    ordered by created_at descending, limited to the specified number.
+    Returns a list of tuples, each containing (puzzle_number, created_at).
     """
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            SELECT puzzle_number, timestamp
+            SELECT game_number, created_at
             FROM connections_scores
-            ORDER BY timestamp DESC
+            ORDER BY created_at DESC
             LIMIT ?
         """, (limit,))
         puzzles = cursor.fetchall()

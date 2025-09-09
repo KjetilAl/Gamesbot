@@ -322,80 +322,39 @@ async def myscore(ctx):
         return
 
     message = f"📊 **{ctx.author.display_name}'s Last 5 Wordle Scores**\n"
-    for game_number, attempts, skill, luck, timestamp in scores:
-        message += f"📅 {timestamp[:10]} | **Game {game_number}** — {attempts}/6 | Skill: {skill}/99 | Luck: {luck}/99\n"
+    for game_number, attempts, skill, luck, created_at in scores:
+        message += f"📅 {created_at[:10]} | **Game {game_number}** — {attempts}/6 | Skill: {skill}/99 | Luck: {luck}/99\n"
 
     await ctx.send(message)
 
 async def get_leaderboard_embed(game_key: str, period: str) -> Optional[discord.Embed]:
     """
     Fetches leaderboard data and builds a Discord embed for a given game and period.
-
-    Args:
-        game_key (str): The key for the game (e.g., "wordle").
-        period (str): The leaderboard period ("weekly", "monthly", "overall").
-
-    Returns:
-        Optional[discord.Embed]: The generated embed, or None if an error occurs.
     """
     if game_key not in game_config.GAME_CONFIGS:
-        print(f"Invalid game key '{game_key}' provided.")
         return None
 
     config = game_config.GAME_CONFIGS[game_key]
     game_name = config["name"]
 
-    # 1. Fetch scores
     try:
         leaderboard_data = config["get_leaderboard_function"](period=period)
         if not leaderboard_data:
-            return None  # No data, no embed.
+            return None
     except Exception as e:
         print(f"Error fetching {period} leaderboard for {game_name}: {e}")
         return None
 
-    # 2. Get the appropriate embed builder function
-    builder_func = config.get("embed_builder_function")
-    if not builder_func:
-        print(f"No embed builder function defined for {game_name}.")
-        return None
-
-    # Define colors
     game_colors = {
-        "Wordle": discord.Color.green(), "Connections": discord.Color.purple(), "Framed": discord.Color.red(),
-        "Gisnep": discord.Color.blue(), "Bandle": discord.Color.gold(), "Minute Cryptic": discord.Color.dark_teal(),
+        "Wordle": discord.Color.green(), "Connections": discord.Color.purple(),
+        "Framed": discord.Color.red(), "Gisnep": discord.Color.blue(),
+        "Bandle": discord.Color.gold(), "Minute Cryptic": discord.Color.dark_teal(),
         "Word Salad": discord.Color.green(), "Pips": discord.Color.orange(),
     }
-    embed_color = game_colors.get(game_name, discord.Color.from_rgb(128, 128, 128))
-
-    # 3. Build the embed
+    color = game_colors.get(game_name, discord.Color.from_rgb(128, 128, 128))
     title = f"🏆 The {game_name} {period.capitalize()} Leaderboard 🏆"
 
-    # For dedicated builders (Wordle, Connections, Gisnep)
-    if game_name in ["Wordle", "Connections", "Gisnep"]:
-        return await builder_func(
-            title=title,
-            leaderboard_data=leaderboard_data,
-            period=period,
-            color=embed_color
-        )
-    # For the generic builder
-    else:
-        keys = config.get("leaderboard_keys")
-        if not keys:
-            print(f"Missing 'leaderboard_keys' for generic game {game_name}.")
-            return None
-
-        # Transform list of tuples into list of dicts
-        rows = [dict(zip(keys, row)) for row in leaderboard_data]
-
-        return await builder_func(
-            game_name=game_name,
-            title=title,
-            rows=rows,
-            period=period.capitalize(),
-            color=embed_color
-        )
+    return await embed_builder.build_embed_for_game(game_key, title, leaderboard_data, period, color)
 
 @bot.command()
 async def leaderboard(ctx, game: str = "wordle", period: str = "weekly"):
