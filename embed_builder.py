@@ -305,3 +305,49 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
     emit_footer = f"Posted: {discord.utils.utcnow().strftime('%Y-%m-%d')}"
     embed.set_footer(text=emit_footer)
     return embed
+
+async def build_embed_for_game(game_key, title, leaderboard_data, period, color):
+    """
+    Dispatcher function to build an embed for a specific game.
+    """
+    # Moved import here to avoid circular dependency
+    import game_config
+
+    try:
+        config = game_config.GAME_CONFIGS[game_key]
+        builder_func = config["embed_builder_function"]
+
+        # Dedicated builders (e.g., build_wordle_leaderboard_embed)
+        if builder_func.__name__.startswith("build_") and "leaderboard_embed" in builder_func.__name__ and builder_func.__name__ != "build_leaderboard_embed":
+            return await builder_func(
+                title=title,
+                leaderboard_data=leaderboard_data,
+                period=period,
+                color=color
+            )
+
+        # Generic builder path
+        keys = config.get("leaderboard_keys")
+        if not keys:
+            raise ValueError(f"Missing leaderboard_keys for generic game {config['name']}")
+
+        rows = [dict(zip(keys, row)) for row in leaderboard_data]
+        return await builder_func(
+            game_name=config["name"],
+            title=title,
+            rows=rows,
+            period=period.capitalize(),
+            color=color
+        )
+    except KeyError:
+        # This case handles if game_key is not in GAME_CONFIGS
+        print(f"Error: No game configuration found for key '{game_key}'")
+        return None
+    except ValueError as e:
+        # This case handles missing leaderboard_keys
+        print(f"Configuration error for {game_key}: {e}")
+        return None
+    except Exception as e:
+        # Catch any other unexpected errors during embed building
+        print(f"An unexpected error occurred while building embed for {game_key}: {e}")
+        return None
