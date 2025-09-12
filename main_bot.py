@@ -54,301 +54,168 @@ async def on_message(message):
             print(f"Detected {config['name']} score from {message.author.display_name}")
             processed = True
             
-            # Parse the message content
+            # 1. Parse the message content
             game_info = config["parse_function"](content)
             
             if not game_info:
                 await message.channel.send(f"⚠️ Couldn't process your {config['name']} result.")
                 break
             
-            # Process the game score based on game type
             try:
-                # Save the score (using the code from the handle_game_message function)
+                # --- Initialize variables for stats and post message ---
+                post_message = None
+                updated_stats = None
+                player_stats = None
+                server_stats = None
+
+                # 2. Save score and update stats (game-specific)
                 if game_key == "wordle":
-                    # --- 1. Save the score ---
                     config["save_score_function"](
                         message.author.id, message.author.display_name,
-                        game_info["game_number"],
-                        game_info["attempts"],
-                        game_info.get("skill"),
-                        game_info.get("luck"),
-                        game_info.get("hard_mode", False)
+                        game_info["game_number"], game_info["attempts"],
+                        game_info.get("skill"), game_info.get("luck"), game_info.get("hard_mode", False)
                     )
-
-                    # --- 2. Update player stats ---
                     updated_stats = database.update_player_stats(
-                        message.author.id,
-                        message.author.display_name,
-                        game_info["game_number"],
-                        game_info["attempts"],
-                        game_info.get("skill"),
-                        game_info.get("luck")
+                        message.author.id, message.author.display_name,
+                        game_info["game_number"], game_info["attempts"],
+                        game_info.get("skill"), game_info.get("luck")
                     )
-
-                    # --- 3. Handle latest game number + role assignment BEFORE posting ---
-                    game_number_key = config["game_number_key"]
-                    latest_game_identifier = config["get_latest_game_number_function"](game_key)
-                    current_game_identifier = game_info[game_number_key]
-
-                    if current_game_identifier:
-                        should_update_db = False
-                        try:
-                            current_num = int(current_game_identifier)
-                            latest_num = int(latest_game_identifier) if latest_game_identifier is not None else 0
-                            if latest_game_identifier is None or current_num > latest_num:
-                                should_update_db = True
-                        except (ValueError, TypeError):
-                            print(
-                                f"Could not compare Wordle game identifiers: '{current_game_identifier}' and "
-                                f"'{latest_game_identifier}'. Skipping DB update for this game."
-                            )
-
-                        if should_update_db:
-                            config["update_latest_game_number_function"](game_key, str(current_game_identifier))
-                            print(f"Updated latest Wordle number to {current_game_identifier}")
-
-                        # Handle role assignment and intro first
-                        should_introduce = await role_manager.handle_game_role_assignment(
-                            message.guild,
-                            message.author,
-                            game_key,
-                            config,
-                            current_game_identifier,
-                            latest_game_identifier
-                        )
-
-                        # Delay slightly so Discord can propagate permission changes
-                        if should_introduce:
-                            await asyncio.sleep(1)
-                            await role_manager.introduce_player_in_game_channel(
-                                message.guild,
-                                message.author,
-                                config,
-                                game_info
-                            )
-
-                    # --- 4. Generate and post the Wordle message AFTER roles & intros ---
-                    post_message = post_generator.generate_wordle_post(
-                        message.author.display_name,
-                        game_info["game_number"],
-                        game_info["attempts"],
-                        game_info.get("skill"),
-                        game_info.get("luck"),
-                        updated_stats
-                    )
-
-                    channel_name = config.get("chat_channel_name")
-                    game_channel = discord.utils.get(message.guild.channels, name=channel_name)
-                    if game_channel:
-                        await game_channel.send(post_message)
-                    else:
-                        print(f"Warning: Could not find channel '{channel_name}' for {config['name']}. Posting in original channel.")
-                        await message.channel.send(post_message)
-
-
                 elif game_key == "connections":
                     config["save_score_function"](
-                        message.author.id,
-                        message.author.display_name,
-                        game_info["game_number"],
-                        game_info.get("total_score"),
-                        game_info.get("mistake_count"),
-                        game_info.get("perfect_game"),
-                        game_info.get("solved_purple_first"),
-                        game_info.get("skill"),
-                        game_info.get("uniqueness")
+                        message.author.id, message.author.display_name,
+                        game_info["game_number"], game_info.get("total_score"), game_info.get("mistake_count"),
+                        game_info.get("perfect_game"), game_info.get("solved_purple_first"),
+                        game_info.get("skill"), game_info.get("uniqueness")
                     )
                     updated_stats = database.update_connections_stats(
-                        message.author.id,
-                        message.author.display_name,
-                        game_info.get("mistake_count", 0),
-                        game_info.get("perfect_game", False),
+                        message.author.id, message.author.display_name,
+                        game_info.get("mistake_count", 0), game_info.get("perfect_game", False),
                         game_info.get("solved_purple_first", False)
                     )
-                    post_message = post_generator.generate_connections_post(
-                        message.author.display_name,
-                        game_info["game_number"],
-                        game_info,
-                        updated_stats
+                elif game_key == "gisnep":
+                    config["save_score_function"](
+                        str(message.author.id), message.author.display_name,
+                        game_info["game_number"], game_info["completion_time"]
                     )
-
-                    # Find the game's chat channel and post the message there
-                    channel_name = config.get("chat_channel_name")
-                    game_channel = discord.utils.get(message.guild.channels, name=channel_name)
-                    if game_channel:
-                        await game_channel.send(post_message)
-                    else:
-                        print(f"Warning: Could not find channel '{channel_name}' for {config['name']}. Posting in original channel.")
-                        await message.channel.send(post_message)
-
+                    database.update_gisnep_puzzle_stats(game_info["game_number"], game_info["completion_time"])
+                    player_stats = database.update_gisnep_player_stats(
+                        str(message.author.id), message.author.display_name, game_info["completion_time"]
+                    )
+                    server_stats = database.get_gisnep_puzzle_stats(game_info["game_number"])
+                elif game_key == "bandle":
+                    config["save_score_function"](
+                        message.author.id, message.author.display_name,
+                        game_info["game_number"], game_info["attempts"], game_info["found_total"],
+                        game_info["found_percentage"], game_info["current_streak"], game_info["max_streak"],
+                        game_info["bonus_rounds_completed"], game_info["bonus_rounds_total"],
+                        game_info["bonus_emojis"], game_info["total_score"]
+                    )
+                    player_stats = database.update_bandle_player_stats(
+                        message.author.id, message.author.display_name,
+                        game_info["attempts"], game_info["bonus_rounds_completed"]
+                    )
                 elif game_key == "framed":
                     config["save_score_function"](
                         message.author.id, message.author.display_name,
-                        game_info["game_number"],
-                        game_info["attempts"], 
-                        game_info["total_score"]
+                        game_info["game_number"], game_info["attempts"], game_info["total_score"]
                     )
-                elif game_key == "gisnep":
-                    # Save score
-                    config["save_score_function"](
-                        str(message.author.id), message.author.display_name,
-                        game_info["game_number"],
-                        game_info["completion_time"]
-                    )
-
-                    # Update puzzle stats
-                    database.update_gisnep_puzzle_stats(
-                        game_info["game_number"],
-                        game_info["completion_time"]
-                    )
-
-                    # Update player stats
-                    player_stats = database.update_gisnep_player_stats(
-                        str(message.author.id),
-                        message.author.display_name,
-                        game_info["completion_time"]
-                    )
-
-                    # Get server stats for the puzzle
-                    server_stats = database.get_gisnep_puzzle_stats(game_info["game_number"])
-
-                    # Generate commentary
-                    post_message = post_generator.generate_gisnep_post(
-                        message.author.display_name,
-                        game_info["game_number"],
-                        game_info["completion_time"],
-                        player_stats,
-                        server_stats
-                    )
-
-                    # Post commentary to the dedicated channel
-                    channel_name = config.get("chat_channel_name")
-                    game_channel = discord.utils.get(message.guild.channels, name=channel_name)
-                    if game_channel:
-                        await game_channel.send(post_message)
-                    else:
-                        print(f"Warning: Could not find channel '{channel_name}' for {config['name']}. Posting in original channel.")
-                        await message.channel.send(post_message)
-                elif game_key == "bandle":
-                    config["save_score_function"](
-                        message.author.id,
-                        message.author.display_name,
-                        game_info["game_number"],
-                        game_info["attempts"],
-                        game_info["found_total"],
-                        game_info["found_percentage"],
-                        game_info["current_streak"],
-                        game_info["max_streak"],
-                        game_info["bonus_rounds_completed"],
-                        game_info["bonus_rounds_total"],
-                        game_info["bonus_emojis"],
-                        game_info["total_score"]
-                    )
-                    player_stats = database.update_bandle_player_stats(
-                        message.author.id,
-                        message.author.display_name,
-                        game_info["attempts"],
-                        game_info["bonus_rounds_completed"]
-                    )
-                    post_message = post_generator.generate_bandle_post(
-                        message.author.display_name,
-                        game_info,
-                        player_stats
-                    )
-                    channel_name = config.get("chat_channel_name")
-                    game_channel = discord.utils.get(message.guild.channels, name=channel_name)
-                    if game_channel:
-                        await game_channel.send(post_message)
-                    else:
-                        print(f"Warning: Could not find channel '{channel_name}' for {config['name']}. Posting in original channel.")
-                        await message.channel.send(post_message)
                 elif game_key == "minute_cryptic":
                     config["save_score_function"](
                         message.author.id, message.author.display_name,
-                        game_info["game_date"],
-                        game_info["clue"],
-                        game_info["word_length"],
-                        game_info["score_description"]
+                        game_info["game_date"], game_info["clue"],
+                        game_info["word_length"], game_info["score_description"]
                     )
                 elif game_key == "word_salad":
                     config["save_score_function"](
                         message.author.id, message.author.display_name,
-                        game_info["game_number"],
-                        game_info["completion_time_seconds"],
-                        game_info["hints_used"],
-                        game_info["score"]
+                        game_info["game_number"], game_info["completion_time_seconds"],
+                        game_info["hints_used"], game_info["score"]
                     )
                 elif game_key == "pips":
                     config["save_score_function"](
                         message.author.id, message.author.display_name,
-                        game_info["game_number"],
-                        game_info["difficulty"],
-                        game_info["completion_time"],
-                        game_info["score"],
-                        game_info["cookie"]
+                        game_info["game_number"], game_info["difficulty"],
+                        game_info["completion_time"], game_info["score"], game_info["cookie"]
                     )
                 
-                # Create acknowledgement and handle roles
-                response = config["create_acknowledgement"](message.author.display_name, game_info)
-                
-                # Get the latest game number/date from the database
+                # 3. Handle DB update for latest game, role assignment, and introductions
                 game_number_key = config["game_number_key"]
-                latest_game_identifier = config["get_latest_game_number_function"](game_key)
-                current_game_identifier = game_info[game_number_key]
+                current_game_identifier = game_info.get(game_number_key)
 
                 if current_game_identifier:
-                    # Handle database update for latest game number
+                    latest_game_identifier = config["get_latest_game_number_function"](game_key)
+
+                    # Determine if the database should be updated
                     should_update_db = False
-    
-                    # For Minute Cryptic (dates)
                     if game_key == "minute_cryptic":
-                        if latest_game_identifier is None:
-                            should_update_db = True
+                        if latest_game_identifier is None: should_update_db = True
                         else:
                             try:
                                 current_date = date.fromisoformat(str(current_game_identifier))
                                 latest_date = date.fromisoformat(str(latest_game_identifier))
-                                if current_date > latest_date:
-                                    should_update_db = True
-                            except ValueError as e:
-                                print(f"Date parsing error in main_bot: {e}")
-                    # For Word Salad and all other number-based games
+                                if current_date > latest_date: should_update_db = True
+                            except (ValueError, TypeError) as e:
+                                print(f"Date parsing error in main_bot for {game_key}: {e}")
                     else:
                         try:
                             current_num = int(current_game_identifier)
                             latest_num = int(latest_game_identifier) if latest_game_identifier is not None else 0
-                            if latest_game_identifier is None or current_num > latest_num:
-                                should_update_db = True
+                            if latest_game_identifier is None or current_num > latest_num: should_update_db = True
                         except (ValueError, TypeError):
-                            print(f"Could not compare game identifiers for {game_key}: '{current_game_identifier}' and '{latest_game_identifier}'. Skipping DB update for this game.")
-    
+                            print(f"Could not compare identifiers for {game_key}: '{current_game_identifier}' vs '{latest_game_identifier}'.")
+
                     # Update database if needed
                     if should_update_db:
                         config["update_latest_game_number_function"](game_key, str(current_game_identifier))
-                        print(f"Updated latest {game_key} number to {current_game_identifier}")
-    
+                        print(f"Updated latest {config['name']} identifier to {current_game_identifier}")
+
                     # Handle role assignment and determine if an introduction is needed
                     should_introduce = await role_manager.handle_game_role_assignment(
-                        message.guild,
-                        message.author,
-                        game_key,
-                        config,
-                        current_game_identifier,
-                        latest_game_identifier
+                        message.guild, message.author, game_key, config,
+                        current_game_identifier, latest_game_identifier
                     )
 
-                    # Post introduction message if required
-                    if should_introduce and game_key not in ["connections", "gisnep", "bandle"]:
+                    # Post introduction message if required (and if game is configured for it)
+                    if should_introduce and config.get("create_introduction"):
                         await asyncio.sleep(1)  # ensure role permissions propagate
                         await role_manager.introduce_player_in_game_channel(
-                            message.guild,
-                            message.author,
-                            config,
-                            game_info
+                            message.guild, message.author, config, game_info
                         )
 
-                
-                # Acknowledge the score with an emoji
+                # 4. Generate post message (AFTER roles are handled)
+                if game_key == "wordle":
+                    post_message = post_generator.generate_wordle_post(
+                        message.author.display_name, game_info["game_number"], game_info["attempts"],
+                        game_info.get("skill"), game_info.get("luck"), updated_stats
+                    )
+                elif game_key == "connections":
+                    post_message = post_generator.generate_connections_post(
+                        message.author.display_name, game_info["game_number"], game_info, updated_stats
+                    )
+                elif game_key == "gisnep":
+                    post_message = post_generator.generate_gisnep_post(
+                        message.author.display_name, game_info["game_number"], game_info["completion_time"],
+                        player_stats, server_stats
+                    )
+                elif game_key == "bandle":
+                    post_message = post_generator.generate_bandle_post(
+                        message.author.display_name, game_info, player_stats
+                    )
+                else: # Fallback for games without a special post generator
+                    if config.get("create_acknowledgement"):
+                        post_message = config["create_acknowledgement"](message.author.display_name, game_info)
+
+                # 5. Send the post message to the correct channel
+                if post_message:
+                    channel_name = config.get("chat_channel_name")
+                    game_channel = discord.utils.get(message.guild.channels, name=channel_name)
+                    if game_channel:
+                        await game_channel.send(post_message)
+                    else:
+                        print(f"Warning: Could not find channel '{channel_name}' for {config['name']}. Posting in original channel.")
+                        await message.channel.send(post_message)
+
+                # 6. Acknowledge the original message
                 await message.add_reaction("🤖")
 
             except Exception as e:
