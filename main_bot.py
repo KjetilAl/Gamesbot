@@ -65,6 +65,7 @@ async def on_message(message):
             try:
                 # Save the score (using the code from the handle_game_message function)
                 if game_key == "wordle":
+                    # --- 1. Save the score ---
                     config["save_score_function"](
                         message.author.id, message.author.display_name,
                         game_info["game_number"],
@@ -73,6 +74,8 @@ async def on_message(message):
                         game_info.get("luck"),
                         game_info.get("hard_mode", False)
                     )
+
+                    # --- 2. Update player stats ---
                     updated_stats = database.update_player_stats(
                         message.author.id,
                         message.author.display_name,
@@ -81,6 +84,50 @@ async def on_message(message):
                         game_info.get("skill"),
                         game_info.get("luck")
                     )
+
+                    # --- 3. Handle latest game number + role assignment BEFORE posting ---
+                    game_number_key = config["game_number_key"]
+                    latest_game_identifier = config["get_latest_game_number_function"](game_key)
+                    current_game_identifier = game_info[game_number_key]
+
+                    if current_game_identifier:
+                        should_update_db = False
+                        try:
+                            current_num = int(current_game_identifier)
+                            latest_num = int(latest_game_identifier) if latest_game_identifier is not None else 0
+                            if latest_game_identifier is None or current_num > latest_num:
+                                should_update_db = True
+                        except (ValueError, TypeError):
+                            print(
+                                f"Could not compare Wordle game identifiers: '{current_game_identifier}' and "
+                                f"'{latest_game_identifier}'. Skipping DB update for this game."
+                            )
+
+                        if should_update_db:
+                            config["update_latest_game_number_function"](game_key, str(current_game_identifier))
+                            print(f"Updated latest Wordle number to {current_game_identifier}")
+
+                        # Handle role assignment and intro first
+                        should_introduce = await role_manager.handle_game_role_assignment(
+                            message.guild,
+                            message.author,
+                            game_key,
+                            config,
+                            current_game_identifier,
+                            latest_game_identifier
+                        )
+
+                        # Delay slightly so Discord can propagate permission changes
+                        if should_introduce:
+                            await asyncio.sleep(1)
+                            await role_manager.introduce_player_in_game_channel(
+                                message.guild,
+                                message.author,
+                                config,
+                                game_info
+                            )
+
+                    # --- 4. Generate and post the Wordle message AFTER roles & intros ---
                     post_message = post_generator.generate_wordle_post(
                         message.author.display_name,
                         game_info["game_number"],
@@ -90,7 +137,6 @@ async def on_message(message):
                         updated_stats
                     )
 
-                    # Find the game's chat channel and post the message there
                     channel_name = config.get("chat_channel_name")
                     game_channel = discord.utils.get(message.guild.channels, name=channel_name)
                     if game_channel:
@@ -98,6 +144,7 @@ async def on_message(message):
                     else:
                         print(f"Warning: Could not find channel '{channel_name}' for {config['name']}. Posting in original channel.")
                         await message.channel.send(post_message)
+
 
                 elif game_key == "connections":
                     config["save_score_function"](
