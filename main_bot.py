@@ -289,15 +289,17 @@ async def on_message(message):
                         current_game_identifier,
                         latest_game_identifier
                     )
-    
+
                     # Post introduction message if required
-                    if should_introduce and game_key not in ["wordle", "connections", "gisnep", "bandle"]:
+                    if should_introduce and game_key not in ["connections", "gisnep", "bandle"]:
+                        await asyncio.sleep(1)  # ensure role permissions propagate
                         await role_manager.introduce_player_in_game_channel(
                             message.guild,
                             message.author,
                             config,
                             game_info
                         )
+
                 
                 # Acknowledge the score with an emoji
                 await message.add_reaction("🤖")
