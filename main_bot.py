@@ -201,9 +201,11 @@ async def on_message(message):
                     post_message = post_generator.generate_bandle_post(
                         message.author.display_name, game_info, player_stats
                     )
-                else: # Fallback for games without a special post generator
-                    if config.get("create_acknowledgement"):
+                else:
+                    # Fallback only for games without a special post generator
+                    if config.get("create_acknowledgement") and not post_message:
                         post_message = config["create_acknowledgement"](message.author.display_name, game_info)
+
 
                 # 5. Send the post message to the correct channel
                 if post_message:
