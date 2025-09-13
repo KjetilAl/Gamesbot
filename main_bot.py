@@ -202,10 +202,15 @@ async def on_message(message):
                         message.author.display_name, game_info, player_stats
                     )
                 else:
-                    # Fallback only for games without a special post generator
-                    if config.get("create_acknowledgement") and not post_message:
-                        post_message = config["create_acknowledgement"](message.author.display_name, game_info)
-
+                    # Only use acknowledgement if no post_message exists yet
+                    if not post_message and config.get("create_acknowledgement"):
+                    # If create_acknowledgement returns just an emoji, use it as a reaction instead of posting
+                        acknowledgement = config["create_acknowledgement"](message.author.display_name, game_info)
+                        if acknowledgement.strip() == "🤖":
+                            # Don't post this in chat — just react
+                            post_message = None
+                        else:
+                            post_message = acknowledgement
 
                 # 5. Send the post message to the correct channel
                 if post_message:
