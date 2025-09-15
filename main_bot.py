@@ -185,8 +185,9 @@ async def on_message(message):
                 # 4. Generate post message (AFTER roles are handled)
                 if game_key == "wordle":
                     post_message = post_generator.generate_wordle_post(
-                        message.author.display_name, game_info["game_number"], game_info["attempts"],
-                        game_info.get("skill"), game_info.get("luck"), updated_stats
+                        message.author.display_name,
+                        game_info,
+                        updated_stats
                     )
                 elif game_key == "connections":
                     post_message = post_generator.generate_connections_post(
