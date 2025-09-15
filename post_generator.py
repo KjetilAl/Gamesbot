@@ -177,54 +177,61 @@ def _generate_gisnep_post(display_name, game_info, player_stats):
     # Combine and return the final message
     return f"{opening_line}\n{time_analysis}"
 
-def _generate_connections_post(display_name, game_info, player_stats):
-    """Generates a dynamic Connections post based on the player's score and stats."""
-    game_number = game_info.get("game_number")
-    perfect_game = game_info.get("perfect_game", False)
-    solved_purple_first = game_info.get("solved_purple_first", False)
-    mistake_count = game_info.get("mistake_count", 0)
-    finished_game = game_info.get("finished_game", False)
-    total_score = game_info.get("total_score", 0)
-    uniqueness = game_info.get("uniqueness")
-    skill = game_info.get("skill")
+# In post_generator.py
 
-    total_perfects = player_stats.get("total_perfects", 0)
-    total_purples = player_stats.get("total_purples", 0)
+def _generate_connections_post(display_name: str, game_info: dict, player_stats: dict) -> str:
+    """Generates nuanced Connections feedback based on detailed solve patterns."""
+    game_number = game_info.get("game_number", "?")
+    finished = game_info.get("finished_game", False)
+    perfect = game_info.get("perfect_game", False)
+    solve_order = game_info.get("solve_order", [])
+    mistakes = game_info.get("mistake_count", 0)
 
-    # Part A: The Opening Line (Performance-based)
-    if perfect_game:
-        opening_line = f"A perfect grid! {display_name} solved Connections #{game_number} without a single mistake! ✨"
-    elif solved_purple_first:
-        opening_line = f"A bold strategy! {display_name} tackled the trickiest purple group first to solve Connections #{game_number}! ♟️"
-    elif mistake_count >= 3 and finished_game:
-        opening_line = f"Down to the wire! {display_name} navigated a tricky board to solve Connections #{game_number}. 😮‍💨"
-    elif not finished_game:
-        opening_line = f"The categories were elusive today! A valiant effort on Connections #{game_number} from {display_name}. Better luck next time! 🤔"
-    else: # A standard win
-        opening_line = f"{display_name} has solved Connections #{game_number} with a score of {total_score}! ✅"
+    opening_line = ""
+    
+    # --- Part 1: The Opening Line (based on your specific rules) ---
+    
+    # Rule 6: Player struck out
+    if not finished:
+        opening_line = f"Oof, the board was a minefield for **{display_name}** on Connections #{game_number} today."
+    
+    # Rule 1: The "True Perfect" solution
+    elif perfect and solve_order == ['🟪', '🟦', '🟩', '🟨']:
+        opening_line = f"👑 Flawless! **{display_name}** solved Connections #{game_number} in perfect, hardest-to-easiest order."
+    
+    # Rule 2: "Close to Perfect" (Purple first, but not perfect order)
+    elif perfect and solve_order and solve_order[0] == '🟪':
+        opening_line = f"Excellent work by **{display_name}** on Connections #{game_number}, nailing the tricky purple group first on a perfect run."
 
-    # Part B: The Stat Spotlight (The "Charm" Element)
+    # Rule 3: "Pretty Good" (Blue first, Purple second)
+    elif perfect and solve_order[:2] == ['🟦', '🟪']:
+        opening_line = f"A solid perfect solve for **{display_name}** on Connections #{game_number}, tackling the two hardest groups first."
+
+    # Rule 5: Struggled with hard categories
+    elif mistakes > 0 and len(solve_order) >= 2 and set(solve_order[:2]) == {'🟩', '🟨'}:
+        opening_line = f"**{display_name}** cleared the easier groups on Connections #{game_number}, but the blue and purple categories put up a fight."
+
+    # Fallback for any other standard win
+    else:
+        opening_line = f"**{display_name}** solved Connections #{game_number} with {mistakes} mistake{'s' if mistakes != 1 else ''}."
+
+    # --- Part 2: The Stat Spotlight ---
     spotlights = []
 
-    # Uniqueness is the most interesting stat, so prioritize it
-    if uniqueness:
-        spotlights.append(f"Their solve path has a **Uniqueness of {uniqueness}**! Truly a one-of-a-kind brain. 🧠")
-    if skill and skill > 90:
-        spotlights.append(f"With a **Skill** score of **{skill}**, that was some serious lateral thinking! 🧐")
-    if perfect_game and total_perfects > 0:
-        spotlights.append(f"That's their **{total_perfects}th** perfect game! A true Connections connoisseur. 🧑‍🎨")
-    if solved_purple_first and total_purples > 0:
-        spotlights.append(f"That's the **{total_purples}th** time they've solved purple first. No fear! 😎")
+    # Rule 7: "Rainbow Wrong" guess (high priority)
+    if game_info.get("rainbow_wrong_guess"):
+        spotlights.append("That first guess of one of each color is a classic 'Rainbow Wrong'! 🌈")
+    
+    # Historical context for perfect games
+    total_perfects = player_stats.get("total_perfects", 0)
+    if perfect and total_perfects > 1:
+        spotlights.append(f"That marks their **{total_perfects}th** perfect game! 🧑‍🎨")
 
-    # Default fallback
-    if not spotlights:
-        spotlights.append(f"They navigated the puzzle with only **{mistake_count}** mistake{'s' if mistake_count != 1 else ''}. Nice!")
-
-    # Choose one spotlight to show
-    stat_spotlight = random.choice(spotlights)
-
-    # Combine and return the final message
-    return f"{opening_line}\n{stat_spotlight}"
+    # If there's a spotlight, add it.
+    if spotlights:
+        return f"{opening_line}\n{random.choice(spotlights)}"
+    
+    return opening_line
 
 def generate_post(game_name: str, display_name: str, game_info: dict, player_stats: dict) -> str:
     """Routes the request to the appropriate sub-generator for the given game."""
