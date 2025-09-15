@@ -170,15 +170,15 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
     
     # SORT THE ROWS BASED ON GAME TYPE AND PERFORMANCE
     if game_name == "Wordle":
-        rows.sort(key=lambda x: x.get("avg_attempts", float('inf')))
+        rows.sort(key=lambda x: float(x.get("avg_attempts", float('inf'))))
     elif game_name == "Connections":
         rows.sort(key=lambda x: x.get("avg_score", 0), reverse=True)
     elif game_name == "Framed":
-        rows.sort(key=lambda x: x.get("avg_attempts", float('inf')))
+        rows.sort(key=lambda x: float(x.get("avg_attempts", float('inf'))))
     elif game_name == "Gisnep":
-        rows.sort(key=lambda x: x.get("avg_time", float('inf')))
+        rows.sort(key=lambda x: float(x.get("avg_time", float('inf'))))
     elif game_name == "Bandle":
-        rows.sort(key=lambda x: x.get("avg_attempts", float('inf')))
+        rows.sort(key=lambda x: float(x.get("avg_attempts", float('inf'))))
     elif game_name == "Minute Cryptic":
         rows.sort(key=lambda x: x.get("avg_score", 0), reverse=True)
     elif game_name == "Word Salad":
