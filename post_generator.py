@@ -1,6 +1,6 @@
 import random
 
-def generate_wordle_post(display_name: str, game_info: dict[str, any], player_stats: dict[str, any]) -> str:
+def _generate_wordle_post(display_name: str, game_info: dict[str, any], player_stats: dict[str, any]) -> str:
     """
     Generates dynamic, human-like feedback for Wordle results.
     """
@@ -53,7 +53,7 @@ def generate_wordle_post(display_name: str, game_info: dict[str, any], player_st
     # Combine the opening line with a randomly chosen spotlight for variety
     return f"{opening_line}\n{random.choice(spotlights)}"
     
-def generate_bandle_post(display_name, game_info, player_stats):
+def _generate_bandle_post(display_name, game_info, player_stats):
     """Generates a dynamic Bandle post based on the player's score and stats."""
     game_number = game_info.get("game_number")
     attempts = game_info.get("attempts")
@@ -108,8 +108,11 @@ def generate_bandle_post(display_name, game_info, player_stats):
     encore = random.choice(spotlights)
     return f"{opening_line}\n{encore}"
 
-def generate_gisnep_post(display_name, game_number, completion_time, player_stats, server_stats):
+def _generate_gisnep_post(display_name, game_info, player_stats):
     """Generates a dynamic Gisnep post based on the player's score and stats."""
+    game_number = game_info.get("game_number")
+    completion_time = game_info.get("completion_time")
+    server_stats = player_stats.get("server_stats", {})
 
     import random
 
@@ -174,9 +177,9 @@ def generate_gisnep_post(display_name, game_number, completion_time, player_stat
     # Combine and return the final message
     return f"{opening_line}\n{time_analysis}"
 
-def generate_connections_post(display_name, game_number, game_info, updated_stats):
+def _generate_connections_post(display_name, game_info, player_stats):
     """Generates a dynamic Connections post based on the player's score and stats."""
-
+    game_number = game_info.get("game_number")
     perfect_game = game_info.get("perfect_game", False)
     solved_purple_first = game_info.get("solved_purple_first", False)
     mistake_count = game_info.get("mistake_count", 0)
@@ -185,8 +188,8 @@ def generate_connections_post(display_name, game_number, game_info, updated_stat
     uniqueness = game_info.get("uniqueness")
     skill = game_info.get("skill")
 
-    total_perfects = updated_stats.get("total_perfects", 0)
-    total_purples = updated_stats.get("total_purples", 0)
+    total_perfects = player_stats.get("total_perfects", 0)
+    total_purples = player_stats.get("total_purples", 0)
 
     # Part A: The Opening Line (Performance-based)
     if perfect_game:
@@ -222,3 +225,21 @@ def generate_connections_post(display_name, game_number, game_info, updated_stat
 
     # Combine and return the final message
     return f"{opening_line}\n{stat_spotlight}"
+
+def generate_post(game_name: str, display_name: str, game_info: dict, player_stats: dict) -> str:
+    """Routes the request to the appropriate sub-generator for the given game."""
+
+    game_generators = {
+        "wordle": _generate_wordle_post,
+        "connections": _generate_connections_post,
+        "gisnep": _generate_gisnep_post,
+        "bandle": _generate_bandle_post,
+    }
+
+    generator_func = game_generators.get(game_name.lower())
+
+    if generator_func:
+        return generator_func(display_name, game_info, player_stats)
+    else:
+        # Return None instead of an error message to be handled by the bot
+        return None
