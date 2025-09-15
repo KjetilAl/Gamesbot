@@ -1,53 +1,58 @@
 import random
 
-def generate_wordle_post(display_name, game_number, attempts, skill, luck, updated_stats):
-    """Generates a dynamic Wordle post based on the player's score and stats."""
+def generate_wordle_post(display_name: str, game_info: Dict[str, Any], player_stats: Dict[str, Any]) -> str:
+    """
+    Generates dynamic, human-like feedback for Wordle results.
+    """
+    game_number = game_info.get("game_number", "?")
+    attempts = game_info.get("attempts", 7) # Default to 7 for a failed state
+    skill = game_info.get("skill") # Can be None
+    luck = game_info.get("luck")   # Can be None
 
-    # Use 0 if skill or luck is None
-    skill = skill or 0
-    luck = luck or 0
-
-    # Part A: The Opening Line (Flavor Text)
+    # --- Part 1: The Opening Line (based on performance) ---
+    if attempts > 6:
+        return f"**{display_name}** was bested by Wordle #{game_number} today. Better luck tomorrow! 💪"
+    
     if attempts == 1:
-        opening_line = f"A miracle! {display_name} solved Wordle {game_number} in ONE GUESS! 🤯"
+        opening_line = f"🤯 Incredible! **{display_name}** solved Wordle #{game_number} in a single guess!"
     elif attempts == 2:
-        opening_line = f"Pure genius! {display_name} cracked Wordle {game_number} in just two tries! 🧠"
+        opening_line = f"🧠 Masterful work! **{display_name}** cracked Wordle #{game_number} in just two tries."
     elif attempts == 6:
-        opening_line = f"Whew! {display_name} clutched it on the final guess for Wordle {game_number}! 😅"
-    elif attempts > 6: # A loss
-        opening_line = f"Oof, a tough one today. {display_name} was bested by Wordle {game_number}. You'll get it tomorrow! 💪"
-    else: # For 3, 4, 5
-        opening_line = f"Nice one! {display_name} finished Wordle {game_number} in {attempts}/6. ✅"
+        opening_line = f"😅 Whew! **{display_name}** clutched it on the final guess for Wordle #{game_number}."
+    else: # Neutral case for 3, 4, 5 guesses
+        opening_line = f"**{display_name}** solved Wordle #{game_number} in {attempts}/6."
 
-    # Part B: The Stat Spotlight (The Dynamic Element)
+    # --- Part 2: The Stat Spotlight (a single, interesting follow-up) ---
     spotlights = []
-    new_streak = updated_stats["new_streak"]
-    is_new_max_streak = updated_stats["is_new_max_streak"]
-    win_percentage = updated_stats["win_percentage"]
-    total_plays = updated_stats["total_plays"]
+    
+    # Check for new max streak from player_stats
+    if player_stats.get("is_new_max_streak") and player_stats.get("current_streak", 0) > 3:
+        spotlights.append(f"🚀 That's a new personal best streak of **{player_stats['current_streak']}**! Unstoppable!")
+    
+    # Check for exceptional skill or luck from game_info
+    if skill is not None:
+        if skill > 90:
+            spotlights.append("With a **Skill** score of **90+**, that was a masterclass in deduction. 🧐")
+    
+    if luck is not None:
+        if luck > 85:
+            spotlights.append("A **Luck** score over **85**? The dictionary gods were smiling today! ✨")
+        elif luck < 15:
+            spotlights.append("Only **{luck}** luck? They earned that win the hard way. Pure skill.")
 
-    # Add spotlights based on conditions
-    if skill > 90:
-        spotlights.append(f"With a **Skill** score of **{skill}**, that was a masterclass in deduction! 🧐")
-    if luck > 75:
-        spotlights.append(f"A **Luck** score of **{luck}**? The dictionary gods smiled upon you today! ✨")
-    if luck < 25:
-        spotlights.append(f"Only **{luck}** luck? You earned that win the hard way!  मेहनत (meh·nat - 'hard work')")
-    if new_streak > 3:
-        spotlights.append(f"That's **{new_streak}** wins in a row! They're on fire! 🔥")
-    if is_new_max_streak:
-        spotlights.append(f"That's a new personal best streak of **{new_streak}**! Unstoppable! 🚀")
-
-    # Always have a default option
+    # Always have a default fallback if no other conditions are met
     if not spotlights:
-        spotlights.append(f"They've played **{total_plays}** games with a **{win_percentage:.2f}%** win rate. Keep it up!")
+        current_streak = player_stats.get("current_streak", 0)
+        if current_streak > 2:
+            spotlights.append(f"They're now on a **{current_streak}-game** winning streak! 🔥")
+        else:
+            # A simple, neutral default
+            win_percentage = player_stats.get("win_percentage", 0)
+            spotlights.append(f"Their win percentage is holding steady at **{win_percentage:.1f}%**.")
 
-    # Choose one spotlight to show
-    stat_spotlight = random.choice(spotlights)
-
-    # Combine and return the final message
-    return f"{opening_line}\n{stat_spotlight}"
-
+    # Combine the opening line with a randomly chosen spotlight for variety
+    return f"{opening_line}\n{random.choice(spotlights)}"
+    
 def generate_bandle_post(display_name, game_info, player_stats):
     """Generates a dynamic Bandle post based on the player's score and stats."""
     game_number = game_info.get("game_number")
