@@ -276,6 +276,48 @@ def _generate_word_salad_post(display_name: str, game_info: dict, player_stats: 
     # Combine and return
     return f"{opening_line}\n{random.choice(spotlights)}"
 
+# In post_generator.py
+
+def _generate_framed_post(display_name: str, game_info: dict, player_stats: dict) -> str:
+    """Generates dynamic feedback for Framed based on the number of guesses."""
+    game_number = game_info.get("game_number", "?")
+    attempts = game_info.get("attempts", 0)
+    solved = game_info.get("solved", False)
+    total_score = game_info.get("total_score", 0)
+
+    # --- Part 1: The Opening Line (based on your rules) ---
+
+    if not solved:
+        opening_line = f"🤔 An obscure one today! **{display_name}** couldn't quite place the movie in Framed #{game_number}."
+    elif attempts == 1:
+        opening_line = f"🎬 Incredible! **{display_name}** guessed the movie for Framed #{game_number} from the very first frame!"
+    elif attempts == 6:
+        opening_line = f"🍿 Just in time! **{display_name}** got the movie on the final frame for Framed #{game_number}."
+    else: # Neutral case for 2-5 guesses
+        opening_line = f"**{display_name}** solved Framed #{game_number} in {attempts} guesses."
+
+    # --- Part 2: The Stat Spotlight ---
+    spotlights = []
+
+    # Spotlight on a new max streak
+    if player_stats.get("is_new_max_streak") and player_stats.get("current_streak", 0) > 3:
+        spotlights.append(f"🚀 That's a new personal best streak of **{player_stats['current_streak']}**!")
+    
+    # Spotlight comparing to their average
+    avg_score = player_stats.get("avg_score", 0)
+    if solved and total_score > avg_score and avg_score > 0:
+        spotlights.append(f"That's higher than their average score of {avg_score:.1f} points. Nice one!")
+
+    # Default fallback mentioning the point score, if the game was won
+    if not spotlights and solved:
+        spotlights.append(f"Their score for today's puzzle is **{total_score}** points.")
+        
+    # Combine and return
+    if spotlights:
+        return f"{opening_line}\n{random.choice(spotlights)}"
+
+    return opening_line
+
 def generate_post(game_name: str, display_name: str, game_info: dict, player_stats: dict) -> str:
     """Routes the request to the appropriate sub-generator for the given game."""
 
@@ -285,6 +327,7 @@ def generate_post(game_name: str, display_name: str, game_info: dict, player_sta
         "gisnep": _generate_gisnep_post,
         "bandle": _generate_bandle_post,
         "word_salad": _generate_word_salad_post,
+        "framed": _generate_framed_post, # <-- ADD THIS LINE
     }
 
     generator_func = game_generators.get(game_name.lower())
