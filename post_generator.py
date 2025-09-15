@@ -1,6 +1,6 @@
 import random
 
-def generate_wordle_post(display_name: str, game_info: Dict[str, Any], player_stats: Dict[str, Any]) -> str:
+def generate_wordle_post(display_name: str, game_info: dict[str, Any], player_stats: dict[str, Any]) -> str:
     """
     Generates dynamic, human-like feedback for Wordle results.
     """
