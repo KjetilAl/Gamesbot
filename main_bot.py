@@ -27,6 +27,48 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# --- Player Stats Handlers ---
+def get_wordle_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    """Gets Wordle player stats."""
+    return database.update_player_stats(
+        user_id, user_name,
+        game_info["game_number"], game_info["attempts"],
+        game_info.get("skill"), game_info.get("luck")
+    )
+
+def get_connections_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    """Gets Connections player stats."""
+    return database.update_connections_stats(
+        user_id, user_name,
+        game_info.get("mistake_count", 0), game_info.get("perfect_game", False),
+        game_info.get("solved_purple_first", False)
+    )
+
+def get_gisnep_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    """Gets Gisnep player stats, including server stats."""
+    database.update_gisnep_puzzle_stats(game_info["game_number"], game_info["completion_time"])
+    player_stats = database.update_gisnep_player_stats(
+        str(user_id), user_name, game_info["completion_time"]
+    )
+    server_stats = database.get_gisnep_puzzle_stats(game_info["game_number"])
+    player_stats["server_stats"] = server_stats  # Embed server_stats
+    return player_stats
+
+def get_bandle_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    """Gets Bandle player stats."""
+    return database.update_bandle_player_stats(
+        user_id, user_name,
+        game_info["attempts"], game_info["bonus_rounds_completed"]
+    )
+
+PLAYER_STATS_HANDLERS = {
+    "wordle": get_wordle_stats,
+    "connections": get_connections_stats,
+    "gisnep": get_gisnep_stats,
+    "bandle": get_bandle_stats,
+}
+
+
 @bot.event
 async def on_ready():
     """Handler for when the bot is ready."""
@@ -62,168 +104,79 @@ async def on_message(message):
                 break
             
             try:
-                # --- Initialize variables for stats and post message ---
+                # --- Simplified Score and Stat Handling ---
                 post_message = None
-                updated_stats = None
-                player_stats = None
-                server_stats = None
+                player_stats = {}
 
-                # 2. Save score and update stats (game-specific)
+                # 2. Save score using the configured function
+                # This part remains specific because save functions have different signatures
                 if game_key == "wordle":
-                    config["save_score_function"](
-                        message.author.id, message.author.display_name,
-                        game_info["game_number"], game_info["attempts"],
-                        game_info.get("skill"), game_info.get("luck"), game_info.get("hard_mode", False)
-                    )
-                    updated_stats = database.update_player_stats(
-                        message.author.id, message.author.display_name,
-                        game_info["game_number"], game_info["attempts"],
-                        game_info.get("skill"), game_info.get("luck")
-                    )
+                    config["save_score_function"](message.author.id, message.author.display_name, game_info["game_number"], game_info["attempts"], game_info.get("skill"), game_info.get("luck"), game_info.get("hard_mode", False))
                 elif game_key == "connections":
-                    config["save_score_function"](
-                        message.author.id, message.author.display_name,
-                        game_info["game_number"], game_info.get("total_score"), game_info.get("mistake_count"),
-                        game_info.get("perfect_game"), game_info.get("solved_purple_first"),
-                        game_info.get("skill"), game_info.get("uniqueness")
-                    )
-                    updated_stats = database.update_connections_stats(
-                        message.author.id, message.author.display_name,
-                        game_info.get("mistake_count", 0), game_info.get("perfect_game", False),
-                        game_info.get("solved_purple_first", False)
-                    )
+                    config["save_score_function"](message.author.id, message.author.display_name, game_info["game_number"], game_info.get("total_score"), game_info.get("mistake_count"), game_info.get("perfect_game"), game_info.get("solved_purple_first"), game_info.get("skill"), game_info.get("uniqueness"))
                 elif game_key == "gisnep":
-                    config["save_score_function"](
-                        str(message.author.id), message.author.display_name,
-                        game_info["game_number"], game_info["completion_time"]
-                    )
-                    database.update_gisnep_puzzle_stats(game_info["game_number"], game_info["completion_time"])
-                    player_stats = database.update_gisnep_player_stats(
-                        str(message.author.id), message.author.display_name, game_info["completion_time"]
-                    )
-                    server_stats = database.get_gisnep_puzzle_stats(game_info["game_number"])
+                    config["save_score_function"](str(message.author.id), message.author.display_name, game_info["game_number"], game_info["completion_time"])
                 elif game_key == "bandle":
-                    config["save_score_function"](
-                        message.author.id, message.author.display_name,
-                        game_info["game_number"], game_info["attempts"], game_info["found_total"],
-                        game_info["found_percentage"], game_info["current_streak"], game_info["max_streak"],
-                        game_info["bonus_rounds_completed"], game_info["bonus_rounds_total"],
-                        game_info["bonus_emojis"], game_info["total_score"]
-                    )
-                    player_stats = database.update_bandle_player_stats(
-                        message.author.id, message.author.display_name,
-                        game_info["attempts"], game_info["bonus_rounds_completed"]
-                    )
+                    config["save_score_function"](message.author.id, message.author.display_name, game_info["game_number"], game_info["attempts"], game_info["found_total"], game_info["found_percentage"], game_info["current_streak"], game_info["max_streak"], game_info["bonus_rounds_completed"], game_info["bonus_rounds_total"], game_info["bonus_emojis"], game_info["total_score"])
                 elif game_key == "framed":
-                    config["save_score_function"](
-                        message.author.id, message.author.display_name,
-                        game_info["game_number"], game_info["attempts"], game_info["total_score"]
-                    )
+                    config["save_score_function"](message.author.id, message.author.display_name, game_info["game_number"], game_info["attempts"], game_info["total_score"])
                 elif game_key == "minute_cryptic":
-                    config["save_score_function"](
-                        message.author.id, message.author.display_name,
-                        game_info["game_date"], game_info["clue"],
-                        game_info["word_length"], game_info["score_description"]
-                    )
+                    config["save_score_function"](message.author.id, message.author.display_name, game_info["game_date"], game_info["clue"], game_info["word_length"], game_info["score_description"])
                 elif game_key == "word_salad":
-                    config["save_score_function"](
-                        message.author.id, message.author.display_name,
-                        game_info["game_number"], game_info["completion_time_seconds"],
-                        game_info["hints_used"], game_info["score"]
-                    )
+                    config["save_score_function"](message.author.id, message.author.display_name, game_info["game_number"], game_info["completion_time_seconds"], game_info["hints_used"], game_info["score"])
                 elif game_key == "pips":
-                    config["save_score_function"](
-                        message.author.id, message.author.display_name,
-                        game_info["game_number"], game_info["difficulty"],
-                        game_info["completion_time"], game_info["score"], game_info["cookie"]
-                    )
-                
-                # 3. Handle DB update for latest game, role assignment, and introductions
+                    config["save_score_function"](message.author.id, message.author.display_name, game_info["game_number"], game_info["difficulty"], game_info["completion_time"], game_info["score"], game_info["cookie"])
+
+                # 3. Get player stats if a handler exists
+                if stats_handler := PLAYER_STATS_HANDLERS.get(game_key):
+                    player_stats = stats_handler(message.author.id, message.author.display_name, game_info)
+
+                # 4. Handle DB update for latest game, role assignment, and introductions
                 game_number_key = config["game_number_key"]
                 current_game_identifier = game_info.get(game_number_key)
 
                 if current_game_identifier:
                     latest_game_identifier = config["get_latest_game_number_function"](game_key)
-
-                    # Determine if the database should be updated
                     should_update_db = False
                     if game_key == "minute_cryptic":
-                        if latest_game_identifier is None: should_update_db = True
-                        else:
-                            try:
-                                current_date = date.fromisoformat(str(current_game_identifier))
-                                latest_date = date.fromisoformat(str(latest_game_identifier))
-                                if current_date > latest_date: should_update_db = True
-                            except (ValueError, TypeError) as e:
-                                print(f"Date parsing error in main_bot for {game_key}: {e}")
+                        if latest_game_identifier is None or date.fromisoformat(str(current_game_identifier)) > date.fromisoformat(str(latest_game_identifier)):
+                            should_update_db = True
                     else:
-                        try:
-                            current_num = int(current_game_identifier)
-                            latest_num = int(latest_game_identifier) if latest_game_identifier is not None else 0
-                            if latest_game_identifier is None or current_num > latest_num: should_update_db = True
-                        except (ValueError, TypeError):
-                            print(f"Could not compare identifiers for {game_key}: '{current_game_identifier}' vs '{latest_game_identifier}'.")
+                        if latest_game_identifier is None or int(current_game_identifier) > int(latest_game_identifier):
+                            should_update_db = True
 
-                    # Update database if needed
                     if should_update_db:
                         config["update_latest_game_number_function"](game_key, str(current_game_identifier))
                         print(f"Updated latest {config['name']} identifier to {current_game_identifier}")
 
-                    # Handle role assignment and determine if an introduction is needed
-                    should_introduce = await role_manager.handle_game_role_assignment(
-                        message.guild, message.author, game_key, config,
-                        current_game_identifier, latest_game_identifier
-                    )
+                    should_introduce = await role_manager.handle_game_role_assignment(message.guild, message.author, game_key, config, current_game_identifier, latest_game_identifier)
 
-                    # Post introduction message if required (and if game is configured for it)
                     if should_introduce and config.get("create_introduction"):
-                        await asyncio.sleep(1)  # ensure role permissions propagate
-                        await role_manager.introduce_player_in_game_channel(
-                            message.guild, message.author, config, game_info
-                        )
+                        await asyncio.sleep(1)
+                        await role_manager.introduce_player_in_game_channel(message.guild, message.author, config, game_info)
 
-                # 4. Generate post message (AFTER roles are handled)
-                if game_key == "wordle":
-                    post_message = post_generator.generate_wordle_post(
-                        message.author.display_name,
-                        game_info,
-                        updated_stats
-                    )
-                elif game_key == "connections":
-                    post_message = post_generator.generate_connections_post(
-                        message.author.display_name, game_info["game_number"], game_info, updated_stats
-                    )
-                elif game_key == "gisnep":
-                    post_message = post_generator.generate_gisnep_post(
-                        message.author.display_name, game_info["game_number"], game_info["completion_time"],
-                        player_stats, server_stats
-                    )
-                elif game_key == "bandle":
-                    post_message = post_generator.generate_bandle_post(
-                        message.author.display_name, game_info, player_stats
-                    )
-                else:
-                    # Only use acknowledgement if no post_message exists yet
-                    if not post_message and config.get("create_acknowledgement"):
-                    # If create_acknowledgement returns just an emoji, use it as a reaction instead of posting
-                        acknowledgement = config["create_acknowledgement"](message.author.display_name, game_info)
-                        if acknowledgement.strip() == "🤖":
-                            # Don't post this in chat — just react
-                            post_message = None
-                        else:
-                            post_message = acknowledgement
+                # 5. Generate post message using the new dispatcher
+                post_message = post_generator.generate_post(
+                    game_key, message.author.display_name, game_info, player_stats
+                )
 
-                # 5. Send the post message to the correct channel
+                # If no dynamic post was generated, fall back to the simple acknowledgement
+                if not post_message and config.get("create_acknowledgement"):
+                    acknowledgement = config["create_acknowledgement"](message.author.display_name, game_info)
+                    if acknowledgement.strip() != "🤖":
+                        post_message = acknowledgement
+
+                # 6. Send the post message
                 if post_message:
                     channel_name = config.get("chat_channel_name")
                     game_channel = discord.utils.get(message.guild.channels, name=channel_name)
                     if game_channel:
                         await game_channel.send(post_message)
                     else:
-                        print(f"Warning: Could not find channel '{channel_name}' for {config['name']}. Posting in original channel.")
+                        print(f"Warning: Could not find channel '{channel_name}'. Posting in original channel.")
                         await message.channel.send(post_message)
 
-                # 6. Acknowledge the original message
+                # 7. Acknowledge the original message
                 await message.add_reaction("🤖")
 
             except Exception as e:
