@@ -230,6 +230,52 @@ def _generate_connections_post(display_name: str, game_info: dict, player_stats:
     
     return opening_line
 
+# In post_generator.py
+
+def _format_salad_time(seconds: int) -> str:
+    """Helper function to format seconds into a M_s string."""
+    minutes, sec = divmod(seconds, 60)
+    return f"{minutes}m {sec}s"
+
+def _generate_word_salad_post(display_name: str, game_info: dict, player_stats: dict) -> str:
+    """Generates dynamic feedback for Word Salad based on completion time."""
+    game_number = game_info.get("game_number", "?")
+    time_seconds = game_info.get("completion_time_seconds", 0)
+    hints_used = game_info.get("hints_used", 0)
+    score = game_info.get("score", 0)
+    time_str = _format_salad_time(time_seconds)
+
+    # --- Part 1: The Opening Line (based on your time thresholds) ---
+
+    if time_seconds > 1200: # Over 20 minutes
+        opening_line = f"Did they take a nap halfway through? 😴 **{display_name}** finished Word Salad #{game_number} in a leisurely **{time_str}**."
+    elif time_seconds > 600: # Over 10 minutes
+        opening_line = f"That was a real head-scratcher! **{display_name}** wrestled with Word Salad #{game_number}, finishing in **{time_str}**."
+    elif time_seconds < 120: # Under 2 minutes
+        opening_line = f"⚡ Incredible speed! **{display_name}** blitzed through Word Salad #{game_number} in just **{time_str}**!"
+    else: # Neutral case for 2-10 minutes
+        opening_line = f"**{display_name}** solved Word Salad #{game_number} in **{time_str}**."
+
+    # --- Part 2: The Stat Spotlight ---
+    spotlights = []
+
+    # Add a spotlight for a new Personal Best time
+    if player_stats.get('is_new_pb'):
+        spotlights.append("🚀 A new personal best time!")
+
+    # Add context about hints used
+    if hints_used == 0 and time_seconds < 300: # No hints on a good time is impressive
+        spotlights.append("And they did it with **no hints**! Pure brainpower.")
+    elif hints_used > 0:
+        spotlights.append(f"They used **{hints_used}** hint{'s' if hints_used > 1 else ''} to solve it.")
+    
+    # Default fallback that mentions the score
+    if not spotlights:
+        spotlights.append(f"Their final score for the puzzle was **{score}** points.")
+    
+    # Combine and return
+    return f"{opening_line}\n{random.choice(spotlights)}"
+
 def generate_post(game_name: str, display_name: str, game_info: dict, player_stats: dict) -> str:
     """Routes the request to the appropriate sub-generator for the given game."""
 
@@ -238,6 +284,7 @@ def generate_post(game_name: str, display_name: str, game_info: dict, player_sta
         "connections": _generate_connections_post,
         "gisnep": _generate_gisnep_post,
         "bandle": _generate_bandle_post,
+        "word_salad": _generate_word_salad_post,
     }
 
     generator_func = game_generators.get(game_name.lower())
