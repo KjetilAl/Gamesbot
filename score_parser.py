@@ -64,72 +64,78 @@ def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
         "grid": grid  # Add the grid to the result
     }
 
+# In score_parser.py
+
 def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
     """
-    Extract puzzle number, guesses, and skill score from a Connections result.
-    Handles both old and new formats.
+    Extract puzzle number, guesses, solve order, and other details from a Connections result.
     """
     lines = message_content.strip().split("\n")
-    puzzle_match = None
-    puzzle_start_index = -1
-    for i, line in enumerate(lines):
-        if "Puzzle #" in line:
-            puzzle_match = re.search(r"Puzzle #(\d+)", line)
-            puzzle_start_index = i
-            break
-
+    puzzle_match = re.search(r"Puzzle #(\d+)", message_content)
     if not puzzle_match:
-        print("Connections - Not a valid Connections result (puzzle number not found)")
         return None
 
     puzzle_number = int(puzzle_match.group(1))
 
-    # Process game lines: skip empty, Archive, or Skill lines
-    game_lines = [line.strip() for line in lines[puzzle_start_index + 1:]
-                  if line.strip() and not line.lower().startswith("archive")]
-
-    # Optional: extract skill score
-    skill_score = None
-    for line in game_lines:
-        skill_match = re.search(r"Skill\s+(\d+)/99", line, re.IGNORECASE)
-        if skill_match:
-            skill_score = int(skill_match.group(1))
+    # Process game lines, starting after the puzzle number line
+    game_lines = [line.strip() for line in lines if line.strip()]
+    puzzle_start_index = -1
+    for i, line in enumerate(game_lines):
+        if f"Puzzle #{puzzle_number}" in line:
+            puzzle_start_index = i
             break
+    
+    if puzzle_start_index == -1:
+        game_lines_to_process = game_lines
+    else:
+        game_lines_to_process = game_lines[puzzle_start_index + 1:]
 
-    # Extract uniqueness
-    uniqueness_text = None
-    for line in game_lines:
-        uniqueness_match = re.search(r"Uniqueness\s+(.+)", line, re.IGNORECASE)
-        if uniqueness_match:
-            uniqueness_text = uniqueness_match.group(1).strip()
-            break
-
-    found_colors = set()
-    mistakes = 0
     all_guesses = []
-    first_successful = {}
+    mistakes = 0
+    found_colors = set()
+    first_successful = {} # Stores the guess index of the first time a color was found
+    
+    # New: Detect a "Rainbow Wrong" guess
+    rainbow_wrong_guess = False
+    rainbow_set = {'🟨', '🟩', '🟦', '🟪'}
 
-    for line in game_lines:
-        if len(line) == 4 and len(set(line)) == 1 and line[0] in "🟨🟪🟩🟦":
+    for line in game_lines_to_process:
+        # Skip metadata lines
+        if line.lower().startswith(("skill", "uniqueness", "archive")):
+            continue
+        
+        # Check for a successful group solve
+        if len(line) == 4 and len(set(line)) == 1 and line[0] in "🟨🟩🟦🟪":
             color = line[0]
-            all_guesses.append(color)
+            all_guesses.append(color * 4) # Store the actual solved line
             if color not in found_colors:
                 found_colors.add(color)
-                first_successful[color] = len(all_guesses) - 1
-        elif line.startswith("Skill") or line.startswith("Uniqueness"):
-            continue
+                first_successful[color] = len(all_guesses)
+        # It's a mistake line
         else:
             mistakes += 1
-            all_guesses.append("X")
+            all_guesses.append(line) # Store the actual mistake content
+            # Check if this mistake is a "Rainbow Wrong"
+            if len(line) == 4 and set(line) == rainbow_set:
+                rainbow_wrong_guess = True
 
-    score_details = calculate_connections_score(all_guesses, found_colors, first_successful, mistakes, skill_score)
+    # New: Determine the solve order
+    # Sort the found colors by the index of their first appearance
+    sorted_colors = sorted(first_successful.items(), key=lambda item: item[1])
+    solve_order = [color for color, index in sorted_colors]
+
+    finished_game = len(found_colors) == 4
+    perfect_game = finished_game and mistakes == 0
 
     return {
         "game_number": puzzle_number,
-        "guesses": all_guesses,
-        "num_guesses": len(all_guesses),
-        "uniqueness": uniqueness_text,
-        **score_details
+        "finished_game": finished_game,
+        "perfect_game": perfect_game,
+        "mistake_count": mistakes,
+        "solved_purple_first": solve_order[0] == '🟪' if solve_order else False,
+        "solve_order": solve_order,
+        "rainbow_wrong_guess": rainbow_wrong_guess,
+        "guesses": all_guesses, # Now contains actual guess content
     }
 
 def calculate_connections_score(guesses, found_colors, first_successful, mistake_count, skill_score=None):
