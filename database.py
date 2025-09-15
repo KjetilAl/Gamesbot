@@ -788,13 +788,18 @@ def get_connections_leaderboard(period: str = 'weekly'):
     grandmaster = cursor.fetchone()
 
     # The Pathfinder
+    # Build uniqueness filter correctly
+    if where_clause:
+        uniqueness_where = f"{where_clause} AND uniqueness_text IS NOT NULL"
+    else:
+        uniqueness_where = "WHERE uniqueness_text IS NOT NULL"
+
     cursor.execute(f"""
         SELECT display_name, uniqueness_text
         FROM connections_scores
-        {where_clause}
-        WHERE uniqueness_text IS NOT NULL
+        {uniqueness_where}
     """, params)
-    uniqueness_scores = cursor.fetchall()
+        uniqueness_scores = cursor.fetchall()
 
     pathfinder = None
     if uniqueness_scores:
