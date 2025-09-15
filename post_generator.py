@@ -38,7 +38,7 @@ def _generate_wordle_post(display_name: str, game_info: dict[str, any], player_s
         if luck > 85:
             spotlights.append("A **Luck** score over **85**? The dictionary gods were smiling today! ✨")
         elif luck < 15:
-            spotlights.append("Only **{luck}** luck? They earned that win the hard way. Pure skill.")
+            spotlights.append(f"Only **{luck}** luck? They earned that win the hard way. Pure skill.")
 
     # Always have a default fallback if no other conditions are met
     if not spotlights:
