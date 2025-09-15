@@ -799,7 +799,7 @@ def get_connections_leaderboard(period: str = 'weekly'):
         FROM connections_scores
         {uniqueness_where}
     """, params)
-        uniqueness_scores = cursor.fetchall()
+    uniqueness_scores = cursor.fetchall()
 
     pathfinder = None
     if uniqueness_scores:
