@@ -53,60 +53,57 @@ def _generate_wordle_post(display_name: str, game_info: dict[str, any], player_s
     # Combine the opening line with a randomly chosen spotlight for variety
     return f"{opening_line}\n{random.choice(spotlights)}"
     
-def _generate_bandle_post(display_name, game_info, player_stats):
-    """Generates a dynamic Bandle post based on the player's score and stats."""
-    game_number = game_info.get("game_number")
-    attempts = game_info.get("attempts")
-    bonus_rounds_completed = game_info.get("bonus_rounds_completed")
-    bonus_rounds_total = game_info.get("bonus_rounds_total")
-    bonus_emojis = game_info.get("bonus_emojis")
-    current_streak = game_info.get("current_streak")
+# In post_generator.py
 
-    # --- Opening Line ---
-    opening_line = f"{display_name} just finished their set for Bandle #{game_number}!"
+def _generate_bandle_post(display_name: str, game_info: dict, player_stats: dict) -> str:
+    """Generates a dynamic and tonally appropriate Bandle post."""
+    game_number = game_info.get("game_number", "?")
+    attempts = game_info.get("attempts", 7)
+    solved = game_info.get("solved", False)
+    bonus_completed = game_info.get("bonus_rounds_completed", 0)
+    bonus_total = game_info.get("bonus_rounds_total", 0)
 
-    # --- Stat Spotlight / Encore ---
+    # --- Part 1: The Opening Line (based on performance) ---
+    
+    if not solved:
+        opening_line = f"A tough one! The artist for Bandle #{game_number} stumped **{display_name}** today."
+    elif attempts == 1:
+        opening_line = f"🤯 A true music savant! **{display_name}** identified the artist for Bandle #{game_number} in a single guess!"
+    elif attempts <= 3:
+        opening_line = f"A great ear! **{display_name}** nailed the artist for Bandle #{game_number} in just {attempts} tracks. 🎵"
+    else: # Neutral case for 4-6 guesses
+        opening_line = f"**{display_name}** finished their set for Bandle #{game_number}, getting the artist in {attempts} guesses."
+
+    # --- Part 2: The Stat Spotlight (The Encore) ---
     spotlights = []
 
-    # Streaks
-    if current_streak and current_streak > 2:
-        spotlights.append(f"They're on a {current_streak}-day streak! The crowd goes wild! 🔥")
-
-    # Quick guess
-    if attempts == 1:
-        spotlights.append("In ONE guess! A true music savant! 🤯")
-    elif attempts and attempts <= 3:
-        spotlights.append(f"A great ear! They only needed {attempts} tracks to nail it. 🎵")
-
-    # Bonus rounds
-    emoji_themes = {
-        "🎤": "lyrical knowledge", "🖼️": "artist recognition", "🌍": "music geography",
-        "🧩": "trivia mastery", "📅": "historical timeline", "⏱️": "rhythmic sense",
-        "🎸": "instrumental ear", "🧑": "band member knowledge", "💿": "discography expertise"
-    }
-
-    if bonus_rounds_completed and bonus_rounds_completed > 0:
-        completed_emojis = bonus_emojis.split()
-        if completed_emojis:
-            highlight_emoji = random.choice(completed_emojis)
+    # Spotlight on a perfect bonus round score (highest priority)
+    if bonus_total > 0 and bonus_completed == bonus_total:
+        emoji_themes = { "🎤": "lyrical knowledge", "🖼️": "artist recognition", "💿": "discography expertise" }
+        bonus_emojis = game_info.get("bonus_emojis", "").split()
+        if bonus_emojis:
+            highlight_emoji = random.choice(bonus_emojis)
             highlight_theme = emoji_themes.get(highlight_emoji, "musical skill")
-
-            if bonus_rounds_completed == bonus_rounds_total:
-                spotlights.append(f"A perfect score on the bonus rounds! Their {highlight_theme} {highlight_emoji} was especially impressive! 💯")
-            else:
-                spotlights.append(f"Great work on the bonus rounds! They showed off some serious {highlight_theme} {highlight_emoji}.")
-
-    # Fallback/default spotlight
-    if not spotlights:
-        player_avg_attempts = player_stats.get("avg_attempts", 0)
-        if player_avg_attempts > 0 and attempts < player_avg_attempts:
-            spotlights.append(f"That's faster than their average of {player_avg_attempts:.2f} guesses! They're getting better and better! 📈")
+            spotlights.append(f"They also went a perfect **{bonus_completed}/{bonus_total}** on the bonus rounds, showing off some serious {highlight_theme}! 💯")
         else:
-            spotlights.append("Another great performance in the books. 🤘")
+            spotlights.append(f"They also aced the bonus rounds, going a perfect **{bonus_completed}/{bonus_total}**! 💯")
 
-    # --- Combine and return ---
-    encore = random.choice(spotlights)
-    return f"{opening_line}\n{encore}"
+    # Spotlight on streaks from historical player stats
+    current_streak = player_stats.get("current_streak", 0)
+    if player_stats.get("is_new_max_streak") and current_streak > 3:
+        spotlights.append(f"🚀 That's a new personal best streak of **{current_streak}**! The crowd goes wild!")
+    elif current_streak > 3:
+        spotlights.append(f"That's **{current_streak}** wins in a row! They're on fire! 🔥")
+    
+    # Default fallback: a simple, informative statement about the bonus rounds
+    if not spotlights and bonus_total > 0 and solved:
+        spotlights.append(f"On the bonus rounds, they scored **{bonus_completed}/{bonus_total}**.")
+
+    # Combine and return
+    if spotlights:
+        return f"{opening_line}\n{random.choice(spotlights)}"
+        
+    return opening_line
 
 def _generate_gisnep_post(display_name, game_info, player_stats):
     """Generates a dynamic Gisnep post based on the player's score and stats."""
