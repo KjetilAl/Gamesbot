@@ -48,6 +48,51 @@ async def build_wordle_leaderboard_embed(title: str, leaderboard_data: dict, per
     embed.set_footer(text=emit_footer)
     return embed
 
+async def build_sexaginta_leaderboard_embed(title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
+    """
+    Builds a Discord embed for the enhanced Sexaginta-quattuordle leaderboard.
+    """
+    embed = discord.Embed(
+        title=title,
+        description=f"Period: {period.capitalize()}",
+        color=color
+    )
+
+    # Top Players
+    top_players = leaderboard_data.get("top_players")
+    if top_players:
+        medals = ["🥇", "🥈", "🥉"]
+        player_list = []
+        for i, (player, avg_pct, avg_score, plays) in enumerate(top_players):
+            player_list.append(f"{medals[i]} **{player}** - {avg_pct:.2f}% solved, {avg_score:.2f} avg score, {plays} plays")
+        embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
+    else:
+        embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
+
+    # Superlatives
+    superlatives = []
+    strategist = leaderboard_data.get("strategist")
+    if strategist:
+        player, avg_score = strategist
+        superlatives.append(f"🧠 The Strategist Award to **{player}** for the highest average weighted score of {avg_score:.2f}.")
+
+    finisher = leaderboard_data.get("finisher")
+    if finisher:
+        player, avg_pct = finisher
+        superlatives.append(f"✅ The Finisher Award to **{player}** for the highest average percent solved of {avg_pct:.2f}%.")
+
+    veteran = leaderboard_data.get("veteran")
+    if veteran:
+        player, plays = veteran
+        superlatives.append(f"🎖️ The Veteran Award to **{player}** for the most plays with {plays} games.")
+
+    if superlatives:
+        embed.add_field(name="✨ Superlatives", value="\n".join(superlatives), inline=False)
+
+    emit_footer = f"Posted: {discord.utils.utcnow().strftime('%Y-%m-%d')}"
+    embed.set_footer(text=emit_footer)
+    return embed
+
 async def build_gisnep_leaderboard_embed(title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
     """
     Builds a Discord embed for the enhanced Gisnep leaderboard.

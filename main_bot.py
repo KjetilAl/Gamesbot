@@ -61,11 +61,16 @@ def get_bandle_stats(user_id: int, user_name: str, game_info: dict) -> dict:
         game_info["attempts"], game_info["bonus_rounds_completed"]
     )
 
+def get_sexaginta_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    """Gets Sexaginta-quattuordle player stats."""
+    return database.update_sexaginta_stats(user_id, user_name, game_info)
+
 PLAYER_STATS_HANDLERS = {
     "wordle": get_wordle_stats,
     "connections": get_connections_stats,
     "gisnep": get_gisnep_stats,
     "bandle": get_bandle_stats,
+    "sexaginta": get_sexaginta_stats,
 }
 
 
@@ -126,6 +131,8 @@ async def on_message(message):
                     config["save_score_function"](message.author.id, message.author.display_name, game_info["game_number"], game_info["completion_time_seconds"], game_info["hints_used"], game_info["score"])
                 elif game_key == "pips":
                     config["save_score_function"](message.author.id, message.author.display_name, game_info["game_number"], game_info["difficulty"], game_info["completion_time"], game_info["score"], game_info["cookie"])
+                elif game_key == "sexaginta":
+                    config["save_score_function"](message.author.id, message.author.display_name, game_info)
 
                 # 3. Get player stats if a handler exists
                 if stats_handler := PLAYER_STATS_HANDLERS.get(game_key):
@@ -227,6 +234,7 @@ async def get_leaderboard_embed(game_key: str, period: str) -> Optional[discord.
         "Framed": discord.Color.red(), "Gisnep": discord.Color.blue(),
         "Bandle": discord.Color.gold(), "Minute Cryptic": discord.Color.dark_teal(),
         "Word Salad": discord.Color.green(), "Pips": discord.Color.orange(),
+        "Sexaginta-Quattuordle": discord.Color.dark_gold(),
     }
     color = game_colors.get(game_name, discord.Color.from_rgb(128, 128, 128))
     title = f"🏆 The {game_name} {period.capitalize()} Leaderboard 🏆"

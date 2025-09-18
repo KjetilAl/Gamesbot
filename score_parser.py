@@ -20,6 +20,79 @@ WORD_SALAD_TIME_PATTERN = re.compile(r"⌛(\d+m\s*\d+s)", re.IGNORECASE)
 WORD_SALAD_HINTS_PATTERN = re.compile(r"❓(\d+)", re.IGNORECASE)
 PIPS_PATTERN = re.compile(r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|🔴)\s*\n(\d{1,2}:\d{2})\s*(🍪)?", re.IGNORECASE)
 
+SEXAGINTA_HEADER_RE = re.compile(
+    r"#SexagintaQuattuordle\s+(\d+)\s+(\d{1,2}|X)\/(\d{1,2})\s*(?:\(score\s*([\d,]+)\s*,\s*([\d]{1,3})%\))?",
+    re.IGNORECASE
+)
+
+# Emoji band mapping
+SEXAGINTA_BANDS = {
+    "purple": {"💜","🟪","🟣"},
+    "blue":   {"💙","🟦","🔵"},
+    "green":  {"💚","🟩","🟢"},
+    "yellow": {"💛","🟨","🟡"},
+    "orange": {"🧡","🟧","🟠"},
+    "red":    {"❤️","🟥","🔴","❌"},
+}
+
+SEXAGINTA_BAND_WEIGHTS = {
+    "purple": 6,
+    "blue": 5,
+    "green": 4,
+    "yellow": 3,
+    "orange": 2,
+    "red": 1
+}
+
+def parse_sexaginta_score(text: str, author_id: int = None) -> Optional[Dict[str, Any]]:
+    header_match = SEXAGINTA_HEADER_RE.search(text)
+    if not header_match:
+        return None
+
+    game_number = int(header_match.group(1))
+    guesses_used = header_match.group(2)
+    guesses_allowed = int(header_match.group(3))
+    score_value = int(header_match.group(4).replace(",", "")) if header_match.group(4) else None
+    percent_solved = int(header_match.group(5)) if header_match.group(5) else None
+
+    # Extract seed from URL
+    seed_match = re.search(r"https://64ordle\.au/\?seed=(\d+)", text)
+    seed = int(seed_match.group(1)) if seed_match else None
+
+    lines = text.split('\n')
+    grid_lines: List[str] = []
+    for ln in lines:
+        if any(ch in ln for ch in ("🟪","🟦","🟩","🟨","🟧","🟥","💜","💙","💚","💛","🧡","❤️","🔵","🔴","❌")):
+            grid_lines.append(ln)
+
+    # --- Advanced band parsing ---
+    band_counts = {band: 0 for band in SEXAGINTA_BANDS.keys()}
+    for row in grid_lines:
+        for ch in row:
+            for band, symbols in SEXAGINTA_BANDS.items():
+                if ch in symbols:
+                    band_counts[band] += 1
+                    break
+
+    # Calculate weighted performance score
+    weighted_score = sum(SEXAGINTA_BAND_WEIGHTS[b] * c for b, c in band_counts.items())
+    max_score = 64 * SEXAGINTA_BAND_WEIGHTS["purple"]
+    performance_pct = (weighted_score / max_score) * 100 if max_score else None
+
+    return {
+        "game_number": game_number,
+        "guesses_used": guesses_used,
+        "guesses_allowed": guesses_allowed,
+        "score_value": score_value,
+        "pct": percent_solved,
+        "grid_lines": grid_lines,
+        "seed": seed,
+        "band_counts": band_counts,
+        "weighted_score": weighted_score,
+        "performance_pct": round(performance_pct, 1) if performance_pct is not None else None,
+        "author_id": author_id
+    }
+
 def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
     wordle_match = WORDLE_PATTERN.search(message_content)
     skill_luck_match = SKILL_LUCK_PATTERN.search(message_content)
@@ -136,6 +209,7 @@ def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
         "solve_order": solve_order,
         "rainbow_wrong_guess": rainbow_wrong_guess,
         "guesses": all_guesses, # Now contains actual guess content
+        "num_guesses": len(all_guesses)
     }
 
 def calculate_connections_score(guesses, found_colors, first_successful, mistake_count, skill_score=None):
@@ -513,6 +587,10 @@ def is_word_salad_message(message_content: str) -> bool:
 def is_pips_message(message_content: str) -> bool:
     """Checks if a message contains a Pips score."""
     return "pips #" in message_content.lower() and PIPS_PATTERN.search(message_content) is not None
+
+def is_sexaginta_message(message_content: str) -> bool:
+    """Checks if a message contains a Sexaginta-quattuordle score."""
+    return "sexagintaquattuordle" in message_content.lower() and SEXAGINTA_HEADER_RE.search(message_content) is not None
     
 def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"

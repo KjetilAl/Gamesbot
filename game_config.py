@@ -16,6 +16,7 @@ LEADERBOARD_KEY_MAPPINGS = {
     "Minute Cryptic": ["display_name", "games_played", "solved_count", "avg_score"],
     "Word Salad": ["display_name", "games_played", "avg_time", "best_time", "avg_hints", "total_score", "avg_score"],
     "Pips": ["display_name", "total_score", "games_played", "cookie_count"],
+    "Sexaginta": ["display_name", "avg_pct", "avg_score", "plays"],
 }
 
 # Game configurations dictionary
@@ -134,5 +135,21 @@ GAME_CONFIGS = {
         "create_acknowledgement": score_parser.create_pips_acknowledgement,
         "create_introduction": score_parser.create_pips_introduction,
         "game_number_key": "game_number"
+    },
+    "sexaginta": {
+        "name": "Sexaginta-Quattuordle",
+        "aliases": ["64ordle", "sexaginta"],
+        "is_game_message": score_parser.is_sexaginta_message,
+        "parse_function": score_parser.parse_sexaginta_score,
+        "save_score_function": database.save_sexaginta_score,
+        "get_leaderboard_function": database.get_sexaginta_leaderboard,
+        "embed_builder_function": embed_builder.build_sexaginta_leaderboard_embed,
+        "leaderboard_keys": LEADERBOARD_KEY_MAPPINGS["Sexaginta"],
+        "get_latest_game_number_function": database.get_latest_game_number_from_db,
+        "update_latest_game_number_function": database.update_latest_game_number_in_db,
+        "chat_channel_name": "64ordle-chat",
+        "player_role_name": "64ordle-player",
+        "game_number_key": "game_number",
+        "create_introduction": True
     }
 }

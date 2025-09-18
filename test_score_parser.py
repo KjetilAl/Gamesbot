@@ -263,6 +263,12 @@ Full parsed object:
             parsefn = score_parser.parse_bandle_score,
             matchfields = ['game_number', 'attempts', 'solved', 'bonus_rounds_completed', 'bonus_rounds_total', 'bonus_emojis', 'current_streak', 'max_streak', 'total_score'])
 
+    def test_parse_sexaginta_score(self):
+        self.do_parse_test(
+            sheet = self.sheets['Sexaginta'],
+            parsefn = score_parser.parse_sexaginta_score,
+            matchfields = ['game_number', 'guesses_used', 'guesses_allowed', 'score_value', 'pct', 'seed', 'weighted_score', 'performance_pct'])
+
 class TestPipsParser(unittest.TestCase):
     def test_calculate_pips_score(self):
         # Test cases for easy difficulty

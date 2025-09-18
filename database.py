@@ -37,7 +37,10 @@ def initialize_db():
                 connections_avg_mistakes REAL DEFAULT 0.0,
                 gisnep_total_plays INTEGER DEFAULT 0,
                 gisnep_avg_seconds REAL DEFAULT 0.0,
-                gisnep_personal_best_seconds INTEGER -- Can be NULL
+                gisnep_personal_best_seconds INTEGER, -- Can be NULL
+                sexaginta_total_plays INTEGER DEFAULT 0,
+                sexaginta_avg_pct REAL DEFAULT 0.0,
+                sexaginta_avg_weighted_score REAL DEFAULT 0.0
             )
         """)
         # Connections
@@ -160,10 +163,25 @@ def initialize_db():
             )
         """)
 
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sexaginta_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                display_name TEXT,
+                game_number INTEGER NOT NULL,
+                guesses_used TEXT,
+                guesses_allowed INTEGER,
+                percent_solved REAL,
+                weighted_score REAL,
+                grid_text TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+
         conn.commit()
         print("DB: All tables created or verified.")
-        }
 
+        migrations = {}
         for table, old_column in migrations.items():
             if old_column:
                 try:
@@ -183,7 +201,7 @@ def initialize_db():
         initial_games = [
             ('Wordle', '0'), ('Connections', '0'), ('Framed', '0'),
             ('Gisnep', '0'), ('Bandle', '0'), ('Minute Cryptic', '2000-01-01'),
-            ('Pips', '0')
+            ('Pips', '0'), ('Sexaginta', '0')
         ]
         try:
             cursor.executemany(
@@ -226,6 +244,26 @@ def save_wordle_score(user_id, display_name, game_number, attempts, skill=None, 
         INSERT INTO wordle_scores (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (user_id, display_name, game_number, attempts, skill, luck, hard_mode, total_score, created_at))
+    conn.commit()
+    conn.close()
+
+def save_sexaginta_score(user_id, display_name, game_info):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO sexaginta_scores
+        (user_id, display_name, game_number, guesses_used, guesses_allowed, percent_solved, weighted_score, grid_text, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    """, (
+        str(user_id),
+        display_name,
+        game_info.get("game_number"),
+        str(game_info.get("guesses_used")),
+        game_info.get("guesses_allowed"),
+        game_info.get("performance_pct"),
+        game_info.get("weighted_score"),
+        "\n".join(game_info.get("grid_lines", []))
+    ))
     conn.commit()
     conn.close()
 
@@ -568,6 +606,47 @@ def update_bandle_player_stats(user_id, display_name, attempts, bonus_rounds_com
         "total_plays": new_total_plays,
         "avg_attempts": new_avg_attempts,
         "avg_bonus_rounds": new_avg_bonus_rounds
+    }
+
+def update_sexaginta_stats(user_id, display_name, game_info):
+    """Update player stats for Sexaginta-quattuordle after a new score is submitted."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT sexaginta_total_plays, sexaginta_avg_pct, sexaginta_avg_weighted_score FROM player_stats WHERE user_id = ?", (str(user_id),))
+    stats = cursor.fetchone()
+
+    if not stats or stats[0] is None:
+        total_plays, avg_pct, avg_weighted_score = 0, 0.0, 0.0
+        cursor.execute("SELECT user_id FROM player_stats WHERE user_id = ?", (str(user_id),))
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (str(user_id), display_name))
+    else:
+        total_plays, avg_pct, avg_weighted_score = stats
+
+    performance_pct = game_info.get("performance_pct", 0)
+    weighted_score = game_info.get("weighted_score", 0)
+
+    new_total_plays = total_plays + 1
+    new_avg_pct = ((avg_pct * total_plays) + performance_pct) / new_total_plays
+    new_avg_weighted_score = ((avg_weighted_score * total_plays) + weighted_score) / new_total_plays
+
+    cursor.execute("""
+        UPDATE player_stats
+        SET display_name = ?,
+            sexaginta_total_plays = ?,
+            sexaginta_avg_pct = ?,
+            sexaginta_avg_weighted_score = ?
+        WHERE user_id = ?
+    """, (display_name, new_total_plays, new_avg_pct, new_avg_weighted_score, str(user_id)))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "total_plays": new_total_plays,
+        "avg_pct": new_avg_pct,
+        "avg_weighted_score": new_avg_weighted_score
     }
 
 def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, clue: str, word_length: int, score_description: str):
@@ -1011,6 +1090,66 @@ def get_word_salad_leaderboard(period: str = 'overall'):
     leaderboard = cursor.fetchall()
     conn.close()
     return leaderboard
+
+def get_sexaginta_leaderboard(period="weekly"):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    where_clause, params = get_scores_by_period(period, "created_at")
+
+    # Top players
+    cursor.execute(f"""
+        SELECT display_name, AVG(percent_solved) as avg_pct, AVG(weighted_score) as avg_score, COUNT(*) as plays
+        FROM sexaginta_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        ORDER BY avg_pct DESC, avg_score DESC
+        LIMIT 10
+    """, params)
+    top_players = cursor.fetchall()
+
+    # Superlatives
+    # The Strategist: Player with the highest average weighted score.
+    cursor.execute(f"""
+        SELECT display_name, AVG(weighted_score) as avg_score
+        FROM sexaginta_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        HAVING COUNT(*) > 3
+        ORDER BY avg_score DESC
+        LIMIT 1
+    """, params)
+    strategist = cursor.fetchone()
+
+    # The Finisher: Player with the highest average percent solved.
+    cursor.execute(f"""
+        SELECT display_name, AVG(percent_solved) as avg_pct
+        FROM sexaginta_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        HAVING COUNT(*) > 3
+        ORDER BY avg_pct DESC
+        LIMIT 1
+    """, params)
+    finisher = cursor.fetchone()
+
+    # The Veteran: Player with the most plays.
+    cursor.execute(f"""
+        SELECT display_name, COUNT(*) as plays
+        FROM sexaginta_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        ORDER BY plays DESC
+        LIMIT 1
+    """, params)
+    veteran = cursor.fetchone()
+
+    conn.close()
+    return {
+        "top_players": top_players,
+        "strategist": strategist,
+        "finisher": finisher,
+        "veteran": veteran
+    }
 
 def get_pips_leaderboard(period: str = 'overall'):
     """Fetch Pips leaderboard data, supporting different periods and stats."""
