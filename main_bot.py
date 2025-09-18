@@ -5,6 +5,7 @@ import zoneinfo
 from discord.ext import commands, tasks
 from typing import Dict, List, Tuple, Optional, Any
 from datetime import date
+import traceback
 
 # Import custom modules
 import database
@@ -94,10 +95,18 @@ async def on_message(message):
         
     content = message.content
     processed = False
+
+    # --- Performance Optimization: Quick Guard Clause ---
+    if "#" not in content and "wordle" not in content.lower():
+        # This filters out most non-game messages very quickly
+        await bot.process_commands(message)
+        return
     
     # Check each game configuration to see if the message matches
     for game_key, config in game_config.GAME_CONFIGS.items():
-        if config["is_game_message"](content):
+        # Check for both primary game name and its aliases
+        game_names_to_check = [game_key] + config.get("aliases", [])
+        if any(name in content.lower() for name in game_names_to_check) and config["is_game_message"](content):
             print(f"Detected {config['name']} score from {message.author.display_name}")
             processed = True
             
@@ -188,8 +197,9 @@ async def on_message(message):
 
             except Exception as e:
                 print(f"Error processing {config['name']} score: {e}")
+                traceback.print_exc() # Print full stack trace
                 await message.channel.send(f"⚠️ There was an error processing your {config['name']} score.")
-            
+
             break
     
     if not processed:
