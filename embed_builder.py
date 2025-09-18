@@ -48,51 +48,6 @@ async def build_wordle_leaderboard_embed(title: str, leaderboard_data: dict, per
     embed.set_footer(text=emit_footer)
     return embed
 
-async def build_sexaginta_leaderboard_embed(title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
-    """
-    Builds a Discord embed for the enhanced Sexaginta-quattuordle leaderboard.
-    """
-    embed = discord.Embed(
-        title=title,
-        description=f"Period: {period.capitalize()}",
-        color=color
-    )
-
-    # Top Players
-    top_players = leaderboard_data.get("top_players")
-    if top_players:
-        medals = ["🥇", "🥈", "🥉"]
-        player_list = []
-        for i, (player, avg_pct, avg_score, plays) in enumerate(top_players):
-            player_list.append(f"{medals[i]} **{player}** - {avg_pct:.2f}% solved, {avg_score:.2f} avg score, {plays} plays")
-        embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
-    else:
-        embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
-
-    # Superlatives
-    superlatives = []
-    strategist = leaderboard_data.get("strategist")
-    if strategist:
-        player, avg_score = strategist
-        superlatives.append(f"🧠 The Strategist Award to **{player}** for the highest average weighted score of {avg_score:.2f}.")
-
-    finisher = leaderboard_data.get("finisher")
-    if finisher:
-        player, avg_pct = finisher
-        superlatives.append(f"✅ The Finisher Award to **{player}** for the highest average percent solved of {avg_pct:.2f}%.")
-
-    veteran = leaderboard_data.get("veteran")
-    if veteran:
-        player, plays = veteran
-        superlatives.append(f"🎖️ The Veteran Award to **{player}** for the most plays with {plays} games.")
-
-    if superlatives:
-        embed.add_field(name="✨ Superlatives", value="\n".join(superlatives), inline=False)
-
-    emit_footer = f"Posted: {discord.utils.utcnow().strftime('%Y-%m-%d')}"
-    embed.set_footer(text=emit_footer)
-    return embed
-
 async def build_gisnep_leaderboard_embed(title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
     """
     Builds a Discord embed for the enhanced Gisnep leaderboard.
@@ -179,6 +134,22 @@ async def build_connections_leaderboard_embed(title: str, leaderboard_data: dict
     embed.set_footer(text=emit_footer)
     return embed
 
+def _format_sexaginta_fields(row: dict) -> list[str]:
+    """Helper function to format the fields for a Sexaginta-Quattuordle leaderboard row."""
+    avg_pct = row.get("avg_pct")
+    avg_score = row.get("avg_score")
+    plays = row.get("plays")
+    
+    details = []
+    if avg_pct is not None:
+        details.append(f"📊 Avg % Solved: **{avg_pct:.2f}%**")
+    if avg_score is not None:
+        details.append(f"⭐ Avg Score: **{avg_score:.2f}**")
+    if plays is not None:
+        details.append(f"🎮 Games Played: **{plays}**")
+    
+    return details
+
 async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], period: str, color: discord.Color) -> discord.Embed:
     """
     Builds a Discord embed for a game leaderboard, formatted based on game type.
@@ -203,6 +174,7 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
         "Minute Cryptic": lambda x: x.get("avg_score", 0),
         "Word Salad": lambda x: x.get("avg_score", -float('inf')) if x.get("avg_score") is not None else -float('inf'),
         "Pips": lambda x: (x.get("cookie_count", 0), x.get("total_score", 0)),
+        "Sexaginta-Quattuordle": lambda x: (x.get("avg_pct", 0), x.get("avg_score", 0)),
     }
 
     reverse_flags = {
@@ -210,6 +182,7 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
         "Minute Cryptic": True,
         "Word Salad": True,
         "Pips": True,
+        "Sexaginta-Quattuordle": True,
     }
 
     if game_name in SORT_KEYS:
@@ -321,8 +294,10 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
             if row.get("is_cookie_monster"):
                 name = name.replace(" 🍪", "")
                 name = f"{name} 🍪 (Cookie Monster)"
-
-
+        
+        elif game_name == "Sexaginta-Quattuordle":
+            details = _format_sexaginta_fields(row)
+            
         field_value = "\n".join(details)
         embed.add_field(
             name=f"{medal} {name}",
