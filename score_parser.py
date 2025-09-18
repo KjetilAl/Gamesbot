@@ -32,7 +32,7 @@ SEXAGINTA_BANDS = {
     "green":  {"💚","🟩","🟢"},
     "yellow": {"💛","🟨","🟡"},
     "orange": {"🧡","🟧","🟠"},
-    "red":    {"❤️","🟥","🔴","❌"},
+    "red":    {"❤️","🟥","🔴","❌", "💕", "🔺"},
 }
 
 SEXAGINTA_BAND_WEIGHTS = {
@@ -43,6 +43,67 @@ SEXAGINTA_BAND_WEIGHTS = {
     "orange": 2,
     "red": 1
 }
+
+SEXAGINTA_EMOJI_SCORES = {
+    # Fixed value emoji
+    "💜": 3, "🟣": 12,
+    "💙": 13, "🔵": 24,
+    "💚": 25, "🟢": 36,
+    "💛": 37, "🟡": 48,
+    "🧡": 49, "🟠": 60,
+    "❤️": 61, "🔴": 70,
+    "❤": 61, # Alternative heart emoji
+    "❌": 71, # Unsolved
+
+    # Emoji with ranged values (squares)
+    # The actual score is sequential within the range.
+    "🟪": (4, 11),
+    "🟦": (14, 23),
+    "🟩": (26, 35),
+    "🟨": (38, 47),
+    "🟧": (50, 59),
+    "🟥": (62, 68),
+
+    # Unknown emoji from user's post
+    "💕": None, # Pink heart, unknown value
+    "🔺": None, # Red triangle, unknown value
+}
+
+def calculate_sexaginta_score_from_grid(grid_lines: List[str]) -> Optional[int]:
+    """
+    Calculates the total score from a Sexaginta-quattuordle grid.
+    The score is the sum of the guess counts for each of the 64 words.
+    This function assumes that square emojis are numbered sequentially.
+    """
+    if not grid_lines:
+        return None
+
+    all_emojis = "".join(grid_lines)
+
+    # Count occurrences of each square emoji to handle sequential scoring
+    square_counts = {
+        "🟪": 0, "🟦": 0, "🟩": 0, "🟨": 0, "🟧": 0, "🟥": 0
+    }
+
+    total_score = 0
+    unknown_emojis_found = False
+
+    for emoji in all_emojis:
+        if emoji in square_counts:
+            base_score, _ = SEXAGINTA_EMOJI_SCORES[emoji]
+            total_score += base_score + square_counts[emoji]
+            square_counts[emoji] += 1
+        elif emoji in SEXAGINTA_EMOJI_SCORES:
+            score = SEXAGINTA_EMOJI_SCORES[emoji]
+            if score is not None:
+                total_score += score
+            else:
+                unknown_emojis_found = True
+        else:
+            # Emoji not in any mapping
+            unknown_emojis_found = True
+
+    return total_score if not unknown_emojis_found else None
 
 def parse_sexaginta_score(text: str, author_id: int = None) -> Optional[Dict[str, Any]]:
     header_match = SEXAGINTA_HEADER_RE.search(text)
@@ -62,8 +123,8 @@ def parse_sexaginta_score(text: str, author_id: int = None) -> Optional[Dict[str
     lines = text.split('\n')
     grid_lines: List[str] = []
     for ln in lines:
-        if any(ch in ln for ch in ("🟪","🟦","🟩","🟨","🟧","🟥","💜","💙","💚","💛","🧡","❤️","🔵","🔴","❌")):
-            grid_lines.append(ln)
+        if any(ch in ln for ch in ("🟪","🟦","🟩","🟨","🟧","🟥","💜","💙","💚","💛","🧡","❤️","❤","🔵","🔴","❌", "💕", "🔺")):
+            grid_lines.append(re.sub(r'[\s\n\r️]', '', ln))
 
     # --- Advanced band parsing ---
     band_counts = {band: 0 for band in SEXAGINTA_BANDS.keys()}
@@ -74,10 +135,23 @@ def parse_sexaginta_score(text: str, author_id: int = None) -> Optional[Dict[str
                     band_counts[band] += 1
                     break
 
-    # Calculate weighted performance score
-    weighted_score = sum(SEXAGINTA_BAND_WEIGHTS[b] * c for b, c in band_counts.items())
-    max_score = 64 * SEXAGINTA_BAND_WEIGHTS["purple"]
-    performance_pct = (weighted_score / max_score) * 100 if max_score else None
+    # Calculate score from grid
+    calculated_score = calculate_sexaginta_score_from_grid(grid_lines)
+    score_discrepancy = None
+    if score_value is not None and calculated_score is not None:
+        score_discrepancy = score_value - calculated_score
+
+    # Invalidate scores if unknown emojis are present
+    unknown_emojis_present = calculated_score is None
+    if unknown_emojis_present:
+        weighted_score = None
+        performance_pct = None
+    else:
+        # Calculate weighted performance score
+        weighted_score = sum(SEXAGINTA_BAND_WEIGHTS[b] * c for b, c in band_counts.items())
+        max_score = 64 * SEXAGINTA_BAND_WEIGHTS["purple"]
+        performance_pct = (weighted_score / max_score) * 100 if max_score else None
+        performance_pct = round(performance_pct, 1) if performance_pct is not None else None
 
     return {
         "game_number": game_number,
@@ -90,7 +164,9 @@ def parse_sexaginta_score(text: str, author_id: int = None) -> Optional[Dict[str
         "band_counts": band_counts,
         "weighted_score": weighted_score,
         "performance_pct": round(performance_pct, 1) if performance_pct is not None else None,
-        "author_id": author_id
+        "author_id": author_id,
+        "calculated_score": calculated_score,
+        "score_discrepancy": score_discrepancy
     }
 
 def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
