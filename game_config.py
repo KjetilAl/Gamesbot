@@ -150,6 +150,6 @@ GAME_CONFIGS = {
         "chat_channel_name": "64ordle-chat",
         "player_role_name": "64ordle-player",
         "game_number_key": "game_number",
-        "create_introduction": True
+        "create_introduction": score_parser.create_sexaginta_introduction
     }
 }
