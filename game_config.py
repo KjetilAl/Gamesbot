@@ -59,8 +59,6 @@ GAME_CONFIGS = {
         "embed_builder_function": embed_builder.build_gisnep_leaderboard_embed,
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
-        "create_acknowledgement": score_parser.create_gisnep_acknowledgement,
-        "create_introduction": score_parser.create_gisnep_introduction,
         "game_number_key": "game_number"
     },
     "framed": {
@@ -75,8 +73,6 @@ GAME_CONFIGS = {
         "embed_builder_function": embed_builder.build_leaderboard_embed,
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
-        "create_acknowledgement": score_parser.create_framed_acknowledgement,
-        "create_introduction": score_parser.create_framed_introduction,
         "game_number_key": "game_number"
     },
     "bandle": {
@@ -91,8 +87,6 @@ GAME_CONFIGS = {
         "embed_builder_function": embed_builder.build_leaderboard_embed,
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
-        "create_acknowledgement": score_parser.create_bandle_acknowledgement,
-        "create_introduction": score_parser.create_bandle_introduction,
         "game_number_key": "game_number"
     },
     "minute_cryptic": {
@@ -123,8 +117,6 @@ GAME_CONFIGS = {
         "embed_builder_function": embed_builder.build_leaderboard_embed,
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
-        "create_acknowledgement": score_parser.create_word_salad_acknowledgement,
-        "create_introduction": score_parser.create_word_salad_introduction,
         "game_number_key": "game_number"
     },
     "pips": {
