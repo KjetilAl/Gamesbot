@@ -318,6 +318,37 @@ def _generate_framed_post(display_name: str, game_info: dict, player_stats: dict
 
     return opening_line
 
+def _generate_sexaginta_post(display_name: str, game_info: dict, player_stats: dict) -> str:
+    """
+    Generates dynamic but grounded feedback for 64ordle.
+    Highlights exceptional performances (high solve % or low guess count).
+    """
+    game_number = game_info.get("game_number", "?")
+    guesses_used = game_info.get("guesses_used", "?")
+    guesses_allowed = game_info.get("guesses_allowed", 70)
+    pct = game_info.get("pct") or game_info.get("performance_pct")
+    weighted_score = game_info.get("weighted_score")
+    band_counts = game_info.get("band_counts", {})
+
+    # --- Opening Line ---
+    if guesses_used == "X":
+        opening = f"😵 **{display_name}** couldn't tame Sexaginta-Quattuordle #{game_number} this time."
+    else:
+        opening = f"**{display_name}** finished #{game_number} in {guesses_used}/{guesses_allowed} guesses."
+
+    # --- Spotlight Conditions ---
+    spotlights = []
+    if pct is not None and pct >= 90:
+        spotlights.append(f"Only **{100-pct:.0f}%** left unsolved — stellar performance!")
+    if band_counts.get("red", 0) <= 3:
+        spotlights.append("Fewer than 4 reds — that's elite territory. 🔥")
+    if weighted_score and pct and pct < 50:
+        spotlights.append("A tough day — less than half solved, but a valiant effort.")
+
+    if spotlights:
+        return f"{opening}\n{random.choice(spotlights)}"
+    return opening
+
 def generate_post(game_name: str, display_name: str, game_info: dict, player_stats: dict) -> str:
     """Routes the request to the appropriate sub-generator for the given game."""
 
@@ -327,7 +358,8 @@ def generate_post(game_name: str, display_name: str, game_info: dict, player_sta
         "gisnep": _generate_gisnep_post,
         "bandle": _generate_bandle_post,
         "word_salad": _generate_word_salad_post,
-        "framed": _generate_framed_post, # <-- ADD THIS LINE
+        "framed": _generate_framed_post,
+        "sexaginta": _generate_sexaginta_post,
     }
 
     generator_func = game_generators.get(game_name.lower())
