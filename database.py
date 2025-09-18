@@ -1269,6 +1269,34 @@ def get_gisnep_stats(user_id: int) -> dict:
         "avg_time": stats[1] or 0
     }
 
+def get_player_sexaginta_stats(user_id: int) -> dict:
+    """
+    Fetches basic Sexaginta-Quattuordle stats for a single player.
+    Returns a dictionary with total plays, average percent solved, and average weighted score.
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    # Query aggregate stats for this player
+    cursor.execute("""
+        SELECT COUNT(*), AVG(percent_solved), AVG(weighted_score)
+        FROM sexaginta_scores
+        WHERE user_id = ?
+    """, (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+
+    if not result:
+        return {"total_plays": 0, "avg_pct": 0.0, "avg_weighted_score": 0.0}
+
+    total_plays, avg_pct, avg_weighted_score = result
+
+    return {
+        "total_plays": total_plays or 0,
+        "avg_pct": avg_pct or 0.0,
+        "avg_weighted_score": avg_weighted_score or 0.0
+    }
+
 def get_gisnep_puzzle_stats(game_number: int) -> dict:
     """Fetches the stats for a specific Gisnep puzzle."""
     conn = sqlite3.connect(DB_NAME)
