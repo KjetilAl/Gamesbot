@@ -631,8 +631,9 @@ def update_sexaginta_stats(user_id, display_name, game_info):
         avg_pct = avg_pct or 0.0
         avg_weighted_score = avg_weighted_score or 0.0
 
-    performance_pct = game_info.get("performance_pct", 0)
-    weighted_score = game_info.get("weighted_score", 0)
+    # Fix: Handle None values from game_info
+    performance_pct = game_info.get("performance_pct") or 0
+    weighted_score = game_info.get("weighted_score") or 0
 
     new_total_plays = total_plays + 1
     new_avg_pct = ((avg_pct * total_plays) + performance_pct) / new_total_plays
