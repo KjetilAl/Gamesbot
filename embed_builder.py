@@ -17,7 +17,7 @@ async def build_wordle_leaderboard_embed(title: str, leaderboard_data: dict, per
         medals = ["🥇", "🥈", "🥉"]
         player_list = []
         for i, (player, score) in enumerate(top_players):
-            player_list.append(f"{medals[i]} **{player}** - ⭐ Total Score: {score}")
+            player_list.append(f"{medals[i]} **{player}** - {score} points")
         embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
     else:
         embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
@@ -28,18 +28,18 @@ async def build_wordle_leaderboard_embed(title: str, leaderboard_data: dict, per
     einstein = leaderboard_data.get("einstein")
     if einstein:
         player, avg_skill = einstein
-        superlatives.append(f"The Einstein Award 🧠: to **{player}** for the highest average skill score this period ({avg_skill:.1f}).")
+        superlatives.append(f"🧠 The Einstein Award to **{player}** for the highest average skill score this period ({avg_skill:.1f}).")
 
     lucky_charm = leaderboard_data.get("lucky_charm")
     if lucky_charm:
         player, avg_luck = lucky_charm
-        superlatives.append(f"The Lucky Charm Award 🍀: to **{player}** for riding a wave of good fortune with the highest average luck this period ({avg_luck:.1f}).")
+        superlatives.append(f"🍀 The Lucky Charm Award to **{player}** for riding a wave of good fortune with the highest average luck this period ({avg_luck:.1f}).")
 
     ironman = leaderboard_data.get("ironman")
     if ironman:
         player, streak = ironman
         if streak > 1:
-            superlatives.append(f"The Ironman Award 🦾: to **{player}** for maintaining a flawless {streak} game winning streak!")
+            superlatives.append(f"🦾 The Ironman Award to **{player}** for maintaining a flawless {streak} game winning streak!")
 
     if superlatives:
         embed.add_field(name="✨ Superlatives", value="\n".join(superlatives), inline=False)
@@ -85,12 +85,7 @@ async def build_gisnep_leaderboard_embed(title: str, leaderboard_data: dict, per
         mercury_award = leaderboard_data.get("mercury_award")
         if mercury_award:
             player, fastest_time = mercury_award
-            accolades.append(f"The Mercury Award 🏃💨: to **{player}** for the single fastest solve of the week at a blazing {format_time(fastest_time)}!")
-
-        scholar_award = leaderboard_data.get("scholar_award")
-        if scholar_award:
-            player, puzzles_solved = scholar_award
-            accolades.append(f"The Scholar Award 📚: to **{player}** for completing all {puzzles_solved} puzzles this week.")
+            accolades.append(f"🏃💨 The Mercury Award to **{player}** for the single fastest solve of the week at a blazing {format_time(fastest_time)}!")
 
         if accolades:
             embed.add_field(name="✨ Weekly Accolades", value="\n".join(accolades), inline=False)
