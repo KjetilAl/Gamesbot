@@ -110,7 +110,7 @@ async def build_connections_leaderboard_embed(title: str, leaderboard_data: dict
         medals = ["🥇", "🥈", "🥉"]
         player_list = []
         for i, (player, score) in enumerate(top_players):
-            player_list.append(f"{medals[i]} **{player}** - ⭐ Total Score: {score}")
+            player_list.append(f"{medals[i]} **{player}** - {score} points")
         embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
     else:
         embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
@@ -120,17 +120,12 @@ async def build_connections_leaderboard_embed(title: str, leaderboard_data: dict
     perfector = leaderboard_data.get("perfector")
     if perfector and perfector[1] > 0:
         player, count = perfector
-        superlatives.append(f"The Perfector 🧑‍🎨: to **{player}** for achieving {count} perfect game{'s' if count > 1 else ''} this period!")
+        superlatives.append(f"🧑‍🎨 The Perfector to **{player}** for achieving {count} perfect game{'s' if count > 1 else ''} this period!")
 
     grandmaster = leaderboard_data.get("grandmaster")
     if grandmaster and grandmaster[1] > 0:
         player, count = grandmaster
-        superlatives.append(f"The Grandmaster ♟️: to **{player}** for solving the purple group first {count} time{'s' if count > 1 else ''}!")
-
-    pathfinder = leaderboard_data.get("pathfinder")
-    if pathfinder:
-        player, uniqueness = pathfinder
-        superlatives.append(f"The Pathfinder 🗺️: to **{player}** for their mind-bending solve with a Uniqueness of {uniqueness}, the rarest of the period!")
+        superlatives.append(f"♟️ The Grandmaster to **{player}** for solving the purple group first {count} time{'s' if count > 1 else ''}!")
 
     if superlatives:
         embed.add_field(name="✨ Superlatives", value="\n".join(superlatives), inline=False)
