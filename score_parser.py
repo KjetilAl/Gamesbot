@@ -708,3 +708,20 @@ def create_pips_introduction(display_name: str, game_info: Dict[str, Any]) -> st
         message += f"\nWow, {cookie_count} cookie{'s' if cookie_count > 1 else ''}! You're a top performer! 🍪"
 
     return message
+
+def create_sexaginta_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
+    """Create an informative introduction message for Sexaginta players."""
+    # Assuming player_stats is not directly available here, so we get it from DB
+    user_id = game_info.get("user_id") # Note: you may need to pass user_id in game_info
+    # Fallback to display name if user_id is not available
+    if user_id is None:
+        return f"🌟 Everyone welcome **{display_name}** to the 64ordle team!"
+        
+    stats = database.get_player_sexaginta_stats(user_id) # Need to add this function to database.py
+
+    game_number = game_info.get("game_number", "?")
+    pct = stats.get("avg_pct", "?")
+    
+    message = (f"**{display_name}** has joined the 64ordle ranks, starting with game #{game_number}!\n"
+               f"They've played {stats['total_plays']} games with an average solve percentage of {pct:.2f}%.")
+    return message
