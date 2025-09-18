@@ -162,17 +162,6 @@ def initialize_db():
 
         conn.commit()
         print("DB: All tables created or verified.")
-
-        # --- Migration section for adding created_at columns ---
-        migrations = {
-            "wordle_scores": "timestamp",
-            "connections_scores": None, # Already has created_at
-            "gisnep_scores": None, # Already has created_at
-            "bandle_scores": None, # Already has created_at
-            "minute_cryptic_scores": "timestamp",
-            "word_salad_scores": "timestamp",
-            "framed_scores": "timestamp",
-            "pips_scores": "timestamp"
         }
 
         for table, old_column in migrations.items():
@@ -189,19 +178,6 @@ def initialize_db():
                         print(f"DB: created_at column already exists in {table}.")
                     else:
                         raise e
-
-        # --- Add Bandle columns to player_stats (migration) ---
-        try:
-            cursor.execute("ALTER TABLE player_stats ADD COLUMN bandle_total_plays INTEGER DEFAULT 0;")
-            cursor.execute("ALTER TABLE player_stats ADD COLUMN bandle_avg_attempts REAL DEFAULT 0.0;")
-            cursor.execute("ALTER TABLE player_stats ADD COLUMN bandle_avg_bonus_rounds REAL DEFAULT 0.0;")
-            conn.commit()
-            print("DB: Added Bandle columns to player_stats.")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" in str(e):
-                print("DB: Bandle columns already exist in player_stats.")
-            else:
-                raise e
 
         # --- Initialize latest_game_numbers Data ---
         initial_games = [
