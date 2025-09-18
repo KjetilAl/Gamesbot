@@ -617,12 +617,17 @@ def update_sexaginta_stats(user_id, display_name, game_info):
     stats = cursor.fetchone()
 
     if not stats or stats[0] is None:
+        # If stats are not found or total_plays is NULL, initialize them
         total_plays, avg_pct, avg_weighted_score = 0, 0.0, 0.0
+        # Ensure the player exists in the table
         cursor.execute("SELECT user_id FROM player_stats WHERE user_id = ?", (str(user_id),))
         if not cursor.fetchone():
             cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (str(user_id), display_name))
     else:
+        # Unpack the fetched values and ensure they are not None
         total_plays, avg_pct, avg_weighted_score = stats
+        # Explicitly handle potential None values before calculations
+        total_plays = total_plays or 0
         avg_pct = avg_pct or 0.0
         avg_weighted_score = avg_weighted_score or 0.0
 
@@ -650,7 +655,7 @@ def update_sexaginta_stats(user_id, display_name, game_info):
         "avg_pct": new_avg_pct,
         "avg_weighted_score": new_avg_weighted_score
     }
-
+    
 def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, clue: str, word_length: int, score_description: str):
     """Saves a Minute Cryptic score to the database."""
     conn = sqlite3.connect(DB_NAME)
