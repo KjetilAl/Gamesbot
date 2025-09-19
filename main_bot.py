@@ -106,20 +106,22 @@ async def on_message(message):
         return
     
     print("[DEBUG] Message passed quick guard clause.")
-    
-    # Check each game configuration to see if the message matches
+
     for game_key, config in game_config.GAME_CONFIGS.items():
-        game_names_to_check = [game_key] + config.get("aliases", [])
+        # FIX: Replace the underscore in game_key with a space for the name check
+        game_name_for_check = game_key.replace('_', ' ')
+        game_names_to_check = [game_name_for_check] + config.get("aliases", [])
         
         print(f"[DEBUG] Checking against game: {config['name']} ({game_key})")
         
-        is_game_match = any(name in content.lower() for name in game_names_to_check)
+        # This check is now robust and flexible
+        is_name_match = any(name in content.lower() for name in game_names_to_check)
         is_game_message = config["is_game_message"](content)
         
-        print(f"[DEBUG]   - Name check ('{game_names_to_check}'): {is_game_match}")
+        print(f"[DEBUG]   - Name check ('{game_names_to_check}'): {is_name_match}")
         print(f"[DEBUG]   - Pattern check (is_game_message): {is_game_message}")
 
-        if is_game_match and is_game_message:
+        if is_name_match and is_game_message:
             print(f"[DEBUG]   - Match found for {config['name']}. Proceeding with parsing.")
             processed = True
             
