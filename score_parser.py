@@ -71,11 +71,14 @@ SEXAGINTA_EMOJI_SCORES = {
     "🔺": None, # Red triangle, unknown value
 }
 
-def parse_sexaginta_score(content: str) -> dict:
-    match = re.search(
-        r"#SexagintaQuattuordle\s+(\d+)\s+.*?\s*\(score\s*([\d,]+),\s*(\d{1,3})%\)",
-        content,
-        re.DOTALL | re.IGNORECASE
+def parse_sexaginta_score(content: str) -> Optional[dict]:
+    match = SEXAGINTA_HEADER_REGEX.search(content)
+    if not match:
+        return None
+
+    game_number = int(match.group(1))
+    score = int(match.group(2))
+    percent_solved = float(match.group(3))
     )
 
     if not match:
@@ -112,8 +115,8 @@ def parse_sexaginta_score(content: str) -> dict:
     # Return the parsed data
     return {
         "game_number": game_number,
-        "weighted_score": score,  # store game-provided score here
-        "performance_pct": percent_solved,  # match DB schema
+        "game_score": score,
+        "performance_pct": percent_solved,
         "grid_lines": grid_lines,
         "seed": seed,
         "band_counts": band_counts,
@@ -616,7 +619,7 @@ def is_pips_message(message_content: str) -> bool:
 
 def is_sexaginta_message(message_content: str) -> bool:
     """Checks if a message contains a Sexaginta-quattuordle score."""
-    return "sexagintaquattuordle" in message_content.lower() and SEXAGINTA_HEADER_RE.search(message_content) is not None
+    return "sexagintaquattuordle" in message_content.lower() and SEXAGINTA_HEADER_REGEX.search(message_content) is not None
     
 def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
