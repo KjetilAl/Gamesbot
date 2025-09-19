@@ -995,8 +995,8 @@
      <table:table-cell table:style-name="ce7" office:value-type="float" office:value="228" calcext:value-type="float">
       <text:p>228</text:p>
      </table:table-cell>
-     <table:table-cell table:style-name="ce7" office:value-type="float" office:value="59.4" calcext:value-type="float">
-      <text:p>59.4</text:p>
+     <table:table-cell table:style-name="ce7" office:value-type="float" office:value="75.0" calcext:value-type="float">
+      <text:p>75.0</text:p>
      </table:table-cell>
      <table:table-cell table:number-columns-repeated="1015"/>
     </table:table-row>

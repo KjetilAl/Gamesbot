@@ -27,50 +27,6 @@ SEXAGINTA_HEADER_REGEX = re.compile(
     re.IGNORECASE | re.DOTALL
 )
 
-# Emoji band mapping
-SEXAGINTA_BANDS = {
-    "purple": {"💜","🟪","🟣"},
-    "blue":   {"💙","🟦","🔵"},
-    "green":  {"💚","🟩","🟢"},
-    "yellow": {"💛","🟨","🟡"},
-    "orange": {"🧡","🟧","🟠"},
-    "red":    {"❤️","🟥","🔴","❌", "💕", "🔺"},
-}
-
-SEXAGINTA_BAND_WEIGHTS = {
-    "purple": 6,
-    "blue": 5,
-    "green": 4,
-    "yellow": 3,
-    "orange": 2,
-    "red": 1
-}
-
-SEXAGINTA_EMOJI_SCORES = {
-    # Fixed value emoji
-    "💜": 3, "🟣": 12,
-    "💙": 13, "🔵": 24,
-    "💚": 25, "🟢": 36,
-    "💛": 37, "🟡": 48,
-    "🧡": 49, "🟠": 60,
-    "❤️": 61, "🔴": 70,
-    "❤": 61, # Alternative heart emoji
-    "❌": 71, # Unsolved
-
-    # Emoji with ranged values (squares)
-    # The actual score is sequential within the range.
-    "🟪": (4, 11),
-    "🟦": (14, 23),
-    "🟩": (26, 35),
-    "🟨": (38, 47),
-    "🟧": (50, 59),
-    "🟥": (62, 68),
-
-    # Unknown emoji from user's post
-    "💕": None, # Pink heart, unknown value
-    "🔺": None, # Red triangle, unknown value
-}
-
 def parse_sexaginta_score(content: str) -> Optional[dict]:
     match = SEXAGINTA_HEADER_REGEX.search(content)
     if not match:
@@ -79,47 +35,17 @@ def parse_sexaginta_score(content: str) -> Optional[dict]:
     game_number = int(match.group(1))
     score = int(match.group(2))
     percent_solved = float(match.group(3))
-    )
-
-    if not match:
-        return None
-
-    game_number = int(match.group(1))
-    # Use the score value directly from the message, removing commas
-    score = int(match.group(2).replace(",", ""))
-    percent_solved = float(match.group(3))
 
     # Extract seed from URL
     seed_match = re.search(r"https://64ordle\.au/\?seed=(\d+)", content)
     seed = int(seed_match.group(1)) if seed_match else None
 
-    lines = content.split('\n')
-    grid_lines: List[str] = []
-    for ln in lines:
-        # Check if the line contains any known emojis
-        if any(ch in ln for ch in ("🟪","🟦","🟩","🟨","🟧","🟥","💜","💙","💚","💛","🧡","❤️","❤","🔵","🔴","❌", "💕", "🔺")):
-            grid_lines.append(re.sub(r'[\s\n\r️]', '', ln))
-
-    # --- Advanced band parsing ---
-    band_counts = {band: 0 for band in SEXAGINTA_BANDS.keys()}
-    for row in grid_lines:
-        for ch in row:
-            for band, symbols in SEXAGINTA_BANDS.items():
-                if ch in symbols:
-                    band_counts[band] += 1
-                    break
-
-    # Calculate weighted performance score based on band counts
-    weighted_score = sum(SEXAGINTA_BAND_WEIGHTS[b] * c for b, c in band_counts.items())
-    
-    # Return the parsed data
+    # Return the parsed data, using the score from the post
     return {
         "game_number": game_number,
         "game_score": score,
         "performance_pct": percent_solved,
-        "grid_lines": grid_lines,
         "seed": seed,
-        "band_counts": band_counts,
     }
 
 def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
@@ -738,19 +664,3 @@ def create_pips_introduction(display_name: str, game_info: Dict[str, Any]) -> st
 
     return message
 
-def create_sexaginta_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create an informative introduction message for Sexaginta players."""
-    # Assuming player_stats is not directly available here, so we get it from DB
-    user_id = game_info.get("user_id") # Note: you may need to pass user_id in game_info
-    # Fallback to display name if user_id is not available
-    if user_id is None:
-        return f"🌟 Everyone welcome **{display_name}** to the 64ordle team!"
-        
-    stats = database.get_player_sexaginta_stats(user_id) # Need to add this function to database.py
-
-    game_number = game_info.get("game_number", "?")
-    pct = stats.get("avg_pct", "?")
-    
-    message = (f"**{display_name}** has joined the 64ordle ranks, starting with game #{game_number}!\n"
-               f"They've played {stats['total_plays']} games with an average solve percentage of {pct:.2f}%.")
-    return message

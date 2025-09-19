@@ -40,7 +40,7 @@ def initialize_db():
                 gisnep_personal_best_seconds INTEGER, -- Can be NULL
                 sexaginta_total_plays INTEGER DEFAULT 0,
                 sexaginta_avg_pct REAL DEFAULT 0.0,
-                sexaginta_avg_weighted_score REAL DEFAULT 0.0
+                sexaginta_avg_game_score REAL DEFAULT 0.0
             )
         """)
         # Connections
@@ -172,7 +172,7 @@ def initialize_db():
                 guesses_used TEXT,
                 guesses_allowed INTEGER,
                 percent_solved REAL,
-                weighted_score REAL,
+                game_score REAL,
                 grid_text TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -252,17 +252,14 @@ def save_sexaginta_score(user_id, display_name, game_info):
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO sexaginta_scores
-        (user_id, display_name, game_number, guesses_used, guesses_allowed, percent_solved, weighted_score, grid_text, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        (user_id, display_name, game_number, percent_solved, game_score, created_at)
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     """, (
         str(user_id),
         display_name,
         game_info.get("game_number"),
-        str(game_info.get("guesses_used")),
-        game_info.get("guesses_allowed"),
         game_info.get("performance_pct"),
-        game_info.get("weighted_score"),
-        "\n".join(game_info.get("grid_lines", []))
+        game_info.get("game_score")
     ))
     conn.commit()
     conn.close()
@@ -613,40 +610,40 @@ def update_sexaginta_stats(user_id, display_name, game_info):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT sexaginta_total_plays, sexaginta_avg_pct, sexaginta_avg_weighted_score FROM player_stats WHERE user_id = ?", (str(user_id),))
+    cursor.execute("SELECT sexaginta_total_plays, sexaginta_avg_pct, sexaginta_avg_game_score FROM player_stats WHERE user_id = ?", (str(user_id),))
     stats = cursor.fetchone()
 
     if not stats or stats[0] is None:
         # If stats are not found or total_plays is NULL, initialize them
-        total_plays, avg_pct, avg_weighted_score = 0, 0.0, 0.0
+        total_plays, avg_pct, avg_game_score = 0, 0.0, 0.0
         # Ensure the player exists in the table
         cursor.execute("SELECT user_id FROM player_stats WHERE user_id = ?", (str(user_id),))
         if not cursor.fetchone():
             cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (str(user_id), display_name))
     else:
         # Unpack the fetched values and ensure they are not None
-        total_plays, avg_pct, avg_weighted_score = stats
+        total_plays, avg_pct, avg_game_score = stats
         # Explicitly handle potential None values before calculations
         total_plays = total_plays or 0
         avg_pct = avg_pct or 0.0
-        avg_weighted_score = avg_weighted_score or 0.0
+        avg_game_score = avg_game_score or 0.0
 
     # Fix: Handle None values from game_info
     performance_pct = game_info.get("performance_pct") or 0
-    weighted_score = game_info.get("weighted_score") or 0
+    game_score = game_info.get("game_score") or 0
 
     new_total_plays = total_plays + 1
     new_avg_pct = ((avg_pct * total_plays) + performance_pct) / new_total_plays
-    new_avg_weighted_score = ((avg_weighted_score * total_plays) + weighted_score) / new_total_plays
+    new_avg_game_score = ((avg_game_score * total_plays) + game_score) / new_total_plays
 
     cursor.execute("""
         UPDATE player_stats
         SET display_name = ?,
             sexaginta_total_plays = ?,
             sexaginta_avg_pct = ?,
-            sexaginta_avg_weighted_score = ?
+            sexaginta_avg_game_score = ?
         WHERE user_id = ?
-    """, (display_name, new_total_plays, new_avg_pct, new_avg_weighted_score, str(user_id)))
+    """, (display_name, new_total_plays, new_avg_pct, new_avg_game_score, str(user_id)))
 
     conn.commit()
     conn.close()
@@ -654,7 +651,7 @@ def update_sexaginta_stats(user_id, display_name, game_info):
     return {
         "total_plays": new_total_plays,
         "avg_pct": new_avg_pct,
-        "avg_weighted_score": new_avg_weighted_score
+        "avg_game_score": new_avg_game_score
     }
     
 def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, clue: str, word_length: int, score_description: str):
@@ -1106,7 +1103,7 @@ def get_sexaginta_leaderboard(period="weekly"):
 
     # Top players
     cursor.execute(f"""
-        SELECT display_name, AVG(percent_solved) as avg_pct, AVG(weighted_score) as avg_score, COUNT(*) as plays
+        SELECT display_name, AVG(percent_solved) as avg_pct, AVG(game_score) as avg_score, COUNT(*) as plays
         FROM sexaginta_scores
         {where_clause}
         GROUP BY user_id, display_name
@@ -1116,9 +1113,9 @@ def get_sexaginta_leaderboard(period="weekly"):
     top_players = cursor.fetchall()
 
     # Superlatives
-    # The Strategist: Player with the highest average weighted score.
+    # The Strategist: Player with the highest average game score.
     cursor.execute(f"""
-        SELECT display_name, AVG(weighted_score) as avg_score
+        SELECT display_name, AVG(game_score) as avg_score
         FROM sexaginta_scores
         {where_clause}
         GROUP BY user_id, display_name
@@ -1280,14 +1277,14 @@ def get_gisnep_stats(user_id: int) -> dict:
 def get_player_sexaginta_stats(user_id: int) -> dict:
     """
     Fetches basic Sexaginta-Quattuordle stats for a single player.
-    Returns a dictionary with total plays, average percent solved, and average weighted score.
+    Returns a dictionary with total plays, and average percent solved.
     """
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
     # Query aggregate stats for this player
     cursor.execute("""
-        SELECT COUNT(*), AVG(percent_solved), AVG(weighted_score)
+        SELECT COUNT(*), AVG(percent_solved)
         FROM sexaginta_scores
         WHERE user_id = ?
     """, (user_id,))
@@ -1295,14 +1292,13 @@ def get_player_sexaginta_stats(user_id: int) -> dict:
     conn.close()
 
     if not result:
-        return {"total_plays": 0, "avg_pct": 0.0, "avg_weighted_score": 0.0}
+        return {"total_plays": 0, "avg_pct": 0.0}
 
-    total_plays, avg_pct, avg_weighted_score = result
+    total_plays, avg_pct = result
 
     return {
         "total_plays": total_plays or 0,
-        "avg_pct": avg_pct or 0.0,
-        "avg_weighted_score": avg_weighted_score or 0.0
+        "avg_pct": avg_pct or 0.0
     }
 
 def get_gisnep_puzzle_stats(game_number: int) -> dict:
