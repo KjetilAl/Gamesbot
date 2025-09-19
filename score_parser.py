@@ -517,9 +517,8 @@ def is_minute_cryptic_message(message_content: str) -> bool:
 
 def is_word_salad_message(message_content: str) -> bool:
     """Checks if a message contains a Word Salad score."""
-    # Look for the game name and game number pattern
-    return "word salad #" in message_content.lower() and \
-           WORD_SALAD_NUMBER_PATTERN.search(message_content) is not None
+    # This is the bug. Use the new, robust pattern to check.
+    return WORD_SALAD_FULL_PATTERN.search(message_content) is not None
 
 def is_pips_message(message_content: str) -> bool:
     """Checks if a message contains a Pips score."""
