@@ -89,18 +89,23 @@ async def on_ready():
 async def on_message(message):
     """Handler for new messages."""
     if message.author.bot:
-        return  # Ignore bot messages
-    if not message.guild: # Ignore DMs
+        return
+    if not message.guild:
         return
         
     content = message.content
     processed = False
 
+    print(f"\n[DEBUG] Processing message from {message.author.display_name}:")
+    print(f"[DEBUG] Content: \"\"\"{content}\"\"\"")
+
     # --- Performance Optimization: Quick Guard Clause ---
     if "#" not in content and "wordle" not in content.lower():
-        # This filters out most non-game messages very quickly
+        print("[DEBUG] Message does not contain '#' or 'wordle'. Skipping score check.")
         await bot.process_commands(message)
         return
+    
+    print("[DEBUG] Message passed quick guard clause.")
     
     # Check each game configuration to see if the message matches
     for game_key, config in game_config.GAME_CONFIGS.items():
