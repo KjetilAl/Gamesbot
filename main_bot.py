@@ -109,16 +109,25 @@ async def on_message(message):
     
     # Check each game configuration to see if the message matches
     for game_key, config in game_config.GAME_CONFIGS.items():
-        # Check for both primary game name and its aliases
         game_names_to_check = [game_key] + config.get("aliases", [])
-        if any(name in content.lower() for name in game_names_to_check) and config["is_game_message"](content):
-            print(f"Detected {config['name']} score from {message.author.display_name}")
+        
+        print(f"[DEBUG] Checking against game: {config['name']} ({game_key})")
+        
+        is_game_match = any(name in content.lower() for name in game_names_to_check)
+        is_game_message = config["is_game_message"](content)
+        
+        print(f"[DEBUG]   - Name check ('{game_names_to_check}'): {is_game_match}")
+        print(f"[DEBUG]   - Pattern check (is_game_message): {is_game_message}")
+
+        if is_game_match and is_game_message:
+            print(f"[DEBUG]   - Match found for {config['name']}. Proceeding with parsing.")
             processed = True
             
             # 1. Parse the message content
             game_info = config["parse_function"](content)
             
             if not game_info:
+                print(f"[DEBUG]   - Parsing failed for {config['name']}. Sending error message.")
                 await message.channel.send(f"⚠️ Couldn't process your {config['name']} result.")
                 break
             
@@ -128,7 +137,6 @@ async def on_message(message):
                 player_stats = {}
 
                 # 2. Save score using the configured function
-                # This part remains specific because save functions have different signatures
                 if game_key == "wordle":
                     config["save_score_function"](message.author.id, message.author.display_name, game_info["game_number"], game_info["attempts"], game_info.get("skill"), game_info.get("luck"), game_info.get("hard_mode", False))
                 elif game_key == "connections":
@@ -148,11 +156,9 @@ async def on_message(message):
                 elif game_key == "sexaginta":
                     config["save_score_function"](message.author.id, message.author.display_name, game_info)
 
-                # 3. Get player stats if a handler exists
                 if stats_handler := PLAYER_STATS_HANDLERS.get(game_key):
                     player_stats = stats_handler(message.author.id, message.author.display_name, game_info)
 
-                # 4. Handle DB update for latest game, role assignment, and introductions
                 game_number_key = config["game_number_key"]
                 current_game_identifier = game_info.get(game_number_key)
 
@@ -168,26 +174,22 @@ async def on_message(message):
 
                     if should_update_db:
                         config["update_latest_game_number_function"](game_key, str(current_game_identifier))
-                        print(f"Updated latest {config['name']} identifier to {current_game_identifier}")
+                        print(f"[DEBUG] Updated latest {config['name']} identifier to {current_game_identifier}")
 
-                    should_introduce = await role_manager.handle_game_role_assignment(message.guild, message.author, game_key, config, current_game_identifier, latest_game_identifier)
-
-                    if should_introduce and config.get("create_introduction"):
-                        await asyncio.sleep(1)
+                    await role_manager.handle_game_role_assignment(message.guild, message.author, game_key, config, current_game_identifier, latest_game_identifier)
+                    
+                    if config.get("create_introduction"):
                         await role_manager.introduce_player_in_game_channel(message.guild, message.author, config, game_info)
 
-                # 5. Generate post message using the new dispatcher
                 post_message = post_generator.generate_post(
                     game_key, message.author.display_name, game_info, player_stats
                 )
 
-                # If no dynamic post was generated, fall back to the simple acknowledgement
                 if not post_message and config.get("create_acknowledgement"):
                     acknowledgement = config["create_acknowledgement"](message.author.display_name, game_info)
                     if acknowledgement.strip() != "🤖":
                         post_message = acknowledgement
 
-                # 6. Send the post message
                 if post_message:
                     channel_name = config.get("chat_channel_name")
                     game_channel = discord.utils.get(message.guild.channels, name=channel_name)
@@ -197,17 +199,18 @@ async def on_message(message):
                         print(f"Warning: Could not find channel '{channel_name}'. Posting in original channel.")
                         await message.channel.send(post_message)
 
-                # 7. Acknowledge the original message
                 await message.add_reaction("🤖")
+                print(f"[DEBUG] Successfully processed {config['name']} score.")
 
             except Exception as e:
                 print(f"Error processing {config['name']} score: {e}")
-                traceback.print_exc() # Print full stack trace
+                traceback.print_exc()
                 await message.channel.send(f"⚠️ There was an error processing your {config['name']} score.")
-
+            
             break
     
     if not processed:
+        print("[DEBUG] Message did not match any game patterns.")
         await bot.process_commands(message)
 
 @bot.command()
