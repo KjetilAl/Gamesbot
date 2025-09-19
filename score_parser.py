@@ -515,8 +515,6 @@ def is_minute_cryptic_message(message_content: str) -> bool:
            MINUTE_CRYPTIC_SCORE_PATTERN.search(message_content) is not None
 
 def is_word_salad_message(message_content: str) -> bool:
-    """Checks if a message contains a Word Salad score."""
-    # This is the bug. Use the new, robust pattern to check.
     return WORD_SALAD_FULL_PATTERN.search(message_content) is not None
 
 def is_pips_message(message_content: str) -> bool:
