@@ -21,9 +21,10 @@ WORD_SALAD_HINTS_PATTERN = re.compile(r"❓(\d+)", re.IGNORECASE)
 PIPS_PATTERN = re.compile(r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|🔴)\s*\n(\d{1,2}:\d{2})\s*(🍪)?", re.IGNORECASE)
 
 SEXAGINTA_HEADER_REGEX = re.compile(
-    r"#SexagintaQuattuordle\s+(\d+).*?(?:\n| )"  # Capture game number, tolerate line breaks or spaces
-    r"(?:.*?words unsolved:\s*\d+)?\s*"          # Optionally match the "words unsolved" part
-    r"\(score\s*(\d+),\s*([0-9]{1,3})%\)",      # Capture score + percent
+    r"#SexagintaQuattuordle\s+(\d+)"                      # Game number
+    r"(?:\s+(\d{1,3})/70(?:\s+\w+)?"                     # Optional guesses (x/70 [and optional "nice"])
+    r"|\s+~\s*words unsolved:\s*(\d+))"                  # OR words unsolved count
+    r".*?\(score\s*([\d,]+),\s*([0-9]{1,3})%\)",         # Score and percent
     re.IGNORECASE | re.DOTALL
 )
 
@@ -33,16 +34,19 @@ def parse_sexaginta_score(content: str) -> Optional[dict]:
         return None
 
     game_number = int(match.group(1))
-    score = int(match.group(2))
-    percent_solved = float(match.group(3))
+    guesses_made = int(match.group(2)) if match.group(2) else None
+    words_unsolved = int(match.group(3)) if match.group(3) else None
+    score = int(match.group(4).replace(",", ""))
+    percent_solved = float(match.group(5))
 
     # Extract seed from URL
     seed_match = re.search(r"https://64ordle\.au/\?seed=(\d+)", content)
     seed = int(seed_match.group(1)) if seed_match else None
 
-    # Return the parsed data, using the score from the post
     return {
         "game_number": game_number,
+        "guesses_made": guesses_made,      # Will be None if not solved
+        "words_unsolved": words_unsolved,  # Will be None if fully solved
         "game_score": score,
         "performance_pct": percent_solved,
         "seed": seed,
