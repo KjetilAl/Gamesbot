@@ -96,40 +96,27 @@ async def on_message(message):
     content = message.content
     processed = False
 
-    print(f"\n[DEBUG] Processing message from {message.author.display_name}:")
-    print(f"[DEBUG] Content: \"\"\"{content}\"\"\"")
-
     # --- Performance Optimization: Quick Guard Clause ---
     if "#" not in content and "wordle" not in content.lower():
-        print("[DEBUG] Message does not contain '#' or 'wordle'. Skipping score check.")
         await bot.process_commands(message)
         return
-    
-    print("[DEBUG] Message passed quick guard clause.")
 
     for game_key, config in game_config.GAME_CONFIGS.items():
         # FIX: Replace the underscore in game_key with a space for the name check
         game_name_for_check = game_key.replace('_', ' ')
         game_names_to_check = [game_name_for_check] + config.get("aliases", [])
         
-        print(f"[DEBUG] Checking against game: {config['name']} ({game_key})")
-        
         # This check is now robust and flexible
         is_name_match = any(name in content.lower() for name in game_names_to_check)
         is_game_message = config["is_game_message"](content)
-        
-        print(f"[DEBUG]   - Name check ('{game_names_to_check}'): {is_name_match}")
-        print(f"[DEBUG]   - Pattern check (is_game_message): {is_game_message}")
 
         if is_name_match and is_game_message:
-            print(f"[DEBUG]   - Match found for {config['name']}. Proceeding with parsing.")
             processed = True
             
             # 1. Parse the message content
             game_info = config["parse_function"](content)
             
             if not game_info:
-                print(f"[DEBUG]   - Parsing failed for {config['name']}. Sending error message.")
                 await message.channel.send(f"⚠️ Couldn't process your {config['name']} result.")
                 break
             
@@ -176,7 +163,6 @@ async def on_message(message):
 
                     if should_update_db:
                         config["update_latest_game_number_function"](game_key, str(current_game_identifier))
-                        print(f"[DEBUG] Updated latest {config['name']} identifier to {current_game_identifier}")
 
                     await role_manager.handle_game_role_assignment(message.guild, message.author, game_key, config, current_game_identifier, latest_game_identifier)
                     
@@ -202,7 +188,6 @@ async def on_message(message):
                         await message.channel.send(post_message)
 
                 await message.add_reaction("🤖")
-                print(f"[DEBUG] Successfully processed {config['name']} score.")
 
             except Exception as e:
                 print(f"Error processing {config['name']} score: {e}")
@@ -212,7 +197,6 @@ async def on_message(message):
             break
     
     if not processed:
-        print("[DEBUG] Message did not match any game patterns.")
         await bot.process_commands(message)
 
 @bot.command()
