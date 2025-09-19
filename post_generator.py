@@ -14,7 +14,7 @@ def _generate_wordle_post(display_name: str, game_info: dict[str, any], player_s
         return f"**{display_name}** was bested by Wordle #{game_number} today. Better luck tomorrow! 💪"
     
     if attempts == 1:
-        opening_line = f"🤯 Incredible! **{display_name}** solved Wordle #{game_number} in a single guess!"
+        opening_line = f"🤯 Legendary! **{display_name}** solved Wordle #{game_number} in a single guess!"
     elif attempts == 2:
         opening_line = f"🧠 Masterful work! **{display_name}** cracked Wordle #{game_number} in just two tries."
     elif attempts == 6:
@@ -32,7 +32,7 @@ def _generate_wordle_post(display_name: str, game_info: dict[str, any], player_s
     # Check for exceptional skill or luck from game_info
     if skill is not None:
         if skill > 90:
-            spotlights.append("With a **Skill** score of **90+**, that was a masterclass in deduction. 🧐")
+            spotlights.append("With a **Skill** score of **90+**, that was a masterclass in deduction 🧐")
     
     if luck is not None:
         if luck > 85:
@@ -44,7 +44,7 @@ def _generate_wordle_post(display_name: str, game_info: dict[str, any], player_s
     if not spotlights:
         current_streak = player_stats.get("current_streak", 0)
         if current_streak > 2:
-            spotlights.append(f"They're now on a **{current_streak}-game** winning streak! 🔥")
+            spotlights.append(f"They're now on a **{current_streak}-game** winning streak 🔥")
         else:
             # A simple, neutral default
             win_percentage = player_stats.get("win_percentage", 0)
@@ -70,7 +70,7 @@ def _generate_bandle_post(display_name: str, game_info: dict, player_stats: dict
     elif attempts == 1:
         opening_line = f"🤯 A true music savant! **{display_name}** identified the artist for Bandle #{game_number} in a single guess!"
     elif attempts <= 3:
-        opening_line = f"A great ear! **{display_name}** nailed the artist for Bandle #{game_number} in just {attempts} tracks. 🎵"
+        opening_line = f"A great ear! **{display_name}** nailed the artist for Bandle #{game_number} in just {attempts} tracks 🎵"
     else: # Neutral case for 4-6 guesses
         opening_line = f"**{display_name}** finished their set for Bandle #{game_number}, getting the artist in {attempts} guesses."
 
@@ -194,15 +194,15 @@ def _generate_connections_post(display_name: str, game_info: dict, player_stats:
     
     # Rule 1: The "True Perfect" solution
     elif perfect and solve_order == ['🟪', '🟦', '🟩', '🟨']:
-        opening_line = f"👑 Flawless! **{display_name}** solved Connections #{game_number} in perfect, hardest-to-easiest order."
+        opening_line = f"👑 Flawless! **{display_name}** solved Connections #{game_number} in perfect reverse difficulty order."
     
     # Rule 2: "Close to Perfect" (Purple first, but not perfect order)
     elif perfect and solve_order and solve_order[0] == '🟪':
-        opening_line = f"Excellent work by **{display_name}** on Connections #{game_number}, nailing the tricky purple group first on a perfect run."
+        opening_line = f"Excellent work by **{display_name}** on Connections #{game_number}, nailing the tricky purple group first."
 
     # Rule 3: "Pretty Good" (Blue first, Purple second)
     elif perfect and solve_order[:2] == ['🟦', '🟪']:
-        opening_line = f"A solid perfect solve for **{display_name}** on Connections #{game_number}, tackling the two hardest groups first."
+        opening_line = f"A solid solve for **{display_name}** on Connections #{game_number}, tackling the two hardest groups first."
 
     # Rule 5: Struggled with hard categories
     elif mistakes > 0 and len(solve_order) >= 2 and set(solve_order[:2]) == {'🟩', '🟨'}:
@@ -217,12 +217,12 @@ def _generate_connections_post(display_name: str, game_info: dict, player_stats:
 
     # Rule 7: "Rainbow Wrong" guess (high priority)
     if game_info.get("rainbow_wrong_guess"):
-        spotlights.append("That first guess of one of each color is a classic 'Rainbow Wrong'! 🌈")
+        spotlights.append("That first guess of one of each color is a classic 'Rainbow Wrong' 🌈")
     
     # Historical context for perfect games
     total_perfects = player_stats.get("total_perfects", 0)
     if perfect and total_perfects > 1:
-        spotlights.append(f"That marks their **{total_perfects}th** perfect game! 🧑‍🎨")
+        spotlights.append(f"That marks their **{total_perfects}th** game without mistakes 🧑‍🎨")
 
     # If there's a spotlight, add it.
     if spotlights:
