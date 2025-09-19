@@ -277,6 +277,12 @@ Full parsed object:
             parsefn = score_parser.parse_sexaginta_score,
             matchfields = ['game_number', 'game_score', 'performance_pct', 'seed'])
 
+    def test_parse_word_salad_score(self):
+        self.do_parse_test(
+            sheet = self.sheets['Word Salad'],
+            parsefn = score_parser.parse_word_salad_score,
+            matchfields = ['game_number', 'completion_time_seconds', 'hints_used', 'score'])
+
 class TestPipsParser(unittest.TestCase):
     def test_calculate_pips_score(self):
         # Test cases for easy difficulty
