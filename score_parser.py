@@ -15,13 +15,15 @@ BONUS_PATTERN = re.compile(r'Bonus Rounds: (\d+)/(\d+)(?:\s+(.+))?', re.IGNORECA
 MINUTE_CRYPTIC_HEADER_PATTERN = re.compile(r"Minute Cryptic - (\d+ \w+ \d+)")
 MINUTE_CRYPTIC_CLUE_PATTERN = re.compile(r'"(.*?)" \((\d+)\)')
 MINUTE_CRYPTIC_SCORE_PATTERN = re.compile(r"I scored: (.*)")
+PIPS_PATTERN = re.compile(r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|🔴)\s*\n(\d{1,2}:\d{2})\s*(🍪)?", re.IGNORECASE)
+
+# A single, robust regex to capture all key data points for Word Salad
 WORD_SALAD_FULL_PATTERN = re.compile(
     r"Word Salad #(\d+).*?"
     r"⌛(\d+)m\s*(\d+)s.*?"
     r"❓(\d+)",
     re.IGNORECASE | re.DOTALL
 )
-PIPS_PATTERN = re.compile(r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|🔴)\s*\n(\d{1,2}:\d{2})\s*(🍪)?", re.IGNORECASE)
 
 SEXAGINTA_HEADER_REGEX = re.compile(
     r"#SexagintaQuattuordle\s+(\d+)"                      # Game number
@@ -387,71 +389,28 @@ def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]
         return None
 
 def score_wordsalad(time_seconds: int, hints_used: int) -> int:
-    """
-    Calculates the Word Salad score based on completion time and hints used.
-    Higher score is better.
-    """
     tiers = [
         (30, 20), (60, 18), (120, 15), (300, 10), (600, 8),
         (900, 7), (1200, 6), (1500, 5), (1800, 4), (3600, 3),
         (5400, 2), (float('inf'), 1)
     ]
-    # Find the base score for the given time_seconds
     base_score = next(score for limit, score in tiers if time_seconds < limit)
-    
-    # Deduct points for hints used
     total_score = base_score - hints_used
-    
-    # Ensure the score does not go below zero
     return max(total_score, 0)
 
 def parse_word_salad_score(message_content: str) -> Optional[Dict[str, Any]]:
-
-    if "word salad" not in message_content.lower():
-        print("DEBUG: 'Word Salad' keyword not found in message_content.")
+    full_match = WORD_SALAD_FULL_PATTERN.search(message_content)
+    if not full_match:
         return None
 
-    puzzle_match = re.search(r"Word Salad\s*#(\d+)", message_content, re.IGNORECASE)
-    if not puzzle_match:
-        print("DEBUG: Failed to match 'Word Salad #' pattern (e.g., 'Word Salad #123').")
-        return None
-    game_number = int(puzzle_match.group(1))
-    print(f"DEBUG: Game number found: {game_number}")
-
-    time_str_match = re.search(r"⌛([^,\n]+)", message_content)
-    if not time_str_match:
-        print("DEBUG: Failed to match time string pattern.")
-        return None
-
-    time_str = time_str_match.group(1).strip()
-
-    minutes = 0
-    seconds = 0
-
-    minutes_match = re.search(r"(\d+)m", time_str)
-    if minutes_match:
-        minutes = int(minutes_match.group(1))
-
-    seconds_match = re.search(r"(\d+)s", time_str)
-    if seconds_match:
-        seconds = int(seconds_match.group(1))
-
-    if minutes == 0 and seconds == 0:
-        print(f"DEBUG: No minutes or seconds found in time string: {time_str}")
-        return None
-
+    game_number = int(full_match.group(1))
+    minutes = int(full_match.group(2))
+    seconds = int(full_match.group(3))
+    hints_used = int(full_match.group(4))
+    
     completion_time_seconds = minutes * 60 + seconds
-    print(f"DEBUG: Time found: {minutes}m {seconds}s ({completion_time_seconds} seconds)")
-
-    hints_match = re.search(r"❓(\d+)", message_content)
-    hints_used = int(hints_match.group(1)) if hints_match else 0
-    print(f"DEBUG: Hints found: {hints_used}")
-
-    # Calculate the new Word Salad score
     calculated_score = score_wordsalad(completion_time_seconds, hints_used)
-    print(f"DEBUG: Calculated score: {calculated_score}")
 
-    print("DEBUG: Word Salad parsing successful.")
     return {
         "game_number": game_number,
         "completion_time_seconds": completion_time_seconds,
