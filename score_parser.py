@@ -17,9 +17,8 @@ MINUTE_CRYPTIC_CLUE_PATTERN = re.compile(r'"(.*?)" \((\d+)\)')
 MINUTE_CRYPTIC_SCORE_PATTERN = re.compile(r"I scored: (.*)")
 PIPS_PATTERN = re.compile(r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|🔴)\s*\n(\d{1,2}:\d{2})\s*(🍪)?", re.IGNORECASE)
 
-# A single, robust regex to capture all key data points for Word Salad
 WORD_SALAD_FULL_PATTERN = re.compile(
-    r"Word Salad #(\d+).*?"
+    r".*?Word Salad #(\d+).*?"
     r"⌛(\d+)m\s*(\d+)s.*?"
     r"❓(\d+)",
     re.IGNORECASE | re.DOTALL
