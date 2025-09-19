@@ -20,9 +20,11 @@ WORD_SALAD_TIME_PATTERN = re.compile(r"⌛(\d+m\s*\d+s)", re.IGNORECASE)
 WORD_SALAD_HINTS_PATTERN = re.compile(r"❓(\d+)", re.IGNORECASE)
 PIPS_PATTERN = re.compile(r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|🔴)\s*\n(\d{1,2}:\d{2})\s*(🍪)?", re.IGNORECASE)
 
-SEXAGINTA_HEADER_RE = re.compile(
-    r"#SexagintaQuattuordle\s+(\d+)\s+(\d{1,2}|X)\/(\d{1,2})\s*(?:\(score\s*([\d,]+)\s*,\s*([\d]{1,3})%\))?",
-    re.IGNORECASE
+SEXAGINTA_HEADER_REGEX = re.compile(
+    r"#SexagintaQuattuordle\s+(\d+).*?(?:\n| )"  # Capture game number, tolerate line breaks or spaces
+    r"(?:.*?words unsolved:\s*\d+)?\s*"          # Optionally match the "words unsolved" part
+    r"\(score\s*(\d+),\s*([0-9]{1,3})%\)",      # Capture score + percent
+    re.IGNORECASE | re.DOTALL
 )
 
 # Emoji band mapping
@@ -69,60 +71,29 @@ SEXAGINTA_EMOJI_SCORES = {
     "🔺": None, # Red triangle, unknown value
 }
 
-def calculate_sexaginta_score_from_grid(grid_lines: List[str]) -> Optional[int]:
-    """
-    Calculates the total score from a Sexaginta-quattuordle grid.
-    The score is the sum of the guess counts for each of the 64 words.
-    This function assumes that square emojis are numbered sequentially.
-    """
-    if not grid_lines:
+def parse_sexaginta_score(content: str) -> dict:
+    match = re.search(
+        r"#SexagintaQuattuordle\s+(\d+)\s+.*?\s*\(score\s*([\d,]+),\s*(\d{1,3})%\)",
+        content,
+        re.DOTALL | re.IGNORECASE
+    )
+
+    if not match:
         return None
 
-    all_emojis = "".join(grid_lines)
-
-    # Count occurrences of each square emoji to handle sequential scoring
-    square_counts = {
-        "🟪": 0, "🟦": 0, "🟩": 0, "🟨": 0, "🟧": 0, "🟥": 0
-    }
-
-    total_score = 0
-    unknown_emojis_found = False
-
-    for emoji in all_emojis:
-        if emoji in square_counts:
-            base_score, _ = SEXAGINTA_EMOJI_SCORES[emoji]
-            total_score += base_score + square_counts[emoji]
-            square_counts[emoji] += 1
-        elif emoji in SEXAGINTA_EMOJI_SCORES:
-            score = SEXAGINTA_EMOJI_SCORES[emoji]
-            if score is not None:
-                total_score += score
-            else:
-                unknown_emojis_found = True
-        else:
-            # Emoji not in any mapping
-            unknown_emojis_found = True
-
-    return total_score if not unknown_emojis_found else None
-
-def parse_sexaginta_score(text: str, author_id: int = None) -> Optional[Dict[str, Any]]:
-    header_match = SEXAGINTA_HEADER_RE.search(text)
-    if not header_match:
-        return None
-
-    game_number = int(header_match.group(1))
-    guesses_used = header_match.group(2)
-    guesses_allowed = int(header_match.group(3))
-    score_value = int(header_match.group(4).replace(",", "")) if header_match.group(4) else None
-    percent_solved = int(header_match.group(5)) if header_match.group(5) else None
+    game_number = int(match.group(1))
+    # Use the score value directly from the message, removing commas
+    score = int(match.group(2).replace(",", ""))
+    percent_solved = float(match.group(3))
 
     # Extract seed from URL
-    seed_match = re.search(r"https://64ordle\.au/\?seed=(\d+)", text)
+    seed_match = re.search(r"https://64ordle\.au/\?seed=(\d+)", content)
     seed = int(seed_match.group(1)) if seed_match else None
 
-    lines = text.split('\n')
+    lines = content.split('\n')
     grid_lines: List[str] = []
     for ln in lines:
+        # Check if the line contains any known emojis
         if any(ch in ln for ch in ("🟪","🟦","🟩","🟨","🟧","🟥","💜","💙","💚","💛","🧡","❤️","❤","🔵","🔴","❌", "💕", "🔺")):
             grid_lines.append(re.sub(r'[\s\n\r️]', '', ln))
 
@@ -135,38 +106,17 @@ def parse_sexaginta_score(text: str, author_id: int = None) -> Optional[Dict[str
                     band_counts[band] += 1
                     break
 
-    # Calculate score from grid
-    calculated_score = calculate_sexaginta_score_from_grid(grid_lines)
-    score_discrepancy = None
-    if score_value is not None and calculated_score is not None:
-        score_discrepancy = score_value - calculated_score
-
-    # Invalidate scores if unknown emojis are present
-    unknown_emojis_present = calculated_score is None
-    if unknown_emojis_present:
-        weighted_score = None
-        performance_pct = None
-    else:
-        # Calculate weighted performance score
-        weighted_score = sum(SEXAGINTA_BAND_WEIGHTS[b] * c for b, c in band_counts.items())
-        max_score = 64 * SEXAGINTA_BAND_WEIGHTS["purple"]
-        performance_pct = (weighted_score / max_score) * 100 if max_score else None
-        performance_pct = round(performance_pct, 1) if performance_pct is not None else None
-
+    # Calculate weighted performance score based on band counts
+    weighted_score = sum(SEXAGINTA_BAND_WEIGHTS[b] * c for b, c in band_counts.items())
+    
+    # Return the parsed data
     return {
         "game_number": game_number,
-        "guesses_used": guesses_used,
-        "guesses_allowed": guesses_allowed,
-        "score_value": score_value,
-        "pct": percent_solved,
+        "weighted_score": score,  # store game-provided score here
+        "performance_pct": percent_solved,  # match DB schema
         "grid_lines": grid_lines,
         "seed": seed,
         "band_counts": band_counts,
-        "weighted_score": weighted_score,
-        "performance_pct": round(performance_pct, 1) if performance_pct is not None else None,
-        "author_id": author_id,
-        "calculated_score": calculated_score,
-        "score_discrepancy": score_discrepancy
     }
 
 def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
