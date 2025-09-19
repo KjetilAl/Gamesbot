@@ -15,11 +15,12 @@ BONUS_PATTERN = re.compile(r'Bonus Rounds: (\d+)/(\d+)(?:\s+(.+))?', re.IGNORECA
 MINUTE_CRYPTIC_HEADER_PATTERN = re.compile(r"Minute Cryptic - (\d+ \w+ \d+)")
 MINUTE_CRYPTIC_CLUE_PATTERN = re.compile(r'"(.*?)" \((\d+)\)')
 MINUTE_CRYPTIC_SCORE_PATTERN = re.compile(r"I scored: (.*)")
-WORD_SALAD_NUMBER_PATTERN = re.compile(
-    r"Word\s+Salad\s*#\s*(\d+)",   # any whitespace before/after “#”
-    re.IGNORECASE
+WORD_SALAD_FULL_PATTERN = re.compile(
+    r"Word Salad #(\d+).*?"
+    r"⌛(\d+)m\s*(\d+)s.*?"
+    r"❓(\d+)",
+    re.IGNORECASE | re.DOTALL
 )
-WORD_SALAD_HINTS_PATTERN = re.compile(r"❓(\d+)", re.IGNORECASE)
 PIPS_PATTERN = re.compile(r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|🔴)\s*\n(\d{1,2}:\d{2})\s*(🍪)?", re.IGNORECASE)
 
 SEXAGINTA_HEADER_REGEX = re.compile(
