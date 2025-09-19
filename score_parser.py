@@ -19,7 +19,6 @@ WORD_SALAD_NUMBER_PATTERN = re.compile(
     r"Word\s+Salad\s*#\s*(\d+)",   # any whitespace before/after “#”
     re.IGNORECASE
 )
-WORD_SALAD_TIME_PATTERN = re.compile(r"⌛(\d+m\s*\d+s)", re.IGNORECASE)
 WORD_SALAD_HINTS_PATTERN = re.compile(r"❓(\d+)", re.IGNORECASE)
 PIPS_PATTERN = re.compile(r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|🔴)\s*\n(\d{1,2}:\d{2})\s*(🍪)?", re.IGNORECASE)
 
@@ -418,12 +417,28 @@ def parse_word_salad_score(message_content: str) -> Optional[Dict[str, Any]]:
     game_number = int(puzzle_match.group(1))
     print(f"DEBUG: Game number found: {game_number}")
 
-    time_match = re.search(r"⌛(\d+)m\s*(\d+)s", message_content)
-    if not time_match:
-        print("DEBUG: Failed to match 'Time' pattern (e.g., '⌛0m 43s').")
+    time_str_match = re.search(r"⌛([^,\n]+)", message_content)
+    if not time_str_match:
+        print("DEBUG: Failed to match time string pattern.")
         return None
-    minutes = int(time_match.group(1))
-    seconds = int(time_match.group(2))
+
+    time_str = time_str_match.group(1).strip()
+
+    minutes = 0
+    seconds = 0
+
+    minutes_match = re.search(r"(\d+)m", time_str)
+    if minutes_match:
+        minutes = int(minutes_match.group(1))
+
+    seconds_match = re.search(r"(\d+)s", time_str)
+    if seconds_match:
+        seconds = int(seconds_match.group(1))
+
+    if minutes == 0 and seconds == 0:
+        print(f"DEBUG: No minutes or seconds found in time string: {time_str}")
+        return None
+
     completion_time_seconds = minutes * 60 + seconds
     print(f"DEBUG: Time found: {minutes}m {seconds}s ({completion_time_seconds} seconds)")
 
