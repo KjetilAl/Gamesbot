@@ -320,34 +320,34 @@ def _generate_framed_post(display_name: str, game_info: dict, player_stats: dict
 
 def _generate_sexaginta_post(display_name: str, game_info: dict, player_stats: dict) -> str:
     """
-    Generates dynamic but grounded feedback for 64ordle.
-    Highlights exceptional performances (high solve % or low guess count).
+    Generates welcoming feedback for 64ordle that acknowledges the challenge.
     """
     game_number = game_info.get("game_number", "?")
-    guesses_used = game_info.get("guesses_used", "?")
-    guesses_allowed = game_info.get("guesses_allowed", 70)
-    pct = game_info.get("pct") or game_info.get("performance_pct")
-    weighted_score = game_info.get("weighted_score")
-    band_counts = game_info.get("band_counts", {})
+    guesses_used = game_info.get("guesses_used")
+    words_unsolved = game_info.get("words_unsolved")
+    score = game_info.get("game_score", "?")
+    percent_solved = game_info.get("percent_solved", 0)
 
-    # --- Opening Line ---
-    if guesses_used == "X":
-        opening = f"😵 **{display_name}** couldn't tame Sexaginta-Quattuordle #{game_number} this time."
+    # --- Welcome with performance context ---
+    if words_unsolved is not None and words_unsolved > 0:
+        opening = f"Welcome **{display_name}**! Sexaginta-Quattuordle #{game_number} was a beast, and left you with **{words_unsolved}** words unsolved."
+    elif guesses_used is not None and guesses_used <= 70:
+        opening = f"Welcome **{display_name}**! You finished #{game_number} in **{guesses_used}** guesses."
     else:
-        opening = f"**{display_name}** finished #{game_number} in {guesses_used}/{guesses_allowed} guesses."
+        opening = f"Welcome **{display_name}**! You tackled #{game_number} with a score of **{score}**."
 
-    # --- Spotlight Conditions ---
-    spotlights = []
-    if pct is not None and pct >= 90:
-        spotlights.append(f"Only **{100-pct:.0f}%** left unsolved — stellar performance!")
-    if band_counts.get("red", 0) <= 3:
-        spotlights.append("Fewer than 4 reds — that's elite territory. 🔥")
-    if weighted_score and pct and pct < 50:
-        spotlights.append("A tough day — less than half solved, but a valiant effort.")
-
-    if spotlights:
-        return f"{opening}\n{random.choice(spotlights)}"
-    return opening
+    # --- Discussion starters ---
+    starters = []
+    
+    if guesses_used is not None and guesses_used <= 70:
+        starters.append(f"That's a fantastic effort! What's your strategy for managing 64 boards?")
+    elif words_unsolved is not None and words_unsolved > 0:
+        starters.append("Which words gave you the most trouble?")
+    else:
+        # Generic prompt for solved puzzles
+        starters.append("How do you keep track of all 64 boards?")
+    
+    return f"{opening}\n{random.choice(starters)}"
 
 def generate_post(game_name: str, display_name: str, game_info: dict, player_stats: dict) -> str:
     """Routes the request to the appropriate sub-generator for the given game."""
