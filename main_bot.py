@@ -161,15 +161,19 @@ async def on_message(message):
                         if latest_game_identifier is None or int(current_game_identifier) > int(latest_game_identifier):
                             should_update_db = True
 
-                    if should_update_db:
-                        config["update_latest_game_number_function"](game_key, str(current_game_identifier))
+                if should_update_db:
+                    config["update_latest_game_number_function"](game_key, str(current_game_identifier))
 
-                    await role_manager.handle_game_role_assignment(message.guild, message.author, game_key, config, current_game_identifier, latest_game_identifier)
-                    
-                    if config.get("create_introduction"):
-                        await role_manager.introduce_player_in_game_channel(message.guild, message.author, config, game_info)
+                should_introduce = await role_manager.handle_game_role_assignment(
+                    message.guild, message.author, game_key,
+                    config, current_game_identifier, latest_game_identifier
+                )
 
-                post_message = post_generator.generate_post(
+                if should_introduce and config.get("create_introduction"):
+                    await role_manager.introduce_player_in_game_channel(
+                        
+        message.guild, message.author, config, game_info
+    )
                     game_key, message.author.display_name, game_info, player_stats
                 )
 
