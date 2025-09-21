@@ -74,7 +74,6 @@ GAME_CONFIGS = {
         "embed_builder_function": embed_builder.build_leaderboard_embed,
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
-        "create_introduction": score_parser.create_framed_introduction,
         "game_number_key": "game_number"
     },
     "bandle": {
@@ -89,7 +88,6 @@ GAME_CONFIGS = {
         "embed_builder_function": embed_builder.build_leaderboard_embed,
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
-        "create_introduction": score_parser.create_bandle_introduction,
         "game_number_key": "game_number"
     },
     "minute_cryptic": {
@@ -105,7 +103,6 @@ GAME_CONFIGS = {
         "get_latest_game_number_function": database.get_latest_minute_cryptic_date,
         "update_latest_game_number_function": database.update_latest_minute_cryptic_date,
         "create_acknowledgement": score_parser.create_minute_cryptic_acknowledgement,
-        "create_introduction": score_parser.create_minute_cryptic_introduction,
         "game_number_key": "game_date"
     },
     "word_salad": {
@@ -135,7 +132,6 @@ GAME_CONFIGS = {
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
         "create_acknowledgement": score_parser.create_pips_acknowledgement,
-        "create_introduction": score_parser.create_pips_introduction,
         "game_number_key": "game_number"
     },
     "sexaginta": {

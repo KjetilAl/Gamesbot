@@ -349,6 +349,57 @@ def _generate_sexaginta_post(display_name: str, game_info: dict, player_stats: d
     
     return f"{opening}\n{random.choice(starters)}"
 
+def _generate_minute_cryptic_post(display_name: str, game_info: dict, player_stats: dict) -> str:
+    """Generates a dynamic post for Minute Cryptic scores."""
+    game_date = game_info.get("game_date", "a recent puzzle")
+    score_desc = game_info.get("score_description", "a score")
+    solved = game_info.get("solved", False)
+
+    if solved:
+        opening_line = f"🕵️‍♀️ A clever solve! **{display_name}** cracked the Minute Cryptic for {game_date}."
+    else:
+        opening_line = f"🤔 That was a tricky one! **{display_name}** tackled the Minute Cryptic for {game_date}."
+
+    spotlights = []
+    if solved:
+        spotlights.append(f"Their final score was **{score_desc}**.")
+
+    avg_score = player_stats.get("avg_score")
+    if avg_score is not None:
+        spotlights.append(f"Their average score is now **{avg_score:.2f}**.")
+
+    if not spotlights:
+        spotlights.append("Another puzzle in the books!")
+
+    return f"{opening_line}\n{random.choice(spotlights)}"
+
+def _generate_pips_post(display_name: str, game_info: dict, player_stats: dict) -> str:
+    """Generates a post for a completed Pips game."""
+    game_number = game_info.get("game_number", "?")
+    scores = player_stats.get("scores")
+
+    if not scores:
+        return f"🏆 **{display_name}** is making progress on Pips #{game_number}!"
+
+    total_score = sum(s['score'] for s in scores)
+    cookie_count = sum(s['cookie'] for s in scores)
+
+    message = f"🏆 **{display_name}** has completed all Pips difficulties for game #{game_number} with a total score of **{total_score}**!\n\n"
+
+    for score in scores:
+        time_min = score['completion_time'] // 60
+        time_sec = score['completion_time'] % 60
+        time_str = f"{time_min}:{time_sec:02d}"
+        message += f"**{score['difficulty'].capitalize()}**: {time_str} ({score['score']} pts)"
+        if score.get('cookie'):
+            message += " 🍪"
+        message += "\n"
+
+    if cookie_count > 0:
+        message += f"\nWow, {cookie_count} cookie{'s' if cookie_count > 1 else ''}! You're a top performer! 🍪"
+
+    return message
+
 def generate_post(game_name: str, display_name: str, game_info: dict, player_stats: dict) -> str:
     """Routes the request to the appropriate sub-generator for the given game."""
 
@@ -360,6 +411,8 @@ def generate_post(game_name: str, display_name: str, game_info: dict, player_sta
         "word_salad": _generate_word_salad_post,
         "framed": _generate_framed_post,
         "sexaginta": _generate_sexaginta_post,
+        "minute_cryptic": _generate_minute_cryptic_post,
+        "pips": _generate_pips_post,
     }
 
     generator_func = game_generators.get(game_name.lower())
