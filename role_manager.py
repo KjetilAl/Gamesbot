@@ -105,23 +105,3 @@ async def handle_game_role_assignment(
     
     # For other games, introduction is based on posting a new or same score.
     return True
-
-async def introduce_player_in_game_channel(
-    guild: discord.Guild,
-    member: discord.Member,
-    game_config: Dict[str, Any],
-    game_info: Dict[str, Any]
-) -> None:
-    channel_name = game_config["chat_channel_name"]
-    game_channel = discord.utils.get(guild.text_channels, name=channel_name)
-    
-    if not game_channel:
-        print(f"Could not find {channel_name} channel")
-        return
-
-    # Add user_id to game_info so all games can fetch more data for the intro message
-    game_info['user_id'] = member.id
-    
-    intro_message = game_config["create_introduction"](member.display_name, game_info)
-    await game_channel.send(intro_message)
-    print(f"Introduction posted for {member.display_name} in #{channel_name}")

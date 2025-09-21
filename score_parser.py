@@ -1,7 +1,6 @@
 import re
 from typing import Dict, List, Tuple, Optional, Any, Union
 from datetime import datetime, timedelta, date
-import database
 
 # Regular expressions for game patterns
 WORDLE_PATTERN = re.compile(r'Wordle\s+(?:#?\s*)(\d+(?:,\d+)?)\s+([0-6X])/6(\*?)', re.IGNORECASE)
@@ -19,7 +18,7 @@ PIPS_PATTERN = re.compile(r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|�
 
 WORD_SALAD_FULL_PATTERN = re.compile(
     r".*?Word Salad #(\d+).*?"
-    r"⌛(\d+)m\s*(\d+)s.*?"
+    r"⌛\s*(?:(\d+)\s*m)?(?:,?\s*)?(?:(\d+)\s*s)?.*?"
     r"❓(\d+)",
     re.IGNORECASE | re.DOTALL
 )
@@ -403,10 +402,13 @@ def parse_word_salad_score(message_content: str) -> Optional[Dict[str, Any]]:
         return None
 
     game_number = int(full_match.group(1))
-    minutes = int(full_match.group(2))
-    seconds = int(full_match.group(3))
+    minutes = int(full_match.group(2)) if full_match.group(2) else 0
+    seconds = int(full_match.group(3)) if full_match.group(3) else 0
     hints_used = int(full_match.group(4))
-    
+
+    if minutes == 0 and seconds == 0:
+        return None # No time found
+
     completion_time_seconds = minutes * 60 + seconds
     calculated_score = score_wordsalad(completion_time_seconds, hints_used)
 
@@ -534,111 +536,18 @@ def create_connections_acknowledgement(display_name: str, game_info: Dict[str, A
 def create_framed_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
 
-def create_framed_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create an informative introduction message for Framed players."""
-    user_id = game_info.get("user_id")
-    stats = database.get_framed_stats(user_id)
-
-    game_number = game_info.get("game_number", "?")
-    attempts = game_info.get("attempts", "?")
-    
-    message = (f"**{display_name}** solved Framed #{game_number} in {attempts} guesses!\n"
-               f"They have played {stats['games_played']} games with an average score of {stats['avg_score']:.2f}.")
-    return message
-
 def create_gisnep_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
-
-def create_gisnep_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create an informative introduction message for Gisnep players."""
-    user_id = game_info.get("user_id")
-    stats = database.get_gisnep_stats(user_id)
-
-    game_number = game_info.get("game_number", "?")
-    completion_time = game_info.get("completion_time", 0)
-    time_str = f"{completion_time // 60}:{completion_time % 60:02d}"
-
-    message = (f"**{display_name}** finished Gisnep #{game_number} in {time_str}!\n"
-               f"They have played {stats['games_played']} games with an average time of {stats['avg_time']:.2f}s.")
-    return message
 
 def create_bandle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
 
-def create_bandle_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create an informative introduction message for Bandle players."""
-    user_id = game_info.get("user_id")
-    stats = database.get_bandle_stats(user_id)
-
-    game_number = game_info.get("game_number", "?")
-    attempts = game_info.get("attempts", "?")
-    
-    message = (f"**{display_name}** finished Bandle #{game_number} in {attempts} attempts!\n"
-               f"They have played {stats['games_played']} games and earned a total of {stats['total_bonus']} bonus points.")
-    return message
-
 def create_minute_cryptic_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
     
-def create_minute_cryptic_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create an informative introduction message for Minute Cryptic players."""
-    user_id = game_info.get("user_id")
-    stats = database.get_minute_cryptic_stats(user_id)
-
-    game_date = game_info.get("game_date", "?")
-    score_desc = game_info.get("score_description", "?")
-
-    message = (f"**{display_name}** finished the Minute Cryptic for {game_date} with a score of {score_desc}!\n"
-               f"They have played {stats['games_played']} games with an average score of {stats['avg_score']:.2f}.")
-    return message
-
 def create_word_salad_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
 
-def create_word_salad_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create an informative introduction message for Word Salad players."""
-    user_id = game_info.get("user_id")
-    stats = database.get_word_salad_stats(user_id)
-
-    game_number = game_info.get("game_number", "?")
-    score = game_info.get("score", "?")
-
-    message = (f"**{display_name}** finished Word Salad #{game_number} with a score of {score}!\n"
-               f"They have played {stats['games_played']} games with an average score of {stats['avg_score']:.2f}.")
-    return message
-
 def create_pips_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
-
-def create_pips_introduction(display_name: str, game_info: Dict[str, Any]) -> str:
-    """Create introduction message for Pips players."""
-    game_number = game_info.get("game_number", "?")
-    user_id = game_info.get("user_id")
-
-    if user_id is None:
-        return f"🏆 **{display_name}** just completed all Pips difficulties for game #{game_number}!"
-
-    scores = database.get_pips_scores_for_game(user_id, game_number)
-
-    if not scores:
-         return f"🏆 **{display_name}** just completed all Pips difficulties for game #{game_number}!"
-
-    total_score = sum(s['score'] for s in scores)
-    cookie_count = sum(s['cookie'] for s in scores)
-
-    message = f"🏆 **{display_name}** has completed all Pips difficulties for game #{game_number} with a total score of **{total_score}**!\n\n"
-
-    for score in scores:
-        time_min = score['completion_time'] // 60
-        time_sec = score['completion_time'] % 60
-        time_str = f"{time_min}:{time_sec:02d}"
-        message += f"**{score['difficulty'].capitalize()}**: {time_str} ({score['score']} pts)"
-        if score['cookie']:
-            message += " 🍪"
-        message += "\n"
-
-    if cookie_count > 0:
-        message += f"\nWow, {cookie_count} cookie{'s' if cookie_count > 1 else ''}! You're a top performer! 🍪"
-
-    return message
 

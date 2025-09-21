@@ -66,12 +66,32 @@ def get_sexaginta_stats(user_id: int, user_name: str, game_info: dict) -> dict:
     """Gets Sexaginta-quattuordle player stats."""
     return database.update_sexaginta_stats(user_id, user_name, game_info)
 
+def get_framed_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    """Gets Framed player stats."""
+    return database.update_framed_player_stats(user_id, user_name, game_info)
+
+def get_word_salad_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    """Gets Word Salad player stats."""
+    return database.update_word_salad_player_stats(user_id, user_name, game_info)
+
+def get_minute_cryptic_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    """Gets Minute Cryptic player stats."""
+    return database.update_minute_cryptic_player_stats(user_id, user_name, game_info)
+
+def get_pips_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    """Gets Pips player stats."""
+    return database.update_pips_player_stats(user_id, user_name, game_info)
+
 PLAYER_STATS_HANDLERS = {
     "wordle": get_wordle_stats,
     "connections": get_connections_stats,
     "gisnep": get_gisnep_stats,
     "bandle": get_bandle_stats,
     "sexaginta": get_sexaginta_stats,
+    "framed": get_framed_stats,
+    "word_salad": get_word_salad_stats,
+    "minute_cryptic": get_minute_cryptic_stats,
+    "pips": get_pips_stats,
 }
 
 
@@ -169,13 +189,17 @@ async def on_message(message):
                     config, current_game_identifier, latest_game_identifier
                 )
 
-                if should_introduce and config.get("create_introduction"):
-                    await role_manager.introduce_player_in_game_channel(
-                        message.guild,
-                        message.author,
-                        config,
-                        game_info
-                    )
+                post_message = post_generator.generate_post(
+                    game_key,
+                    message.author.display_name,
+                    game_info,
+                    player_stats
+                )
+
+                # For Pips, the introduction is only posted when all difficulties are complete.
+                # The should_introduce flag from handle_game_role_assignment tells us when this happens.
+                if game_key == 'pips' and not should_introduce:
+                    post_message = None
 
                 if not post_message and config.get("create_acknowledgement"):
                     acknowledgement = config["create_acknowledgement"](message.author.display_name, game_info)

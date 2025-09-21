@@ -40,7 +40,23 @@ def initialize_db():
                 gisnep_personal_best_seconds INTEGER, -- Can be NULL
                 sexaginta_total_plays INTEGER DEFAULT 0,
                 sexaginta_avg_pct REAL DEFAULT 0.0,
-                sexaginta_avg_game_score REAL DEFAULT 0.0
+                sexaginta_avg_game_score REAL DEFAULT 0.0,
+                framed_total_plays INTEGER DEFAULT 0,
+                framed_total_wins INTEGER DEFAULT 0,
+                framed_current_streak INTEGER DEFAULT 0,
+                framed_max_streak INTEGER DEFAULT 0,
+                framed_avg_attempts REAL DEFAULT 0.0,
+                framed_avg_score REAL DEFAULT 0.0,
+                word_salad_total_plays INTEGER DEFAULT 0,
+                word_salad_avg_time REAL DEFAULT 0.0,
+                word_salad_personal_best_time INTEGER,
+                word_salad_avg_hints REAL DEFAULT 0.0,
+                word_salad_avg_score REAL DEFAULT 0.0,
+                minute_cryptic_total_plays INTEGER DEFAULT 0,
+                minute_cryptic_solved INTEGER DEFAULT 0,
+                minute_cryptic_avg_score REAL DEFAULT 0.0,
+                pips_total_score INTEGER DEFAULT 0,
+                pips_total_cookies INTEGER DEFAULT 0
             )
         """)
         # Connections
@@ -652,6 +668,199 @@ def update_sexaginta_stats(user_id, display_name, game_info):
         "total_plays": new_total_plays,
         "avg_pct": new_avg_pct,
         "avg_game_score": new_avg_game_score
+    }
+
+def update_framed_player_stats(user_id, display_name, game_info):
+    """Update player stats for Framed after a new score is submitted."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT framed_total_plays, framed_total_wins, framed_current_streak, framed_max_streak, framed_avg_attempts, framed_avg_score FROM player_stats WHERE user_id = ?", (str(user_id),))
+    stats = cursor.fetchone()
+
+    if not stats or stats[0] is None:
+        total_plays, total_wins, current_streak, max_streak, avg_attempts, avg_score = 0, 0, 0, 0, 0.0, 0.0
+        cursor.execute("SELECT user_id FROM player_stats WHERE user_id = ?", (str(user_id),))
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (str(user_id), display_name))
+    else:
+        total_plays, total_wins, current_streak, max_streak, avg_attempts, avg_score = stats
+
+    # --- Calculate new stats ---
+    new_total_plays = total_plays + 1
+    was_a_win = game_info.get("solved", False)
+    new_total_wins = total_wins + (1 if was_a_win else 0)
+
+    if was_a_win:
+        new_streak = current_streak + 1
+    else:
+        new_streak = 0
+
+    new_max_streak = max(max_streak, new_streak)
+
+    attempts = game_info.get("attempts", 7)
+    new_avg_attempts = ((avg_attempts * total_plays) + attempts) / new_total_plays if new_total_plays > 0 else float(attempts)
+
+    score = game_info.get("total_score", 0)
+    new_avg_score = ((avg_score * total_plays) + score) / new_total_plays if new_total_plays > 0 else float(score)
+
+    cursor.execute("""
+        UPDATE player_stats
+        SET display_name = ?, framed_total_plays = ?, framed_total_wins = ?, framed_current_streak = ?, framed_max_streak = ?, framed_avg_attempts = ?, framed_avg_score = ?
+        WHERE user_id = ?
+    """, (display_name, new_total_plays, new_total_wins, new_streak, new_max_streak, new_avg_attempts, new_avg_score, str(user_id)))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "total_plays": new_total_plays,
+        "total_wins": new_total_wins,
+        "current_streak": new_streak,
+        "max_streak": new_max_streak,
+        "is_new_max_streak": new_streak > max_streak and new_streak > 1,
+        "avg_attempts": new_avg_attempts,
+        "avg_score": new_avg_score
+    }
+
+def update_word_salad_player_stats(user_id, display_name, game_info):
+    """Update player stats for Word Salad after a new score is submitted."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT word_salad_total_plays, word_salad_avg_time, word_salad_personal_best_time, word_salad_avg_hints, word_salad_avg_score FROM player_stats WHERE user_id = ?", (str(user_id),))
+    stats = cursor.fetchone()
+
+    if not stats or stats[0] is None:
+        total_plays, avg_time, personal_best, avg_hints, avg_score = 0, 0.0, None, 0.0, 0.0
+        cursor.execute("SELECT user_id FROM player_stats WHERE user_id = ?", (str(user_id),))
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (str(user_id), display_name))
+    else:
+        total_plays, avg_time, personal_best, avg_hints, avg_score = stats
+
+    total_plays = total_plays or 0
+    avg_time = avg_time or 0.0
+    avg_hints = avg_hints or 0.0
+    avg_score = avg_score or 0.0
+
+    new_total_plays = total_plays + 1
+
+    time_seconds = game_info.get("completion_time_seconds", 0)
+    new_avg_time = ((avg_time * total_plays) + time_seconds) / new_total_plays if new_total_plays > 0 else float(time_seconds)
+
+    is_new_pb = False
+    if personal_best is None or time_seconds < personal_best:
+        personal_best = time_seconds
+        is_new_pb = True
+
+    hints = game_info.get("hints_used", 0)
+    new_avg_hints = ((avg_hints * total_plays) + hints) / new_total_plays if new_total_plays > 0 else float(hints)
+
+    score = game_info.get("score", 0)
+    new_avg_score = ((avg_score * total_plays) + score) / new_total_plays if new_total_plays > 0 else float(score)
+
+    cursor.execute("""
+        UPDATE player_stats
+        SET display_name = ?, word_salad_total_plays = ?, word_salad_avg_time = ?, word_salad_personal_best_time = ?, word_salad_avg_hints = ?, word_salad_avg_score = ?
+        WHERE user_id = ?
+    """, (display_name, new_total_plays, new_avg_time, personal_best, new_avg_hints, new_avg_score, str(user_id)))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "total_plays": new_total_plays,
+        "avg_time": new_avg_time,
+        "is_new_pb": is_new_pb,
+        "personal_best": personal_best,
+        "avg_hints": new_avg_hints,
+        "avg_score": new_avg_score
+    }
+
+def update_minute_cryptic_player_stats(user_id, display_name, game_info):
+    """Update player stats for Minute Cryptic after a new score is submitted."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT minute_cryptic_total_plays, minute_cryptic_solved, minute_cryptic_avg_score FROM player_stats WHERE user_id = ?", (str(user_id),))
+    stats = cursor.fetchone()
+
+    if not stats or stats[0] is None:
+        total_plays, solved_count, avg_score = 0, 0, 0.0
+        cursor.execute("SELECT user_id FROM player_stats WHERE user_id = ?", (str(user_id),))
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (str(user_id), display_name))
+    else:
+        total_plays, solved_count, avg_score = stats
+
+    total_plays = total_plays or 0
+    solved_count = solved_count or 0
+    avg_score = avg_score or 0.0
+
+    new_total_plays = total_plays + 1
+
+    was_solved = game_info.get("solved", False)
+    new_solved_count = solved_count + (1 if was_solved else 0)
+
+    score = game_info.get("score_value", 0)
+    new_avg_score = ((avg_score * total_plays) + score) / new_total_plays if new_total_plays > 0 else float(score)
+
+    cursor.execute("""
+        UPDATE player_stats
+        SET display_name = ?, minute_cryptic_total_plays = ?, minute_cryptic_solved = ?, minute_cryptic_avg_score = ?
+        WHERE user_id = ?
+    """, (display_name, new_total_plays, new_solved_count, new_avg_score, str(user_id)))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "total_plays": new_total_plays,
+        "solved_count": new_solved_count,
+        "avg_score": new_avg_score
+    }
+
+def update_pips_player_stats(user_id, display_name, game_info):
+    """Update player stats for Pips after a new score is submitted."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT pips_total_score, pips_total_cookies FROM player_stats WHERE user_id = ?", (str(user_id),))
+    stats = cursor.fetchone()
+
+    if not stats or stats[0] is None:
+        total_score, total_cookies = 0, 0
+        cursor.execute("SELECT user_id FROM player_stats WHERE user_id = ?", (str(user_id),))
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (str(user_id), display_name))
+    else:
+        total_score, total_cookies = stats
+
+    total_score = total_score or 0
+    total_cookies = total_cookies or 0
+
+    new_total_score = total_score + game_info.get("score", 0)
+    new_total_cookies = total_cookies + (1 if game_info.get("cookie", False) else 0)
+
+    cursor.execute("""
+        UPDATE player_stats
+        SET display_name = ?, pips_total_score = ?, pips_total_cookies = ?
+        WHERE user_id = ?
+    """, (display_name, new_total_score, new_total_cookies, str(user_id)))
+
+    conn.commit()
+
+    # For pips, we also need to fetch all scores for the current game to generate the post.
+    game_number = game_info.get("game_number")
+    scores = get_pips_scores_for_game(user_id, game_number)
+
+    conn.close()
+
+    return {
+        "total_score": new_total_score,
+        "total_cookies": new_total_cookies,
+        "scores": [dict(row) for row in scores]
     }
     
 def save_minute_cryptic_score(user_id: int, display_name: str, game_date: str, clue: str, word_length: int, score_description: str):
