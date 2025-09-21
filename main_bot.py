@@ -171,10 +171,14 @@ async def on_message(message):
 
                 if should_introduce and config.get("create_introduction"):
                     await role_manager.introduce_player_in_game_channel(
-                        
-        message.guild, message.author, config, game_info
-    )
-                    game_key, message.author.display_name, game_info, player_stats
+                        message.guild,
+                        message.author,
+                        config,
+                        game_info,
+                        game_key,
+                        message.author.display_name,
+                        player_stats
+                    )
 
                 if not post_message and config.get("create_acknowledgement"):
                     acknowledgement = config["create_acknowledgement"](message.author.display_name, game_info)
