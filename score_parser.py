@@ -162,6 +162,15 @@ def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
     finished_game = len(found_colors) == 4
     perfect_game = finished_game and mistakes == 0
 
+    # Calculate score
+    score_info = calculate_connections_score(
+        guesses=all_guesses,
+        found_colors=found_colors,
+        first_successful=first_successful,
+        mistake_count=mistakes,
+        skill_score=None
+    )
+
     return {
         "game_number": puzzle_number,
         "finished_game": finished_game,
@@ -171,7 +180,8 @@ def parse_connections_result(message_content: str) -> Optional[Dict[str, Any]]:
         "solve_order": solve_order,
         "rainbow_wrong_guess": rainbow_wrong_guess,
         "guesses": all_guesses, # Now contains actual guess content
-        "num_guesses": len(all_guesses)
+        "num_guesses": len(all_guesses),
+        "total_score": score_info['total_score']
     }
 
 def calculate_connections_score(guesses, found_colors, first_successful, mistake_count, skill_score=None):

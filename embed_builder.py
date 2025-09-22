@@ -48,6 +48,122 @@ async def build_wordle_leaderboard_embed(title: str, leaderboard_data: dict, per
     embed.set_footer(text=emit_footer)
     return embed
 
+async def build_sexaginta_leaderboard_embed(title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
+    """
+    Builds a Discord embed for the Sexaginta-Quattuordle leaderboard.
+    """
+    embed = discord.Embed(
+        title=title,
+        description=f"Period: {period.capitalize()}",
+        color=color
+    )
+
+    # Top Players
+    top_players = leaderboard_data.get("top_players")
+    if top_players:
+        medals = ["🥇", "🥈", "🥉"]
+        player_list = []
+        for i, (player, avg_pct, avg_score, plays) in enumerate(top_players):
+            medal = medals[i] if i < len(medals) else f"**#{i+1}**"
+            avg_pct_safe = _safe_float(avg_pct, 0.0)
+            avg_score_safe = _safe_float(avg_score, 0.0)
+            player_list.append(f"{medal} **{player}** - {avg_pct_safe:.2f}% solved, {avg_score_safe:,.0f} score")
+        embed.add_field(name="🏆 Top Players", value="\\n".join(player_list), inline=False)
+    else:
+        embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
+
+    # Superlatives
+    superlatives = []
+    strategist = leaderboard_data.get("strategist")
+    if strategist:
+        player, avg_score = strategist
+        avg_score_safe = _safe_float(avg_score, 0.0)
+        superlatives.append(f"🧠 The Strategist to **{player}** for the highest average game score ({avg_score_safe:,.0f}).")
+
+    finisher = leaderboard_data.get("finisher")
+    if finisher:
+        player, avg_pct = finisher
+        avg_pct_safe = _safe_float(avg_pct, 0.0)
+        superlatives.append(f"🏁 The Finisher to **{player}** for the highest average percent solved ({avg_pct_safe:.2f}%).")
+
+    veteran = leaderboard_data.get("veteran")
+    if veteran:
+        player, plays = veteran
+        superlatives.append(f"🎖️ The Veteran to **{player}** for the most games played this period ({plays}).")
+
+    if superlatives:
+        embed.add_field(name="✨ Superlatives", value="\\n".join(superlatives), inline=False)
+
+    emit_footer = f"Posted: {discord.utils.utcnow().strftime('%Y-%m-%d')}"
+    embed.set_footer(text=emit_footer)
+    return embed
+
+async def build_bandle_leaderboard_embed(title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
+    """
+    Builds a Discord embed for the Bandle leaderboard.
+    """
+    embed = discord.Embed(
+        title=title,
+        description=f"Period: {period.capitalize()}",
+        color=color
+    )
+
+    # Top Players
+    top_players = leaderboard_data.get("top_players")
+    if top_players:
+        medals = ["🥇", "🥈", "🥉"]
+        player_list = []
+        for i, (player, avg_attempts, avg_bonus) in enumerate(top_players):
+            medal = medals[i] if i < len(medals) else f"**#{i+1}**"
+            avg_attempts_safe = _safe_float(avg_attempts, 0.0)
+            player_list.append(f"{medal} **{player}** - Avg. Attempts: {avg_attempts_safe:.2f}")
+        embed.add_field(name="🏆 Top Players", value="\\n".join(player_list), inline=False)
+    else:
+        embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
+
+    # Superlatives
+    superlatives = []
+    music_historian = leaderboard_data.get("music_historian")
+    if music_historian:
+        player, score = music_historian
+        superlatives.append(f"🧠 The Music Historian to **{player}** ({score} points).")
+
+    ar_scout = leaderboard_data.get("ar_scout")
+    if ar_scout:
+        player, score = ar_scout
+        superlatives.append(f"👀 The A&R Scout to **{player}** ({score} points).")
+
+    producers_ear = leaderboard_data.get("producers_ear")
+    if producers_ear:
+        player, score = producers_ear
+        superlatives.append(f"🎧 The Producer's Ear to **{player}** ({score} points).")
+
+    superfan = leaderboard_data.get("superfan")
+    if superfan:
+        player, score = superfan
+        superlatives.append(f"🤩 The Superfan to **{player}** ({score} points).")
+
+    rock_god = leaderboard_data.get("rock_god")
+    if rock_god:
+        player, streak = rock_god
+        superlatives.append(f"🎸 The Rock God to **{player}** for a streak of {streak}!")
+
+    if superlatives:
+        embed.add_field(name="✨ Weekly Accolades", value="\\n".join(superlatives), inline=False)
+
+    emit_footer = f"Posted: {discord.utils.utcnow().strftime('%Y-%m-%d')}"
+    embed.set_footer(text=emit_footer)
+    return embed
+
+def _safe_float(value, default=0.0):
+    """Safely convert a value to a float, returning a default if conversion fails."""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
 async def build_gisnep_leaderboard_embed(title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
     """
     Builds a Discord embed for the enhanced Gisnep leaderboard.

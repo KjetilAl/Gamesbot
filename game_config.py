@@ -85,7 +85,7 @@ GAME_CONFIGS = {
         "save_score_function": database.save_bandle_score,
         "get_leaderboard_function": database.get_bandle_leaderboard,
         "leaderboard_keys": LEADERBOARD_KEY_MAPPINGS["Bandle"],
-        "embed_builder_function": embed_builder.build_leaderboard_embed,
+        "embed_builder_function": embed_builder.build_bandle_leaderboard_embed,
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
         "game_number_key": "game_number"
@@ -141,7 +141,7 @@ GAME_CONFIGS = {
         "parse_function": score_parser.parse_sexaginta_score,
         "save_score_function": database.save_sexaginta_score,
         "get_leaderboard_function": database.get_sexaginta_leaderboard,
-        "embed_builder_function": embed_builder.build_leaderboard_embed,
+        "embed_builder_function": embed_builder.build_sexaginta_leaderboard_embed,
         "leaderboard_keys": LEADERBOARD_KEY_MAPPINGS["Sexaginta"],
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
