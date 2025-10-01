@@ -252,9 +252,19 @@ async def get_leaderboard_embed(game_key: str, period: str) -> Optional[discord.
 
     config = game_config.GAME_CONFIGS[game_key]
     game_name = config["name"]
+    historical_stats = {}
 
     try:
         leaderboard_data = config["get_leaderboard_function"](period=period)
+
+        # Fetch historical stats for comparison
+        if period in ['weekly', 'monthly']:
+            table_name = config.get("table_name")
+            score_column = config.get("score_column")
+            if table_name and score_column:
+                historical_stats = database.get_historical_stats(table_name, score_column, period)
+                leaderboard_data["historical_stats"] = historical_stats
+
     except Exception as e:
         print(f"Error fetching {period} leaderboard for {game_name}: {e}")
         leaderboard_data = {} # Ensure leaderboard_data is a dict

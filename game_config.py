@@ -23,6 +23,8 @@ LEADERBOARD_KEY_MAPPINGS = {
 GAME_CONFIGS = {
     "wordle": {
         "name": "Wordle",
+        "table_name": "wordle_scores",
+        "score_column": "total_score",
         "chat_channel_name": "wordle-chat",
         "player_role_name": "wordle-player",
         "parse_function": score_parser.parse_wordle_score,
@@ -37,6 +39,8 @@ GAME_CONFIGS = {
     },
     "connections": {
         "name": "Connections",
+        "table_name": "connections_scores",
+        "score_column": "total_score",
         "chat_channel_name": "connections-chat",
         "player_role_name": "connections-player",
         "parse_function": score_parser.parse_connections_result,
@@ -51,6 +55,8 @@ GAME_CONFIGS = {
     },
     "gisnep": {
         "name": "Gisnep",
+        "table_name": "gisnep_scores",
+        "score_column": "completion_time",
         "chat_channel_name": "gisnep-chat",
         "player_role_name": "gisnep-player",
         "parse_function": score_parser.parse_gisnep_score,
@@ -64,6 +70,8 @@ GAME_CONFIGS = {
     },
     "framed": {
         "name": "Framed",
+        "table_name": "framed_scores",
+        "score_column": "total_score",
         "chat_channel_name": "framed-chat",
         "player_role_name": "framed-player",
         "parse_function": score_parser.parse_framed_score,
@@ -78,6 +86,8 @@ GAME_CONFIGS = {
     },
     "bandle": {
         "name": "Bandle",
+        "table_name": "bandle_scores",
+        "score_column": "total_score",
         "chat_channel_name": "bandle-chat",
         "player_role_name": "bandle-player",
         "parse_function": score_parser.parse_bandle_score,
@@ -92,6 +102,8 @@ GAME_CONFIGS = {
     },
     "minute_cryptic": {
         "name": "Minute Cryptic",
+        "table_name": "minute_cryptic_scores",
+        "score_column": "score_value",
         "chat_channel_name": "minute-cryptic-chat",
         "player_role_name": "minute-cryptic-player",
         "parse_function": score_parser.parse_minute_cryptic_score,
@@ -107,6 +119,8 @@ GAME_CONFIGS = {
     },
     "word_salad": {
         "name": "Word Salad",
+        "table_name": "word_salad_scores",
+        "score_column": "score",
         "chat_channel_name": "word-salad-chat",
         "player_role_name": "word-salad-player",
         "parse_function": score_parser.parse_word_salad_score,
@@ -121,6 +135,8 @@ GAME_CONFIGS = {
     },
     "pips": {
         "name": "Pips",
+        "table_name": "pips_scores",
+        "score_column": "score",
         "chat_channel_name": "pips-chat",
         "player_role_name": "pips-player",
         "parse_function": score_parser.parse_pips_score,
@@ -136,6 +152,8 @@ GAME_CONFIGS = {
     },
     "sexaginta": {
         "name": "Sexaginta-Quattuordle",
+        "table_name": "sexaginta_scores",
+        "score_column": "game_score",
         "aliases": ["64ordle", "sexaginta"],
         "is_game_message": score_parser.is_sexaginta_message,
         "parse_function": score_parser.parse_sexaginta_score,

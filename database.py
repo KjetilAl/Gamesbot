@@ -942,34 +942,78 @@ def save_word_salad_score(user_id: int, display_name: str, game_number: int,
     conn.commit()
     conn.close()
 
-def get_scores_by_period(period: str, column_name: str = 'created_at') -> tuple[str, tuple]:
-    """Helper function to get the WHERE clause and parameters for a given period."""
+def _get_date_range_for_period(period: str, relative: str = 'current') -> tuple[str, str]:
+    """
+    Calculates the start and end dates for a given period, relative to today.
+    `relative` can be 'current' or 'previous'.
+    """
     today = datetime.date.today()
     if period == 'weekly':
-        # Start of this week (Monday)
-        start_of_week = today - timedelta(days=today.weekday())
-        # Tomorrow (to include today's scores but not future scores)
-        end_date = (today + timedelta(days=1)).isoformat()
-        return (
-            f"WHERE DATE({column_name}, 'localtime') >= DATE(?) "
-            f"AND DATE({column_name}, 'localtime') < DATE(?)",
-            (start_of_week.isoformat(), end_date)
-        )
+        if relative == 'current':
+            start_date = today - timedelta(days=today.weekday())
+            end_date = start_date + timedelta(days=7)
+        else: # previous
+            start_date = today - timedelta(days=today.weekday() + 7)
+            end_date = start_date + timedelta(days=7)
     elif period == 'monthly':
-        # Start of this month
-        start_of_month = today.replace(day=1)
-        # First day of next month
-        if start_of_month.month == 12:
-            next_month = start_of_month.replace(year=start_of_month.year + 1, month=1, day=1)
-        else:
-            next_month = start_of_month.replace(month=start_of_month.month + 1, day=1)
+        if relative == 'current':
+            start_date = today.replace(day=1)
+            end_date = (start_date + timedelta(days=32)).replace(day=1)
+        else: # previous
+            end_of_last_month = today.replace(day=1) - timedelta(days=1)
+            start_date = end_of_last_month.replace(day=1)
+            end_date = (start_date + timedelta(days=32)).replace(day=1)
+    else: # overall
+        return None, None
+
+    return start_date.isoformat(), end_date.isoformat()
+
+def get_scores_by_period(period: str, column_name: str = 'created_at') -> tuple[str, tuple]:
+    """Helper function to get the WHERE clause and parameters for a given period."""
+    start_date, end_date = _get_date_range_for_period(period, 'current')
+
+    if start_date and end_date:
         return (
             f"WHERE DATE({column_name}, 'localtime') >= DATE(?) "
             f"AND DATE({column_name}, 'localtime') < DATE(?)",
-            (start_of_month.isoformat(), next_month.isoformat())
+            (start_date, end_date)
         )
-    else:  # overall
-        return "", ()
+    return "", ()
+
+def get_historical_stats(game_table: str, score_column: str, period: str) -> dict:
+    """
+    Fetches historical statistics (player count, average score) for a game
+    for the previous period.
+    """
+    if period not in ['weekly', 'monthly']:
+        return {}
+
+    start_date, end_date = _get_date_range_for_period(period, 'previous')
+    if not start_date or not end_date:
+        return {}
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    query = f"""
+        SELECT
+            COUNT(DISTINCT user_id) as player_count,
+            AVG({score_column}) as avg_score
+        FROM {game_table}
+        WHERE DATE(created_at, 'localtime') >= DATE(?) AND DATE(created_at, 'localtime') < DATE(?)
+    """
+
+    try:
+        cursor.execute(query, (start_date, end_date))
+        stats = cursor.fetchone()
+        if stats and stats[0] is not None:
+            return {"player_count": stats[0], "avg_score": stats[1]}
+    except sqlite3.Error as e:
+        print(f"Error fetching historical stats for {game_table}: {e}")
+    finally:
+        conn.close()
+
+    return {}
 
 def get_wordle_leaderboard(period: str = 'weekly'):
     """Fetch enhanced Wordle leaderboard data with superlatives."""
@@ -1022,13 +1066,26 @@ def get_wordle_leaderboard(period: str = 'weekly'):
     """)
     ironman = cursor.fetchone()
 
+    # Get current period stats
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT user_id), AVG(total_score)
+        FROM wordle_scores
+        {where_clause}
+    """, params)
+    current_stats_result = cursor.fetchone()
+    current_stats = {
+        "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
+        "avg_score": current_stats_result[1] if current_stats_result and current_stats_result[1] is not None else 0.0
+    }
+
     conn.close()
 
     return {
         "top_players": top_players,
         "einstein": einstein,
         "lucky_charm": lucky_charm,
-        "ironman": ironman
+        "ironman": ironman,
+        "current_stats": current_stats
     }
 
 def _parse_uniqueness_to_int(uniqueness_text: str) -> int:
@@ -1112,13 +1169,26 @@ def get_connections_leaderboard(period: str = 'weekly'):
                 best_score = (display_name, uniqueness_text)
         pathfinder = best_score
 
+    # Get current period stats
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT user_id), AVG(total_score)
+        FROM connections_scores
+        {where_clause}
+    """, params)
+    current_stats_result = cursor.fetchone()
+    current_stats = {
+        "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
+        "avg_score": current_stats_result[1] if current_stats_result and current_stats_result[1] is not None else 0.0
+    }
+
     conn.close()
 
     return {
         "top_players": top_players,
         "perfector": perfector,
         "grandmaster": grandmaster,
-        "pathfinder": pathfinder
+        "pathfinder": pathfinder,
+        "current_stats": current_stats
     }
 
 def get_framed_leaderboard(period: str = 'overall'):
@@ -1141,8 +1211,21 @@ def get_framed_leaderboard(period: str = 'overall'):
         LIMIT 10
     """, params)
     leaderboard = cursor.fetchall()
+
+    # Get current period stats
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT user_id), AVG(total_score)
+        FROM framed_scores
+        {where_clause}
+    """, params)
+    current_stats_result = cursor.fetchone()
+    current_stats = {
+        "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
+        "avg_score": current_stats_result[1] if current_stats_result and current_stats_result[1] is not None else 0.0
+    }
+
     conn.close()
-    return leaderboard # Returns list of tuples
+    return {"rows": leaderboard, "current_stats": current_stats}
 
 def get_gisnep_leaderboard(period: str = 'weekly'):
     """Fetch enhanced Gisnep leaderboard data with superlatives."""
@@ -1194,12 +1277,25 @@ def get_gisnep_leaderboard(period: str = 'weekly'):
         """, weekly_params)
         scholar_award = cursor.fetchone()
 
+    # Get current period stats
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT user_id), AVG(completion_time)
+        FROM gisnep_scores
+        {where_clause}
+    """, params)
+    current_stats_result = cursor.fetchone()
+    current_stats = {
+        "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
+        "avg_score": current_stats_result[1] if current_stats_result and current_stats_result[1] is not None else 0.0
+    }
+
     conn.close()
 
     return {
         "top_players": top_players,
         "mercury_award": mercury_award,
-        "scholar_award": scholar_award
+        "scholar_award": scholar_award,
+        "current_stats": current_stats
     }
 
 def get_bandle_leaderboard(period: str = 'weekly'):
@@ -1276,6 +1372,18 @@ def get_bandle_leaderboard(period: str = 'weekly'):
     cursor.execute("SELECT display_name, max_streak FROM player_stats ORDER BY max_streak DESC LIMIT 1")
     rock_god = cursor.fetchone()
 
+    # Get current period stats
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT user_id), AVG(total_score)
+        FROM bandle_scores
+        {where_clause}
+    """, params)
+    current_stats_result = cursor.fetchone()
+    current_stats = {
+        "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
+        "avg_score": current_stats_result[1] if current_stats_result and current_stats_result[1] is not None else 0.0
+    }
+
     conn.close()
 
     return {
@@ -1284,10 +1392,11 @@ def get_bandle_leaderboard(period: str = 'weekly'):
         "ar_scout": ar_scout,
         "producers_ear": producers_ear,
         "superfan": superfan,
-        "rock_god": rock_god
+        "rock_god": rock_god,
+        "current_stats": current_stats
     }
 
-def get_minute_cryptic_leaderboard(period: str = 'weekly') -> list[tuple[str, int]]:
+def get_minute_cryptic_leaderboard(period: str = 'weekly'):
     """
     Fetches the Minute Cryptic leaderboard data, supporting different periods and stats.
     Currently counts number of puzzles solved (score_value = 0) in the given period.
@@ -1310,8 +1419,21 @@ def get_minute_cryptic_leaderboard(period: str = 'weekly') -> list[tuple[str, in
         LIMIT 10
     """, params)
     leaderboard = cursor.fetchall()
+
+    # Get current period stats
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT user_id), AVG(score_value)
+        FROM minute_cryptic_scores
+        {where_clause}
+    """, params)
+    current_stats_result = cursor.fetchone()
+    current_stats = {
+        "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
+        "avg_score": current_stats_result[1] if current_stats_result and current_stats_result[1] is not None else 0.0
+    }
+
     conn.close()
-    return leaderboard # Returns list of tuples
+    return {"rows": leaderboard, "current_stats": current_stats}
 
 def get_word_salad_leaderboard(period: str = 'overall'):
     conn = sqlite3.connect(DB_NAME)
@@ -1333,8 +1455,21 @@ def get_word_salad_leaderboard(period: str = 'overall'):
         LIMIT 10
     """, params)
     leaderboard = cursor.fetchall()
+
+    # Get current period stats
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT user_id), AVG(score)
+        FROM word_salad_scores
+        {where_clause}
+    """, params)
+    current_stats_result = cursor.fetchone()
+    current_stats = {
+        "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
+        "avg_score": current_stats_result[1] if current_stats_result and current_stats_result[1] is not None else 0.0
+    }
+
     conn.close()
-    return leaderboard
+    return {"rows": leaderboard, "current_stats": current_stats}
 
 def get_sexaginta_leaderboard(period="weekly"):
     conn = sqlite3.connect(DB_NAME)
@@ -1388,12 +1523,25 @@ def get_sexaginta_leaderboard(period="weekly"):
     """, params)
     veteran = cursor.fetchone()
 
+    # Get current period stats
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT user_id), AVG(game_score)
+        FROM sexaginta_scores
+        {where_clause}
+    """, params)
+    current_stats_result = cursor.fetchone()
+    current_stats = {
+        "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
+        "avg_score": current_stats_result[1] if current_stats_result and current_stats_result[1] is not None else 0.0
+    }
+
     conn.close()
     return {
         "top_players": top_players,
         "strategist": strategist,
         "finisher": finisher,
-        "veteran": veteran
+        "veteran": veteran,
+        "current_stats": current_stats
     }
 
 def get_pips_leaderboard(period: str = 'overall'):
@@ -1415,8 +1563,21 @@ def get_pips_leaderboard(period: str = 'overall'):
         LIMIT 10
     """, params)
     leaderboard = cursor.fetchall()
+
+    # Get current period stats
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT user_id), AVG(score)
+        FROM pips_scores
+        {where_clause}
+    """, params)
+    current_stats_result = cursor.fetchone()
+    current_stats = {
+        "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
+        "avg_score": current_stats_result[1] if current_stats_result and current_stats_result[1] is not None else 0.0
+    }
+
     conn.close()
-    return leaderboard
+    return {"rows": leaderboard, "current_stats": current_stats}
 
 def get_pips_completed_difficulties(user_id: int, game_number: int) -> list[str]:
     """
