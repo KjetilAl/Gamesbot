@@ -255,11 +255,9 @@ async def get_leaderboard_embed(game_key: str, period: str) -> Optional[discord.
 
     try:
         leaderboard_data = config["get_leaderboard_function"](period=period)
-        if not leaderboard_data:
-            return None
     except Exception as e:
         print(f"Error fetching {period} leaderboard for {game_name}: {e}")
-        return None
+        leaderboard_data = {} # Ensure leaderboard_data is a dict
 
     game_colors = {
         "Wordle": discord.Color.green(), "Connections": discord.Color.purple(),
@@ -289,11 +287,7 @@ async def leaderboard(ctx, game: str = "wordle", period: str = "weekly"):
         return
 
     embed = await get_leaderboard_embed(game_key, period)
-
-    if embed:
-        await ctx.send(embed=embed)
-    else:
-        await ctx.send(f"Could not generate the {game_key} leaderboard for the {period} period. No data was found.")
+    await ctx.send(embed=embed)
 
 async def post_scores(period: str):
     """Fetches and posts leaderboard scores for each game to its respective channel."""
@@ -315,17 +309,13 @@ async def post_scores(period: str):
         # Generate the embed using the unified function
         leaderboard_embed = await get_leaderboard_embed(game_key, period)
 
-        # Send embed if it was created successfully
-        if leaderboard_embed:
-            try:
-                await leaderboard_channel.send(embed=leaderboard_embed)
-                print(f"✅ {period.capitalize()} {game_name} leaderboard posted to #{channel_name}.")
-            except discord.errors.HTTPException as e:
-                print(f"❌ Error posting {game_name} embed: {e}. The embed might be too long.")
-            except Exception as e:
-                print(f"❌ An unexpected error occurred when posting {game_name} leaderboard: {e}")
-        else:
-            print(f"ℹ️ No leaderboard data for {game_name} for the {period} period. Nothing posted.")
+        try:
+            await leaderboard_channel.send(embed=leaderboard_embed)
+            print(f"✅ {period.capitalize()} {game_name} leaderboard posted to #{channel_name}.")
+        except discord.errors.HTTPException as e:
+            print(f"❌ Error posting {game_name} embed: {e}. The embed might be too long.")
+        except Exception as e:
+            print(f"❌ An unexpected error occurred when posting {game_name} leaderboard: {e}")
 
     print(f"--- Finished {period.capitalize()} Score Posting ---")
 
