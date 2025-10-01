@@ -194,6 +194,25 @@ def initialize_db():
             );
         """)
 
+        # --- Create Indexes for Leaderboard Performance ---
+        leaderboard_tables = [
+            "wordle_scores", "connections_scores", "framed_scores",
+            "gisnep_scores", "bandle_scores", "minute_cryptic_scores",
+            "word_salad_scores", "sexaginta_scores", "pips_scores"
+        ]
+        for table in leaderboard_tables:
+            # Index for weekly queries on DATE(created_at, 'localtime')
+            cursor.execute(f"""
+                CREATE INDEX IF NOT EXISTS idx_{table}_weekly
+                ON {table} (DATE(created_at, 'localtime'))
+            """)
+            # Index for monthly queries on strftime('%Y-%m', created_at, 'localtime')
+            cursor.execute(f"""
+                CREATE INDEX IF NOT EXISTS idx_{table}_monthly
+                ON {table} (strftime('%Y-%m', created_at, 'localtime'))
+            """)
+        print("DB: Leaderboard performance indexes created or verified.")
+
         conn.commit()
         print("DB: All tables created or verified.")
 
@@ -933,10 +952,8 @@ def get_scores_by_period(period: str, column_name: str = 'created_at') -> tuple[
         start_date = start_of_week.isoformat()
         return f"WHERE DATE({column_name}, 'localtime') >= DATE(?)", (start_date,)
     elif period == 'monthly':
-        # First day of the current month
-        start_of_month = today.replace(day=1)
-        start_date = start_of_month.isoformat()
-        return f"WHERE DATE({column_name}, 'localtime') >= DATE(?)", (start_date,)
+        # Use strftime to get current month in YYYY-MM format for proper comparison
+        return f"WHERE strftime('%Y-%m', {column_name}, 'localtime') = ?", (today.strftime('%Y-%m'),)
     else:  # overall
         return "", ()
 
