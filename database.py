@@ -201,15 +201,15 @@ def initialize_db():
             "word_salad_scores", "sexaginta_scores", "pips_scores"
         ]
         for table in leaderboard_tables:
-            # Index for weekly queries on DATE(created_at, 'localtime')
+            # Index for weekly queries on DATE(created_at)
             cursor.execute(f"""
                 CREATE INDEX IF NOT EXISTS idx_{table}_weekly
-                ON {table} (DATE(created_at, 'localtime'))
+                ON {table} (DATE(created_at))
             """)
-            # Index for monthly queries on strftime('%Y-%m', created_at, 'localtime')
+            # Index for monthly queries on strftime('%Y-%m', created_at)
             cursor.execute(f"""
                 CREATE INDEX IF NOT EXISTS idx_{table}_monthly
-                ON {table} (strftime('%Y-%m', created_at, 'localtime'))
+                ON {table} (strftime('%Y-%m', created_at))
             """)
         print("DB: Leaderboard performance indexes created or verified.")
 
@@ -947,7 +947,7 @@ def _get_date_range_for_period(period: str, relative: str = 'current') -> tuple[
     Calculates the start and end dates for a given period, relative to today.
     `relative` can be 'current' or 'previous'.
     """
-    today = datetime.date.today()
+    today = datetime.datetime.now(timezone.utc).date()
     if period == 'weekly':
         if relative == 'current':
             start_date = today - timedelta(days=today.weekday())
@@ -974,8 +974,8 @@ def get_scores_by_period(period: str, column_name: str = 'created_at') -> tuple[
 
     if start_date and end_date:
         return (
-            f"WHERE DATE({column_name}, 'localtime') >= DATE(?) "
-            f"AND DATE({column_name}, 'localtime') < DATE(?)",
+            f"WHERE DATE({column_name}) >= DATE(?) "
+            f"AND DATE({column_name}) < DATE(?)",
             (start_date, end_date)
         )
     return "", ()
@@ -1000,7 +1000,7 @@ def get_historical_stats(game_table: str, score_column: str, period: str) -> dic
             COUNT(DISTINCT user_id) as player_count,
             AVG({score_column}) as avg_score
         FROM {game_table}
-        WHERE DATE(created_at, 'localtime') >= DATE(?) AND DATE(created_at, 'localtime') < DATE(?)
+        WHERE DATE(created_at) >= DATE(?) AND DATE(created_at) < DATE(?)
     """
 
     try:
