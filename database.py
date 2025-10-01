@@ -942,18 +942,32 @@ def save_word_salad_score(user_id: int, display_name: str, game_number: int,
     conn.commit()
     conn.close()
 
-def get_scores_by_period(period: str, column_name: str = 'created_at') -> tuple[str, ...]:
+def get_scores_by_period(period: str, column_name: str = 'created_at') -> tuple[str, tuple]:
     """Helper function to get the WHERE clause and parameters for a given period."""
-    # Use DATE() with localtime to correctly handle timezones for weekly/monthly cutoffs
     today = datetime.date.today()
     if period == 'weekly':
-        # Go back to the most recent Monday (weekday 0)
+        # Start of this week (Monday)
         start_of_week = today - timedelta(days=today.weekday())
-        start_date = start_of_week.isoformat()
-        return f"WHERE DATE({column_name}, 'localtime') >= DATE(?)", (start_date,)
+        # Tomorrow (to include today's scores but not future scores)
+        end_date = (today + timedelta(days=1)).isoformat()
+        return (
+            f"WHERE DATE({column_name}, 'localtime') >= DATE(?) "
+            f"AND DATE({column_name}, 'localtime') < DATE(?)",
+            (start_of_week.isoformat(), end_date)
+        )
     elif period == 'monthly':
-        # Use strftime to get current month in YYYY-MM format for proper comparison
-        return f"WHERE strftime('%Y-%m', {column_name}, 'localtime') = ?", (today.strftime('%Y-%m'),)
+        # Start of this month
+        start_of_month = today.replace(day=1)
+        # First day of next month
+        if start_of_month.month == 12:
+            next_month = start_of_month.replace(year=start_of_month.year + 1, month=1, day=1)
+        else:
+            next_month = start_of_month.replace(month=start_of_month.month + 1, day=1)
+        return (
+            f"WHERE DATE({column_name}, 'localtime') >= DATE(?) "
+            f"AND DATE({column_name}, 'localtime') < DATE(?)",
+            (start_of_month.isoformat(), next_month.isoformat())
+        )
     else:  # overall
         return "", ()
 
