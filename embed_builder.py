@@ -62,6 +62,25 @@ async def build_wordle_leaderboard_embed(title: str, leaderboard_data: dict, per
     if superlatives:
         embed.add_field(name="✨ Superlatives", value="\n".join(superlatives), inline=False)
 
+    # Add historical stats comparison
+    historical_stats = leaderboard_data.get("historical_stats")
+    current_stats = leaderboard_data.get("current_stats")
+
+    if historical_stats and current_stats and period != 'overall':
+        # Player count comparison
+        player_count_change = current_stats["player_count"] - historical_stats["player_count"]
+        player_change_str = f" (+{player_count_change})" if player_count_change > 0 else f" ({player_count_change})" if player_count_change < 0 else ""
+
+        # Average score comparison
+        score_diff = current_stats["avg_score"] - historical_stats["avg_score"]
+        score_change_str = f"up from {historical_stats['avg_score']:.1f}" if score_diff > 0 else f"down from {historical_stats['avg_score']:.1f}" if score_diff < 0 else f"same as last {period}"
+
+        comparison_text = (
+            f"**Players This {period.capitalize()}:** {current_stats['player_count']}{player_change_str}\n"
+            f"**Average Score:** {current_stats['avg_score']:.1f}, {score_change_str}"
+        )
+        embed.add_field(name=f"📊 {period.capitalize()} Report", value=comparison_text, inline=False)
+
     emit_footer = f"Posted: {discord.utils.utcnow().strftime('%Y-%m-%d')}"
     embed.set_footer(text=emit_footer)
     return embed
@@ -264,6 +283,25 @@ async def build_connections_leaderboard_embed(title: str, leaderboard_data: dict
     if superlatives:
         embed.add_field(name="✨ Superlatives", value="\n".join(superlatives), inline=False)
 
+    # Add historical stats comparison
+    historical_stats = leaderboard_data.get("historical_stats")
+    current_stats = leaderboard_data.get("current_stats")
+
+    if historical_stats and current_stats and period != 'overall':
+        # Player count comparison
+        player_count_change = current_stats["player_count"] - historical_stats["player_count"]
+        player_change_str = f" (+{player_count_change})" if player_count_change > 0 else f" ({player_count_change})" if player_count_change < 0 else ""
+
+        # Average score comparison
+        score_diff = current_stats["avg_score"] - historical_stats["avg_score"]
+        score_change_str = f"up from {historical_stats['avg_score']:.1f}" if score_diff > 0 else f"down from {historical_stats['avg_score']:.1f}" if score_diff < 0 else f"same as last {period}"
+
+        comparison_text = (
+            f"**Players This {period.capitalize()}:** {current_stats['player_count']}{player_change_str}\n"
+            f"**Average Score:** {current_stats['avg_score']:.1f}, {score_change_str}"
+        )
+        embed.add_field(name=f"📊 {period.capitalize()} Report", value=comparison_text, inline=False)
+
     emit_footer = f"Posted: {discord.utils.utcnow().strftime('%Y-%m-%d')}"
     embed.set_footer(text=emit_footer)
     return embed
@@ -284,7 +322,7 @@ def _format_sexaginta_fields(row: dict) -> list[str]:
     
     return details
 
-async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], period: str, color: discord.Color) -> discord.Embed:
+async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
     """
     Builds a Discord embed for a game leaderboard, formatted based on game type.
     """
@@ -294,6 +332,7 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
         color=color
     )
     medals = ["🥇", "🥈", "🥉"]
+    rows = leaderboard_data.get("rows", [])
 
     if not rows:
         return _build_empty_leaderboard_embed(title, period, color)
@@ -438,6 +477,25 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
             inline=True
         )
 
+    # Add historical stats comparison
+    historical_stats = leaderboard_data.get("historical_stats")
+    current_stats = leaderboard_data.get("current_stats")
+
+    if historical_stats and current_stats and period != 'overall':
+        # Player count comparison
+        player_count_change = current_stats["player_count"] - historical_stats["player_count"]
+        player_change_str = f" (+{player_count_change})" if player_count_change > 0 else f" ({player_count_change})" if player_count_change < 0 else ""
+
+        # Average score comparison
+        score_diff = current_stats["avg_score"] - historical_stats["avg_score"]
+        score_change_str = f"up from {historical_stats['avg_score']:.2f}" if score_diff > 0 else f"down from {historical_stats['avg_score']:.2f}" if score_diff < 0 else f"same as last {period}"
+
+        comparison_text = (
+            f"**Players This {period.capitalize()}:** {current_stats['player_count']}{player_change_str}\n"
+            f"**Average Score:** {current_stats['avg_score']:.2f}, {score_change_str}"
+        )
+        embed.add_field(name=f"📊 {period.capitalize()} Report", value=comparison_text, inline=False)
+
     emit_footer = f"Posted: {discord.utils.utcnow().strftime('%Y-%m-%d')}"
     embed.set_footer(text=emit_footer)
     return embed
@@ -467,11 +525,14 @@ async def build_embed_for_game(game_key, title, leaderboard_data, period, color)
         if not keys:
             raise ValueError(f"Missing leaderboard_keys for generic game {config['name']}")
 
-        rows = [dict(zip(keys, row)) for row in leaderboard_data]
+        rows_as_tuples = leaderboard_data.get("rows", [])
+        rows_as_dicts = [dict(zip(keys, row)) for row in rows_as_tuples]
+        leaderboard_data["rows"] = rows_as_dicts
+
         return await builder_func(
             game_name=config["name"],
             title=title,
-            rows=rows,
+            leaderboard_data=leaderboard_data,
             period=period.capitalize(),
             color=color
         )
