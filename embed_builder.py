@@ -1,10 +1,32 @@
 import discord
 import discord.utils # Needed for utcnow
 
+def _build_empty_leaderboard_embed(title: str, period: str, color: discord.Color) -> discord.Embed:
+    """
+    Builds an embed for an empty leaderboard with an encouraging message.
+    """
+    embed = discord.Embed(
+        title=title,
+        description=f"Period: {period.capitalize()}",
+        color=color
+    )
+    embed.add_field(
+        name="🏆 Be the First!",
+        value=(
+            "No scores have been recorded for this period yet.\n\n"
+            "**Be a trailblazer!** Post your score to claim the top spot and inspire others to join the fun."
+        ),
+        inline=False
+    )
+    return embed
+
 async def build_wordle_leaderboard_embed(title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
     """
     Builds a Discord embed for the enhanced Wordle leaderboard.
     """
+    if not leaderboard_data or not leaderboard_data.get("top_players"):
+        return _build_empty_leaderboard_embed(title, period, color)
+
     embed = discord.Embed(
         title=title,
         description=f"Period: {period.capitalize()}",
@@ -13,15 +35,11 @@ async def build_wordle_leaderboard_embed(title: str, leaderboard_data: dict, per
 
     # Top Players
     top_players = leaderboard_data.get("top_players")
-    if top_players:
-        medals = ["🥇", "🥈", "🥉"]
-        player_list = []
-        for i, (player, score) in enumerate(top_players):
-            player_list.append(f"{medals[i]} **{player}** - {score} points")
-        embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
-    else:
-        embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
-
+    medals = ["🥇", "🥈", "🥉"]
+    player_list = []
+    for i, (player, score) in enumerate(top_players):
+        player_list.append(f"{medals[i]} **{player}** - {score} points")
+    embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
 
     # Superlatives
     superlatives = []
@@ -52,6 +70,9 @@ async def build_sexaginta_leaderboard_embed(title: str, leaderboard_data: dict, 
     """
     Builds a Discord embed for the Sexaginta-Quattuordle leaderboard.
     """
+    if not leaderboard_data or not leaderboard_data.get("top_players"):
+        return _build_empty_leaderboard_embed(title, period, color)
+
     embed = discord.Embed(
         title=title,
         description=f"Period: {period.capitalize()}",
@@ -60,17 +81,14 @@ async def build_sexaginta_leaderboard_embed(title: str, leaderboard_data: dict, 
 
     # Top Players
     top_players = leaderboard_data.get("top_players")
-    if top_players:
-        medals = ["🥇", "🥈", "🥉"]
-        player_list = []
-        for i, (player, avg_pct, avg_score, plays) in enumerate(top_players):
-            medal = medals[i] if i < len(medals) else f"**#{i+1}**"
-            avg_pct_safe = _safe_float(avg_pct, 0.0)
-            avg_score_safe = _safe_float(avg_score, 0.0)
-            player_list.append(f"{medal} **{player}** - {avg_pct_safe:.2f}% solved, {avg_score_safe:,.0f} score")
-        embed.add_field(name="🏆 Top Players", value="\\n".join(player_list), inline=False)
-    else:
-        embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
+    medals = ["🥇", "🥈", "🥉"]
+    player_list = []
+    for i, (player, avg_pct, avg_score, plays) in enumerate(top_players):
+        medal = medals[i] if i < len(medals) else f"**#{i+1}**"
+        avg_pct_safe = _safe_float(avg_pct, 0.0)
+        avg_score_safe = _safe_float(avg_score, 0.0)
+        player_list.append(f"{medal} **{player}** - {avg_pct_safe:.2f}% solved, {avg_score_safe:,.0f} score")
+    embed.add_field(name="🏆 Top Players", value="\\n".join(player_list), inline=False)
 
     # Superlatives
     superlatives = []
@@ -102,6 +120,9 @@ async def build_bandle_leaderboard_embed(title: str, leaderboard_data: dict, per
     """
     Builds a Discord embed for the Bandle leaderboard.
     """
+    if not leaderboard_data or not leaderboard_data.get("top_players"):
+        return _build_empty_leaderboard_embed(title, period, color)
+
     embed = discord.Embed(
         title=title,
         description=f"Period: {period.capitalize()}",
@@ -110,16 +131,13 @@ async def build_bandle_leaderboard_embed(title: str, leaderboard_data: dict, per
 
     # Top Players
     top_players = leaderboard_data.get("top_players")
-    if top_players:
-        medals = ["🥇", "🥈", "🥉"]
-        player_list = []
-        for i, (player, avg_attempts, avg_bonus) in enumerate(top_players):
-            medal = medals[i] if i < len(medals) else f"**#{i+1}**"
-            avg_attempts_safe = _safe_float(avg_attempts, 0.0)
-            player_list.append(f"{medal} **{player}** - Avg. Attempts: {avg_attempts_safe:.2f}")
-        embed.add_field(name="🏆 Top Players", value="\\n".join(player_list), inline=False)
-    else:
-        embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
+    medals = ["🥇", "🥈", "🥉"]
+    player_list = []
+    for i, (player, avg_attempts, avg_bonus) in enumerate(top_players):
+        medal = medals[i] if i < len(medals) else f"**#{i+1}**"
+        avg_attempts_safe = _safe_float(avg_attempts, 0.0)
+        player_list.append(f"{medal} **{player}** - Avg. Attempts: {avg_attempts_safe:.2f}")
+    embed.add_field(name="🏆 Top Players", value="\\n".join(player_list), inline=False)
 
     # Superlatives
     superlatives = []
@@ -168,6 +186,9 @@ async def build_gisnep_leaderboard_embed(title: str, leaderboard_data: dict, per
     """
     Builds a Discord embed for the enhanced Gisnep leaderboard.
     """
+    if not leaderboard_data or not leaderboard_data.get("top_players"):
+        return _build_empty_leaderboard_embed(title, period, color)
+
     embed = discord.Embed(
         title=title,
         description=f"Period: {period.capitalize()} (Ranked by Average Solve Time)",
@@ -184,15 +205,12 @@ async def build_gisnep_leaderboard_embed(title: str, leaderboard_data: dict, per
 
     # Top Players
     top_players = leaderboard_data.get("top_players")
-    if top_players:
-        medals = ["🥇", "🥈", "🥉"]
-        player_list = []
-        for i, (player, avg_seconds) in enumerate(top_players):
-            medal = medals[i] if i < len(medals) else f"**#{i+1}**"
-            player_list.append(f"{medal} **{player}** - ⏱️ Avg Time: {format_time(avg_seconds)}")
-        embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
-    else:
-        embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
+    medals = ["🥇", "🥈", "🥉"]
+    player_list = []
+    for i, (player, avg_seconds) in enumerate(top_players):
+        medal = medals[i] if i < len(medals) else f"**#{i+1}**"
+        player_list.append(f"{medal} **{player}** - ⏱️ Avg Time: {format_time(avg_seconds)}")
+    embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
 
 
     # Weekly Accolades
@@ -214,6 +232,9 @@ async def build_connections_leaderboard_embed(title: str, leaderboard_data: dict
     """
     Builds a Discord embed for the enhanced Connections leaderboard.
     """
+    if not leaderboard_data or not leaderboard_data.get("top_players"):
+        return _build_empty_leaderboard_embed(title, period, color)
+
     embed = discord.Embed(
         title=title,
         description=f"Period: {period.capitalize()}",
@@ -222,14 +243,11 @@ async def build_connections_leaderboard_embed(title: str, leaderboard_data: dict
 
     # Top Players
     top_players = leaderboard_data.get("top_players")
-    if top_players:
-        medals = ["🥇", "🥈", "🥉"]
-        player_list = []
-        for i, (player, score) in enumerate(top_players):
-            player_list.append(f"{medals[i]} **{player}** - {score} points")
-        embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
-    else:
-        embed.add_field(name="🏆 Top Players", value="No scores recorded for this period.", inline=False)
+    medals = ["🥇", "🥈", "🥉"]
+    player_list = []
+    for i, (player, score) in enumerate(top_players):
+        player_list.append(f"{medals[i]} **{player}** - {score} points")
+    embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
 
     # Superlatives
     superlatives = []
@@ -276,10 +294,9 @@ async def build_leaderboard_embed(game_name: str, title: str, rows: list[dict], 
         color=color
     )
     medals = ["🥇", "🥈", "🥉"]
-    
+
     if not rows:
-        embed.description += "\n\nNo scores recorded for this period."
-        return embed
+        return _build_empty_leaderboard_embed(title, period, color)
 
     SORT_KEYS = {
         "Wordle": lambda x: float(x.get("avg_attempts", float('inf'))),
