@@ -265,6 +265,14 @@ async def get_leaderboard_embed(game_key: str, period: str) -> Optional[discord.
                 historical_stats = database.get_historical_stats(table_name, score_column, period)
                 leaderboard_data["historical_stats"] = historical_stats
 
+                lower_is_better = game_key in {"gisnep", "minute_cryptic"}
+                leaderboard_data["period_highlights"] = database.get_period_highlights(
+                    table_name,
+                    score_column,
+                    period,
+                    lower_is_better=lower_is_better,
+                )
+
     except Exception as e:
         print(f"Error fetching {period} leaderboard for {game_name}: {e}")
         leaderboard_data = {} # Ensure leaderboard_data is a dict

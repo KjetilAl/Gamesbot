@@ -284,6 +284,11 @@ Full parsed object:
             matchfields = ['game_number', 'completion_time_seconds', 'hints_used', 'score'])
 
 class TestPipsParser(unittest.TestCase):
+    def test_parse_duration_to_seconds(self):
+        self.assertEqual(score_parser.parse_duration_to_seconds("1:40"), 100)
+        self.assertEqual(score_parser.parse_duration_to_seconds("1:40:52"), 6052)
+        self.assertIsNone(score_parser.parse_duration_to_seconds("99"))
+
     def test_calculate_pips_score(self):
         # Test cases for easy difficulty
         self.assertEqual(score_parser.calculate_pips_score('easy', 10), 10)
@@ -345,7 +350,18 @@ class TestPipsParser(unittest.TestCase):
         }
         self.assertEqual(score_parser.parse_pips_score(message), expected)
 
-        # Test case 4: Invalid message
+        # Test case 4: Hard with hours
+        message = "Pips #160 Hard 🔴\n1:40:52"
+        expected = {
+            "game_number": 160,
+            "difficulty": "hard",
+            "completion_time": 6052,
+            "score": 1,
+            "cookie": False
+        }
+        self.assertEqual(score_parser.parse_pips_score(message), expected)
+
+        # Test case 5: Invalid message
         message = "This is not a pips score"
         self.assertIsNone(score_parser.parse_pips_score(message))
 
