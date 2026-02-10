@@ -192,6 +192,36 @@ async def build_bandle_leaderboard_embed(title: str, leaderboard_data: dict, per
     embed.set_footer(text=emit_footer)
     return embed
 
+
+
+def _add_period_highlights_field(embed: discord.Embed, leaderboard_data: dict, period: str) -> None:
+    """Append weekly/monthly highlights if available."""
+    highlights = leaderboard_data.get("period_highlights") if leaderboard_data else None
+    if not highlights or period.lower() == "overall":
+        return
+
+    lines = []
+    consistency = highlights.get("consistency")
+    if consistency:
+        lines.append(
+            f"📅 **Consistency:** {consistency['display_name']} with **{consistency['plays']}** plays"
+        )
+
+    most_improved = highlights.get("most_improved")
+    if most_improved:
+        lines.append(
+            f"📈 **Most Improved:** {most_improved['display_name']} ({most_improved['delta']:.2f})"
+        )
+
+    momentum = highlights.get("momentum")
+    if momentum:
+        lines.append(
+            f"🚀 **Momentum:** {momentum['display_name']} ({momentum['trend']})"
+        )
+
+    if lines:
+        embed.add_field(name=f"🔥 {period.capitalize()} Highlights", value="\n".join(lines), inline=False)
+
 def _safe_float(value, default=0.0):
     """Safely convert a value to a float, returning a default if conversion fails."""
     if value is None:
@@ -513,12 +543,15 @@ async def build_embed_for_game(game_key, title, leaderboard_data, period, color)
 
         # Dedicated builders (e.g., build_wordle_leaderboard_embed)
         if builder_func.__name__.startswith("build_") and "leaderboard_embed" in builder_func.__name__ and builder_func.__name__ != "build_leaderboard_embed":
-            return await builder_func(
+            embed = await builder_func(
                 title=title,
                 leaderboard_data=leaderboard_data,
                 period=period,
                 color=color
             )
+            if embed is not None:
+                _add_period_highlights_field(embed, leaderboard_data, period)
+            return embed
 
         # Generic builder path
         keys = config.get("leaderboard_keys")
@@ -529,13 +562,16 @@ async def build_embed_for_game(game_key, title, leaderboard_data, period, color)
         rows_as_dicts = [dict(zip(keys, row)) for row in rows_as_tuples]
         leaderboard_data["rows"] = rows_as_dicts
 
-        return await builder_func(
+        embed = await builder_func(
             game_name=config["name"],
             title=title,
             leaderboard_data=leaderboard_data,
             period=period.capitalize(),
             color=color
         )
+        if embed is not None:
+            _add_period_highlights_field(embed, leaderboard_data, period)
+        return embed
     except KeyError:
         # This case handles if game_key is not in GAME_CONFIGS
         print(f"Error: No game configuration found for key '{game_key}'")

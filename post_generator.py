@@ -400,6 +400,34 @@ def _generate_pips_post(display_name: str, game_info: dict, player_stats: dict) 
 
     return message
 
+
+def _build_personal_stat_spotlight(game_name: str, player_stats: dict, game_info: dict) -> str | None:
+    """Build one extra personal stat line for chat engagement."""
+    if not player_stats:
+        return None
+
+    if player_stats.get("is_new_pb"):
+        return "📌 New personal best unlocked!"
+
+    if player_stats.get("is_new_max_streak") and player_stats.get("current_streak", 0) >= 3:
+        return f"🔥 New best streak: **{player_stats['current_streak']}**."
+
+    total_plays = player_stats.get("total_plays")
+    if isinstance(total_plays, int) and total_plays in {10, 25, 50, 100}:
+        return f"🎉 Milestone reached: **{total_plays}** registered games."
+
+    if game_name == "wordle":
+        win_pct = player_stats.get("win_percentage")
+        if isinstance(win_pct, (int, float)) and win_pct >= 80:
+            return f"📊 Win rate is now **{win_pct:.1f}%**. Elite consistency."
+
+    if game_name == "pips":
+        total_cookies = player_stats.get("total_cookies")
+        if isinstance(total_cookies, int) and total_cookies > 0 and total_cookies % 5 == 0:
+            return f"🍪 Cookie milestone: **{total_cookies}** total cookies."
+
+    return None
+
 def generate_post(game_name: str, display_name: str, game_info: dict, player_stats: dict) -> str:
     """Routes the request to the appropriate sub-generator for the given game."""
 
@@ -418,7 +446,11 @@ def generate_post(game_name: str, display_name: str, game_info: dict, player_sta
     generator_func = game_generators.get(game_name.lower())
 
     if generator_func:
-        return generator_func(display_name, game_info, player_stats)
+        base_message = generator_func(display_name, game_info, player_stats)
+        spotlight = _build_personal_stat_spotlight(game_name.lower(), player_stats, game_info)
+        if base_message and spotlight and spotlight not in base_message:
+            return f"{base_message}\n{spotlight}"
+        return base_message
     else:
         # Return None instead of an error message to be handled by the bot
         return None

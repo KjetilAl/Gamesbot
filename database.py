@@ -1015,6 +1015,112 @@ def get_historical_stats(game_table: str, score_column: str, period: str) -> dic
 
     return {}
 
+def _format_rank_change(change: int) -> str:
+    if change > 0:
+        return f"up {change}"
+    if change < 0:
+        return f"down {abs(change)}"
+    return "unchanged"
+
+
+def get_period_highlights(game_table: str, score_column: str, period: str, lower_is_better: bool = False) -> dict:
+    """Build highlight stats for weekly/monthly reports (most improved, consistency, momentum)."""
+    if period not in {"weekly", "monthly"}:
+        return {}
+
+    current_start, current_end = _get_date_range_for_period(period, 'current')
+    previous_start, previous_end = _get_date_range_for_period(period, 'previous')
+    if not all([current_start, current_end, previous_start, previous_end]):
+        return {}
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            f"""
+            SELECT display_name, COUNT(*) AS plays
+            FROM {game_table}
+            WHERE DATE(created_at) >= DATE(?) AND DATE(created_at) < DATE(?)
+            GROUP BY user_id, display_name
+            ORDER BY plays DESC, display_name ASC
+            LIMIT 1
+            """,
+            (current_start, current_end),
+        )
+        consistency = cursor.fetchone()
+
+        cursor.execute(
+            f"""
+            SELECT user_id, display_name, AVG({score_column}) AS avg_score
+            FROM {game_table}
+            WHERE DATE(created_at) >= DATE(?) AND DATE(created_at) < DATE(?)
+            GROUP BY user_id, display_name
+            """,
+            (current_start, current_end),
+        )
+        current_rows = cursor.fetchall()
+
+        cursor.execute(
+            f"""
+            SELECT user_id, display_name, AVG({score_column}) AS avg_score
+            FROM {game_table}
+            WHERE DATE(created_at) >= DATE(?) AND DATE(created_at) < DATE(?)
+            GROUP BY user_id, display_name
+            """,
+            (previous_start, previous_end),
+        )
+        previous_rows = cursor.fetchall()
+
+        current_by_user = {str(r[0]): {"display_name": r[1], "avg_score": r[2]} for r in current_rows}
+        previous_by_user = {str(r[0]): {"display_name": r[1], "avg_score": r[2]} for r in previous_rows}
+
+        improved = []
+        for user_id, current in current_by_user.items():
+            previous = previous_by_user.get(user_id)
+            if not previous or current["avg_score"] is None or previous["avg_score"] is None:
+                continue
+
+            delta = (previous["avg_score"] - current["avg_score"]) if lower_is_better else (current["avg_score"] - previous["avg_score"])
+            if delta > 0:
+                improved.append((current["display_name"], delta))
+
+        most_improved = max(improved, key=lambda x: x[1]) if improved else None
+
+        def rank_rows(rows):
+            filtered = [r for r in rows if r["avg_score"] is not None]
+            sorted_rows = sorted(filtered, key=lambda x: x["avg_score"], reverse=not lower_is_better)
+            return {r["display_name"]: i + 1 for i, r in enumerate(sorted_rows)}
+
+        current_ranks = rank_rows(list(current_by_user.values()))
+        previous_ranks = rank_rows(list(previous_by_user.values()))
+
+        climbers = []
+        for name, curr_rank in current_ranks.items():
+            prev_rank = previous_ranks.get(name)
+            if prev_rank is None:
+                continue
+            change = prev_rank - curr_rank
+            climbers.append((name, change))
+
+        momentum = max(climbers, key=lambda x: x[1]) if climbers else None
+
+        return {
+            "consistency": {"display_name": consistency[0], "plays": consistency[1]} if consistency else None,
+            "most_improved": {"display_name": most_improved[0], "delta": most_improved[1]} if most_improved else None,
+            "momentum": {
+                "display_name": momentum[0],
+                "rank_change": momentum[1],
+                "trend": _format_rank_change(momentum[1]),
+            } if momentum else None,
+        }
+
+    except sqlite3.Error as e:
+        print(f"Error fetching period highlights for {game_table}: {e}")
+        return {}
+    finally:
+        conn.close()
+
 def get_wordle_leaderboard(period: str = 'weekly'):
     """Fetch enhanced Wordle leaderboard data with superlatives."""
     conn = sqlite3.connect(DB_NAME)

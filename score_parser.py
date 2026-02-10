@@ -1,6 +1,6 @@
 import re
-from typing import Dict, List, Tuple, Optional, Any, Union
-from datetime import datetime, timedelta, date
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 # Regular expressions for game patterns
 WORDLE_PATTERN = re.compile(r'Wordle\s+(?:#?\s*)(\d+(?:,\d+)?)\s+([0-6X])/6(\*?)', re.IGNORECASE)
@@ -14,7 +14,16 @@ BONUS_PATTERN = re.compile(r'Bonus Rounds: (\d+)/(\d+)(?:\s+(.+))?', re.IGNORECA
 MINUTE_CRYPTIC_HEADER_PATTERN = re.compile(r"Minute Cryptic - (\d+ \w+ \d+)")
 MINUTE_CRYPTIC_CLUE_PATTERN = re.compile(r'"(.*?)" \((\d+)\)')
 MINUTE_CRYPTIC_SCORE_PATTERN = re.compile(r"I scored: (.*)")
-PIPS_PATTERN = re.compile(r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|🔴)\s*\n(\d{1,2}:\d{2})\s*(🍪)?", re.IGNORECASE)
+PIPS_PATTERN = re.compile(
+    r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|🔴)\s*\n((?:\d{1,2}:)?\d{1,2}:\d{2})\s*(🍪)?",
+    re.IGNORECASE,
+)
+
+PIPS_SCORE_TIERS = {
+    "easy": [(20, 10), (40, 8), (60, 6), (120, 4), (180, 2)],
+    "medium": [(40, 10), (80, 8), (120, 6), (160, 4), (200, 2)],
+    "hard": [(60, 10), (120, 8), (180, 6), (240, 4), (300, 2)],
+}
 
 WORD_SALAD_FULL_PATTERN = re.compile(
     r".*?Word Salad #(\d+).*?"
@@ -54,6 +63,18 @@ def parse_sexaginta_score(content: str) -> Optional[dict]:
         "performance_pct": percent_solved,
         "seed": seed,
     }
+
+
+def parse_duration_to_seconds(duration: str) -> Optional[int]:
+    """Parses m:ss or h:mm:ss into seconds."""
+    parts = duration.split(":")
+    if len(parts) == 2:
+        minutes, seconds = map(int, parts)
+        return minutes * 60 + seconds
+    if len(parts) == 3:
+        hours, minutes, seconds = map(int, parts)
+        return hours * 3600 + minutes * 60 + seconds
+    return None
 
 def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:
     wordle_match = WORDLE_PATTERN.search(message_content)
@@ -262,13 +283,9 @@ def parse_gisnep_score(message_content: str) -> Optional[Dict[str, Any]]:
     game_number = int(game_match.group(1))
     time_str = time_match.group(1)
 
-    # Convert time to seconds
-    parts = list(map(int, time_str.split(":")))
-    if len(parts) == 2:
-        minutes, seconds = parts
-        total_seconds = minutes * 60 + seconds
-    else:
-        total_seconds = parts[0]
+    total_seconds = parse_duration_to_seconds(time_str)
+    if total_seconds is None:
+        return None
 
     return {
         "game_number": game_number,
@@ -432,46 +449,15 @@ def parse_word_salad_score(message_content: str) -> Optional[Dict[str, Any]]:
 def calculate_pips_score(difficulty: str, time_seconds: int) -> int:
     """Calculates the score for Pips based on difficulty and time."""
     difficulty = difficulty.lower()
-    if difficulty == 'easy':
-        if time_seconds <= 20:
-            return 10
-        elif time_seconds <= 40:
-            return 8
-        elif time_seconds <= 60:
-            return 6
-        elif time_seconds <= 120:
-            return 4
-        elif time_seconds <= 180:
-            return 2
-        else:
-            return 1
-    elif difficulty == 'medium':
-        if time_seconds <= 40:
-            return 10
-        elif time_seconds <= 80:
-            return 8
-        elif time_seconds <= 120:
-            return 6
-        elif time_seconds <= 160:
-            return 4
-        elif time_seconds <= 200:
-            return 2
-        else:
-            return 1
-    elif difficulty == 'hard':
-        if time_seconds <= 60:
-            return 10
-        elif time_seconds <= 120:
-            return 8
-        elif time_seconds <= 180:
-            return 6
-        elif time_seconds <= 240:
-            return 4
-        elif time_seconds <= 300:
-            return 2
-        else:
-            return 1
-    return 0
+    tiers = PIPS_SCORE_TIERS.get(difficulty)
+    if not tiers:
+        return 0
+
+    for max_seconds, score in tiers:
+        if time_seconds <= max_seconds:
+            return score
+
+    return 1
 
 def parse_pips_score(message_content: str) -> Optional[Dict[str, Any]]:
     """Parses a Pips score from a message."""
@@ -484,9 +470,9 @@ def parse_pips_score(message_content: str) -> Optional[Dict[str, Any]]:
     time_str = match.group(3)
     cookie = match.group(4) is not None
 
-    # Convert time to seconds
-    minutes, seconds = map(int, time_str.split(':'))
-    completion_time = minutes * 60 + seconds
+    completion_time = parse_duration_to_seconds(time_str)
+    if completion_time is None:
+        return None
 
     # Calculate score
     score = calculate_pips_score(difficulty, completion_time)
@@ -560,4 +546,3 @@ def create_word_salad_acknowledgement(display_name: str, game_info: Dict[str, An
 
 def create_pips_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
-
