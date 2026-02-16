@@ -1006,7 +1006,7 @@ def get_historical_stats(game_table: str, score_column: str, period: str) -> dic
     try:
         cursor.execute(query, (start_date, end_date))
         stats = cursor.fetchone()
-        if stats and stats[0] is not None:
+        if stats and stats[0] > 0:  # Ensures there was at least 1 player
             return {"player_count": stats[0], "avg_score": stats[1]}
     except sqlite3.Error as e:
         print(f"Error fetching historical stats for {game_table}: {e}")
