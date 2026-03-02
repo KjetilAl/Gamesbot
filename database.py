@@ -56,7 +56,24 @@ def initialize_db():
                 minute_cryptic_solved INTEGER DEFAULT 0,
                 minute_cryptic_avg_score REAL DEFAULT 0.0,
                 pips_total_score INTEGER DEFAULT 0,
-                pips_total_cookies INTEGER DEFAULT 0
+                pips_total_cookies INTEGER DEFAULT 0,
+                strands_total_plays INTEGER DEFAULT 0,
+                strands_avg_score REAL DEFAULT 0.0
+            )
+        """)
+        # Strands
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS strands_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                display_name TEXT,
+                game_number INTEGER NOT NULL,
+                total_score INTEGER,
+                solved BOOLEAN,
+                total_symbols INTEGER,
+                hint_count INTEGER,
+                spangram_position INTEGER,
+                created_at TIMESTAMP NOT NULL
             )
         """)
         # Connections
@@ -198,7 +215,7 @@ def initialize_db():
         leaderboard_tables = [
             "wordle_scores", "connections_scores", "framed_scores",
             "gisnep_scores", "bandle_scores", "minute_cryptic_scores",
-            "word_salad_scores", "sexaginta_scores", "pips_scores"
+            "word_salad_scores", "sexaginta_scores", "pips_scores", "strands_scores"
         ]
         for table in leaderboard_tables:
             # Index for weekly queries on DATE(created_at)
@@ -236,7 +253,7 @@ def initialize_db():
         initial_games = [
             ('Wordle', '0'), ('Connections', '0'), ('Framed', '0'),
             ('Gisnep', '0'), ('Bandle', '0'), ('Minute Cryptic', '2000-01-01'),
-            ('Pips', '0'), ('Sexaginta', '0')
+            ('Pips', '0'), ('Sexaginta', '0'), ('Strands', '0')
         ]
         try:
             cursor.executemany(
@@ -462,6 +479,44 @@ def get_recent_scores(user_id, limit=5):
     results = cursor.fetchall()
     conn.close()
     return results
+
+def save_strands_score(user_id, display_name, game_info):
+    """Save a new Strands score, or update if higher."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    created_at = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+
+    game_number = game_info.get("game_number")
+    total_score = game_info.get("total_score", 0)
+    solved = game_info.get("solved", False)
+    total_symbols = game_info.get("total_symbols", 0)
+    hint_count = game_info.get("hint_count", 0)
+    spangram_position = game_info.get("spangram_position")
+
+    cursor.execute("""
+        SELECT id, total_score FROM strands_scores
+        WHERE user_id = ? AND game_number = ?
+    """, (str(user_id), game_number))
+    existing_score = cursor.fetchone()
+
+    if existing_score:
+        # Update if the new score is higher
+        if total_score > existing_score[1]:
+            cursor.execute("""
+                UPDATE strands_scores
+                SET display_name = ?, total_score = ?, solved = ?, total_symbols = ?, hint_count = ?, spangram_position = ?, created_at = ?
+                WHERE id = ?
+            """, (display_name, total_score, solved, total_symbols, hint_count, spangram_position, created_at, existing_score[0]))
+            print(f"Updated Strands score for {display_name} (Game #{game_number}).")
+    else:
+        cursor.execute("""
+            INSERT INTO strands_scores (user_id, display_name, game_number, total_score, solved, total_symbols, hint_count, spangram_position, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (str(user_id), display_name, game_number, total_score, solved, total_symbols, hint_count, spangram_position, created_at))
+        print(f"Added Strands score for {display_name} (Game #{game_number}).")
+
+    conn.commit()
+    conn.close()
 
 def save_connections_score(user_id, display_name, game_number, total_score, mistake_count, perfect_game, solved_purple_first, skill, uniqueness_text):
     """Save a new Connections score."""
@@ -837,6 +892,43 @@ def update_minute_cryptic_player_stats(user_id, display_name, game_info):
     return {
         "total_plays": new_total_plays,
         "solved_count": new_solved_count,
+        "avg_score": new_avg_score
+    }
+
+def update_strands_player_stats(user_id, display_name, game_info):
+    """Update player stats for Strands after a new score is submitted."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT strands_total_plays, strands_avg_score FROM player_stats WHERE user_id = ?", (str(user_id),))
+    stats = cursor.fetchone()
+
+    if not stats or stats[0] is None:
+        total_plays, avg_score = 0, 0.0
+        cursor.execute("SELECT user_id FROM player_stats WHERE user_id = ?", (str(user_id),))
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (str(user_id), display_name))
+    else:
+        total_plays, avg_score = stats
+
+    total_plays = total_plays or 0
+    avg_score = avg_score or 0.0
+
+    new_total_plays = total_plays + 1
+    score = game_info.get("total_score", 0)
+    new_avg_score = ((avg_score * total_plays) + score) / new_total_plays if new_total_plays > 0 else float(score)
+
+    cursor.execute("""
+        UPDATE player_stats
+        SET display_name = ?, strands_total_plays = ?, strands_avg_score = ?
+        WHERE user_id = ?
+    """, (display_name, new_total_plays, new_avg_score, str(user_id)))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "total_plays": new_total_plays,
         "avg_score": new_avg_score
     }
 
@@ -1577,6 +1669,38 @@ def get_word_salad_leaderboard(period: str = 'overall'):
     conn.close()
     return {"rows": leaderboard, "current_stats": current_stats}
 
+def get_strands_leaderboard(period: str = 'overall'):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    where_clause, params = get_scores_by_period(period, 'created_at')
+
+    cursor.execute(f"""
+        SELECT display_name,
+               COUNT(*) AS games_played,
+               SUM(total_score) AS total_score,
+               AVG(total_score) AS avg_score
+        FROM strands_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        ORDER BY avg_score DESC, total_score DESC, games_played DESC
+        LIMIT 10
+    """, params)
+    leaderboard = cursor.fetchall()
+
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT user_id), AVG(total_score)
+        FROM strands_scores
+        {where_clause}
+    """, params)
+    current_stats_result = cursor.fetchone()
+    current_stats = {
+        "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
+        "avg_score": current_stats_result[1] if current_stats_result and current_stats_result[1] is not None else 0.0
+    }
+
+    conn.close()
+    return {"rows": leaderboard, "current_stats": current_stats}
+
 def get_sexaginta_leaderboard(period="weekly"):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -1779,6 +1903,22 @@ def get_gisnep_stats(user_id: int) -> dict:
     return {
         "games_played": stats[0] or 0,
         "avg_time": stats[1] or 0
+    }
+
+def get_strands_stats(user_id: int) -> dict:
+    """Fetches Strands statistics for a given user."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*), AVG(total_score)
+        FROM strands_scores
+        WHERE user_id = ?
+    """, (user_id,))
+    stats = cursor.fetchone()
+    conn.close()
+    return {
+        "games_played": stats[0] or 0,
+        "avg_score": stats[1] or 0
     }
 
 def get_player_sexaginta_stats(user_id: int) -> dict:

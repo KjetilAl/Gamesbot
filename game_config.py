@@ -17,6 +17,7 @@ LEADERBOARD_KEY_MAPPINGS = {
     "Word Salad": ["display_name", "games_played", "avg_time", "best_time", "avg_hints", "total_score", "avg_score"],
     "Pips": ["display_name", "total_score", "games_played", "cookie_count"],
     "Sexaginta": ["display_name", "avg_pct", "avg_score", "plays"],
+    "Strands": ["display_name", "games_played", "total_score", "avg_score"],
 }
 
 # Game configurations dictionary
@@ -149,6 +150,26 @@ GAME_CONFIGS = {
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
         "create_acknowledgement": score_parser.create_pips_acknowledgement,
         "game_number_key": "game_number"
+    },
+    "strands": {
+        "name": "Strands",
+        "table_name": "strands_scores",
+        "score_column": "total_score",
+        "chat_channel_name": "strands-chat",
+        "player_role_name": "strands-player",
+        "parse_function": score_parser.parse_strands_score,
+        "is_game_message": score_parser.is_strands_message,
+        "save_score_function": database.save_strands_score,
+        "get_leaderboard_function": database.get_strands_leaderboard,
+        "leaderboard_keys": LEADERBOARD_KEY_MAPPINGS["Strands"],
+        "embed_builder_function": embed_builder.build_leaderboard_embed,
+        "get_latest_game_number_function": database.get_latest_game_number_from_db,
+        "update_latest_game_number_function": database.update_latest_game_number_in_db,
+        "create_acknowledgement": score_parser.create_strands_acknowledgement,
+        "game_number_key": "game_number",
+        "leaderboard_enabled": True,
+        "weekly_enabled": True,
+        "monthly_enabled": True
     },
     "sexaginta": {
         "name": "Sexaginta-Quattuordle",

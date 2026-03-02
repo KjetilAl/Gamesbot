@@ -40,6 +40,82 @@ SEXAGINTA_HEADER_REGEX = re.compile(
     re.IGNORECASE | re.DOTALL
 )
 
+STRANDS_PATTERN = re.compile(
+    r"Strands\s+#(\d+).*?\n((?:[🔵🟡💡]+\n?)+)",
+    re.IGNORECASE | re.DOTALL
+)
+
+def is_strands_message(message_content: str) -> bool:
+    return (
+        "strands #" in message_content.lower()
+        and STRANDS_PATTERN.search(message_content) is not None
+    )
+
+def calculate_strands_score(total_symbols, hint_count, spangram_position):
+    if spangram_position is None:
+        return {"total_score": 0}
+
+    score = 20
+
+    # Straff for sen spangram
+    score -= (spangram_position - 1)
+
+    # Straff for hint
+    score -= hint_count * 3
+
+    return {
+        "total_score": max(score, 0)
+    }
+
+def parse_strands_score(message_content: str):
+    match = STRANDS_PATTERN.search(message_content)
+    if not match:
+        return None
+
+    game_number = int(match.group(1))
+    emoji_block = match.group(2)
+
+    emojis = []
+    for line in emoji_block.strip().split("\n"):
+        for char in line.strip():
+            if char in ("🔵", "🟡", "💡"):
+                emojis.append(char)
+
+    if not emojis:
+        return None
+
+    total_symbols = len(emojis)
+    blue_count = emojis.count("🔵")
+    hint_count = emojis.count("💡")
+    yellow_count = emojis.count("🟡")
+
+    # If post has multiple yellows, it's invalid
+    if yellow_count > 1:
+        return None
+
+    try:
+        spangram_position = emojis.index("🟡") + 1
+    except ValueError:
+        spangram_position = None
+
+    solved = yellow_count == 1
+
+    score_info = calculate_strands_score(
+        total_symbols=total_symbols,
+        hint_count=hint_count,
+        spangram_position=spangram_position
+    )
+
+    return {
+        "game_number": game_number,
+        "total_symbols": total_symbols,
+        "blue_count": blue_count,
+        "hint_count": hint_count,
+        "spangram_position": spangram_position,
+        "solved": solved,
+        "total_score": score_info["total_score"]
+    }
+
 def parse_sexaginta_score(content: str) -> Optional[dict]:
     match = SEXAGINTA_HEADER_REGEX.search(content)
     if not match:
@@ -545,4 +621,7 @@ def create_word_salad_acknowledgement(display_name: str, game_info: Dict[str, An
     return "🤖"
 
 def create_pips_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
+    return "🤖"
+
+def create_strands_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"

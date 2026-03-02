@@ -373,6 +373,38 @@ def _generate_minute_cryptic_post(display_name: str, game_info: dict, player_sta
 
     return f"{opening_line}\n{random.choice(spotlights)}"
 
+def _generate_strands_post(display_name: str, game_info: dict, player_stats: dict) -> str:
+    """Generates dynamic feedback for Strands."""
+    game_number = game_info.get("game_number", "?")
+    solved = game_info.get("solved", False)
+    total_score = game_info.get("total_score", 0)
+    hint_count = game_info.get("hint_count", 0)
+    spangram_position = game_info.get("spangram_position")
+
+    if not solved:
+        opening_line = f"🧶 Oh no! **{display_name}** got tangled up in Strands #{game_number} today."
+    elif total_score == 20:
+        opening_line = f"🧵 A flawless weave! **{display_name}** scored a perfect 20 on Strands #{game_number}!"
+    else:
+        opening_line = f"**{display_name}** threaded together Strands #{game_number}."
+
+    spotlights = []
+
+    if solved:
+        if hint_count == 0 and spangram_position == 1:
+            spotlights.append("Finding the spangram first with absolutely no hints? Incredible vision! 👀")
+        elif hint_count > 0:
+            spotlights.append(f"They used {hint_count} hint{'s' if hint_count > 1 else ''} along the way.")
+        elif spangram_position and spangram_position > 3:
+            spotlights.append("The spangram proved elusive, but they got there in the end!")
+
+        spotlights.append(f"Final score: **{total_score}** points.")
+
+    if not spotlights:
+        spotlights.append(f"Final score: **{total_score}** points.")
+
+    return f"{opening_line}\n{random.choice(spotlights)}"
+
 def _generate_pips_post(display_name: str, game_info: dict, player_stats: dict) -> str:
     """Generates a post for a completed Pips game."""
     game_number = game_info.get("game_number", "?")
@@ -441,6 +473,7 @@ def generate_post(game_name: str, display_name: str, game_info: dict, player_sta
         "sexaginta": _generate_sexaginta_post,
         "minute_cryptic": _generate_minute_cryptic_post,
         "pips": _generate_pips_post,
+        "strands": _generate_strands_post,
     }
 
     generator_func = game_generators.get(game_name.lower())

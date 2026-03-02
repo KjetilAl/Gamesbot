@@ -377,6 +377,7 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
         "Word Salad": lambda x: x.get("avg_score", -float('inf')) if x.get("avg_score") is not None else -float('inf'),
         "Pips": lambda x: (x.get("cookie_count", 0), x.get("total_score", 0)),
         "Sexaginta-Quattuordle": lambda x: (x.get("avg_pct", 0), x.get("avg_score", 0)),
+        "Strands": lambda x: x.get("avg_score", 0),
     }
 
     reverse_flags = {
@@ -385,6 +386,7 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
         "Word Salad": True,
         "Pips": True,
         "Sexaginta-Quattuordle": True,
+        "Strands": True,
     }
 
     if game_name in SORT_KEYS:
@@ -499,6 +501,13 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
         
         elif game_name == "Sexaginta-Quattuordle":
             details = _format_sexaginta_fields(row)
+
+        elif game_name == "Strands":
+            total_score = row.get("total_score", 0)
+            avg_score = row.get("avg_score")
+            avg_score_display = f"**{avg_score:.2f}**" if avg_score is not None else "N/A"
+            details.append(f"⭐ Total Score: **{total_score}**")
+            details.append(f"📊 Avg Score: {avg_score_display}")
             
         field_value = "\n".join(details)
         embed.add_field(
