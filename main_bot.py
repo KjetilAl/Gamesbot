@@ -315,6 +315,12 @@ async def leaderboard(ctx, game: str = "wordle", period: str = "weekly"):
     embed = await get_leaderboard_embed(game_key, period)
     await ctx.send(embed=embed)
 
+def _leaderboard_has_players(leaderboard_data: dict) -> bool:
+    """Returns True if the leaderboard data contains at least one player."""
+    if not leaderboard_data:
+        return False
+    return bool(leaderboard_data.get("top_players") or leaderboard_data.get("rows"))
+
 async def post_scores(period: str):
     """Fetches and posts leaderboard scores for each game to its respective channel."""
     print(f"--- Starting {period.capitalize()} Score Posting ---")
@@ -330,6 +336,17 @@ async def post_scores(period: str):
         leaderboard_channel = discord.utils.get(bot.get_all_channels(), name=channel_name)
         if not leaderboard_channel:
             print(f"Warning: Could not find the '{channel_name}' channel for {game_name}.")
+            continue
+
+        # Check if anyone has played before posting
+        try:
+            leaderboard_data = config["get_leaderboard_function"](period=period)
+        except Exception as e:
+            print(f"❌ Error fetching {period} leaderboard data for {game_name}: {e}")
+            continue
+
+        if not _leaderboard_has_players(leaderboard_data):
+            print(f"⏭️ Skipping {period} {game_name} leaderboard: no scores recorded this period.")
             continue
 
         # Generate the embed using the unified function
