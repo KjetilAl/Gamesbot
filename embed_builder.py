@@ -152,10 +152,9 @@ async def build_bandle_leaderboard_embed(title: str, leaderboard_data: dict, per
     top_players = leaderboard_data.get("top_players")
     medals = ["🥇", "🥈", "🥉"]
     player_list = []
-    for i, (player, avg_attempts, avg_bonus) in enumerate(top_players):
+    for i, (player, total_score) in enumerate(top_players):
         medal = medals[i] if i < len(medals) else f"**#{i+1}**"
-        avg_attempts_safe = _safe_float(avg_attempts, 0.0)
-        player_list.append(f"{medal} **{player}** - Avg. Attempts: {avg_attempts_safe:.2f}")
+        player_list.append(f"{medal} **{player}** - {total_score} points")
     embed.add_field(name="🏆 Top Players", value="\\n".join(player_list), inline=False)
 
     # Superlatives
@@ -374,10 +373,10 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
         "Gisnep": lambda x: float(x.get("avg_time", float('inf'))),
         "Bandle": lambda x: float(x.get("avg_attempts", float('inf'))),
         "Minute Cryptic": lambda x: x.get("avg_score", 0),
-        "Word Salad": lambda x: x.get("avg_score", -float('inf')) if x.get("avg_score") is not None else -float('inf'),
-        "Pips": lambda x: (x.get("cookie_count", 0), x.get("total_score", 0)),
+        "Word Salad": lambda x: (x.get("total_score", 0) if x.get("total_score") is not None else 0, x.get("avg_score", 0) if x.get("avg_score") is not None else 0),
+        "Pips": lambda x: (x.get("total_score", 0), x.get("cookie_count", 0)),
         "Sexaginta-Quattuordle": lambda x: (x.get("avg_pct", 0), x.get("avg_score", 0)),
-        "Strands": lambda x: x.get("avg_score", 0),
+        "Strands": lambda x: (x.get("total_score", 0), x.get("avg_score", 0)),
     }
 
     reverse_flags = {
@@ -396,7 +395,7 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
         rows.sort(key=lambda x: x.get("games_played", 0), reverse=True)
 
     if game_name == "Pips" and rows:
-        max_cookies = rows[0].get("cookie_count", 0)
+        max_cookies = max((row.get("cookie_count", 0) for row in rows), default=0)
         if max_cookies > 0:
             for row in rows:
                 if row.get("cookie_count") == max_cookies:
