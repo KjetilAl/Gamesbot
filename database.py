@@ -1503,17 +1503,15 @@ def get_bandle_leaderboard(period: str = 'weekly'):
 
     where_clause, params = get_scores_by_period(period, "created_at")
 
-    # 1. Get top 3 players by average attempts
+    # 1. Get top 3 players by total score for the period
     cursor.execute(f"""
         SELECT
-            p.display_name,
-            p.bandle_avg_attempts,
-            p.bandle_avg_bonus_rounds
-        FROM player_stats p
-        JOIN (SELECT DISTINCT user_id FROM bandle_scores {where_clause}) as period_players
-        ON p.user_id = period_players.user_id
-        WHERE p.bandle_total_plays > 0
-        ORDER BY p.bandle_avg_attempts ASC
+            display_name,
+            SUM(total_score) as total_score
+        FROM bandle_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        ORDER BY total_score DESC
         LIMIT 3
     """, params)
     top_players = cursor.fetchall()
@@ -1649,7 +1647,7 @@ def get_word_salad_leaderboard(period: str = 'overall'):
         FROM word_salad_scores
         {where_clause}
         GROUP BY user_id, display_name
-        ORDER BY avg_score DESC, total_score DESC, games_played DESC
+        ORDER BY total_score DESC, avg_score DESC, games_played DESC
         LIMIT 10
     """, params)
     leaderboard = cursor.fetchall()
@@ -1682,7 +1680,7 @@ def get_strands_leaderboard(period: str = 'overall'):
         FROM strands_scores
         {where_clause}
         GROUP BY user_id, display_name
-        ORDER BY avg_score DESC, total_score DESC, games_played DESC
+        ORDER BY total_score DESC, avg_score DESC, games_played DESC
         LIMIT 10
     """, params)
     leaderboard = cursor.fetchall()
@@ -1789,7 +1787,7 @@ def get_pips_leaderboard(period: str = 'overall'):
         FROM pips_scores
         {where_clause}
         GROUP BY user_id, display_name
-        ORDER BY cookie_count DESC, total_score DESC
+        ORDER BY total_score DESC, cookie_count DESC
         LIMIT 10
     """, params)
     leaderboard = cursor.fetchall()
