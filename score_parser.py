@@ -124,8 +124,13 @@ def parse_sexaginta_score(content: str) -> Optional[dict]:
     game_number = int(match.group(1))
     guesses_made = int(match.group(2)) if match.group(2) else None
     words_unsolved = int(match.group(3)) if match.group(3) else None
-    score = int(match.group(4).replace(",", ""))
+    _score_raw = int(match.group(4).replace(",", "")) # kept for variables but unused in new score
     percent_solved = float(match.group(5))
+
+    calc_words_unsolved = words_unsolved if words_unsolved is not None else 0
+    calc_guesses_made = guesses_made if guesses_made is not None else 70
+
+    score = (64 - calc_words_unsolved) + (70 - calc_guesses_made)
 
     # Extract seed from URL
     seed_match = re.search(r"https://64ordle\.au/\?seed=(\d+)", content)
