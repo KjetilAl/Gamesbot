@@ -983,8 +983,8 @@
      <table:table-cell table:style-name="ce7" office:value-type="float" office:value="70" calcext:value-type="float">
       <text:p>70</text:p>
      </table:table-cell>
-     <table:table-cell table:style-name="ce7" office:value-type="float" office:value="2272" calcext:value-type="float">
-      <text:p>2272</text:p>
+     <table:table-cell table:style-name="ce7" office:value-type="float" office:value="67" calcext:value-type="float">
+      <text:p>67</text:p>
      </table:table-cell>
      <table:table-cell table:style-name="ce7" office:value-type="float" office:value="75" calcext:value-type="float">
       <text:p>75</text:p>
