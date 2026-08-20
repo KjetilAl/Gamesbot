@@ -184,7 +184,6 @@ GAME_CONFIGS = {
         "leaderboard_keys": LEADERBOARD_KEY_MAPPINGS["Sexaginta"],
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
-        "create_acknowledgement": score_parser.create_sexaginta_acknowledgement,
         "chat_channel_name": "64ordle-chat",
         "player_role_name": "64ordle-player",
         "game_number_key": "game_number",
