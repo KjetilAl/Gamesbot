@@ -16,7 +16,7 @@ LEADERBOARD_KEY_MAPPINGS = {
     "Minute Cryptic": ["display_name", "games_played", "solved_count", "avg_score"],
     "Word Salad": ["display_name", "games_played", "avg_time", "best_time", "avg_hints", "total_score", "avg_score"],
     "Pips": ["display_name", "total_score", "games_played", "cookie_count"],
-    "Sexaginta": ["display_name", "avg_pct", "avg_score", "plays"],
+    "Sexaginta": ["display_name", "games_played", "total_score", "avg_score", "avg_attempts", "solved_count"],
     "Strands": ["display_name", "games_played", "total_score", "avg_score"],
 }
 
@@ -184,8 +184,12 @@ GAME_CONFIGS = {
         "leaderboard_keys": LEADERBOARD_KEY_MAPPINGS["Sexaginta"],
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
+        "create_acknowledgement": score_parser.create_sexaginta_acknowledgement,
         "chat_channel_name": "64ordle-chat",
         "player_role_name": "64ordle-player",
-        "game_number_key": "game_number"
+        "game_number_key": "game_number",
+        "leaderboard_enabled": True,
+        "weekly_enabled": True,
+        "monthly_enabled": True
     }
 }
