@@ -707,23 +707,18 @@ def update_sexaginta_stats(user_id, display_name, game_info):
     stats = cursor.fetchone()
 
     if not stats or stats[0] is None:
-        # If stats are not found or total_plays is NULL, initialize them
         total_plays, avg_pct, avg_game_score = 0, 0.0, 0.0
-        # Ensure the player exists in the table
         cursor.execute("SELECT user_id FROM player_stats WHERE user_id = ?", (str(user_id),))
         if not cursor.fetchone():
             cursor.execute("INSERT INTO player_stats (user_id, display_name) VALUES (?, ?)", (str(user_id), display_name))
     else:
-        # Unpack the fetched values and ensure they are not None
         total_plays, avg_pct, avg_game_score = stats
-        # Explicitly handle potential None values before calculations
         total_plays = total_plays or 0
         avg_pct = avg_pct or 0.0
         avg_game_score = avg_game_score or 0.0
 
-    # Fix: Handle None values from game_info
-    performance_pct = game_info.get("performance_pct") or 0
-    game_score = game_info.get("game_score") or 0
+    performance_pct = game_info.get("percent_solved", 100.0 if (game_info.get("words_unsolved", 0) == 0) else 0.0)
+    game_score = game_info.get("game_score") or 10
 
     new_total_plays = total_plays + 1
     new_avg_pct = ((avg_pct * total_plays) + performance_pct) / new_total_plays
@@ -1707,43 +1702,49 @@ def get_sexaginta_leaderboard(period="weekly"):
     cursor = conn.cursor()
     where_clause, params = get_scores_by_period(period, "created_at")
 
-    # Top players
+    # Top players (Sorteres etter høyeste totalscore og gjennomsnittlig score)
     cursor.execute(f"""
-        SELECT display_name, AVG(percent_solved) as avg_pct, AVG(game_score) as avg_score, COUNT(*) as plays
+        SELECT 
+            display_name, 
+            COUNT(*) as games_played,
+            SUM(game_score) as total_score,
+            AVG(game_score) as avg_score,
+            AVG(CAST(guesses_used AS INTEGER)) as avg_attempts,
+            SUM(CASE WHEN CAST(guesses_used AS INTEGER) <= 70 AND (percent_solved >= 100.0 OR percent_solved IS NULL) THEN 1 ELSE 0 END) as solved_count
         FROM sexaginta_scores
         {where_clause}
         GROUP BY user_id, display_name
-        ORDER BY avg_pct DESC, avg_score DESC
+        ORDER BY total_score DESC, avg_score DESC
         LIMIT 10
     """, params)
     top_players = cursor.fetchall()
 
     # Superlatives
-    # The Strategist: Player with the highest average game score.
+    # The Strategist: Player with the highest average game score
     cursor.execute(f"""
         SELECT display_name, AVG(game_score) as avg_score
         FROM sexaginta_scores
         {where_clause}
         GROUP BY user_id, display_name
-        HAVING COUNT(*) > 3
+        HAVING COUNT(*) > 2
         ORDER BY avg_score DESC
         LIMIT 1
     """, params)
     strategist = cursor.fetchone()
 
-    # The Finisher: Player with the highest average percent solved.
+    # The Finisher: Player with the highest solve rate / percent solved
     cursor.execute(f"""
         SELECT display_name, AVG(percent_solved) as avg_pct
         FROM sexaginta_scores
         {where_clause}
         GROUP BY user_id, display_name
-        HAVING COUNT(*) > 3
+        HAVING COUNT(*) > 2
         ORDER BY avg_pct DESC
         LIMIT 1
     """, params)
     finisher = cursor.fetchone()
 
-    # The Veteran: Player with the most plays.
+    # The Veteran: Player with the most plays
     cursor.execute(f"""
         SELECT display_name, COUNT(*) as plays
         FROM sexaginta_scores
@@ -1754,7 +1755,7 @@ def get_sexaginta_leaderboard(period="weekly"):
     """, params)
     veteran = cursor.fetchone()
 
-    # Get current period stats
+    # Period stats
     cursor.execute(f"""
         SELECT COUNT(DISTINCT user_id), AVG(game_score)
         FROM sexaginta_scores
@@ -1769,6 +1770,7 @@ def get_sexaginta_leaderboard(period="weekly"):
     conn.close()
     return {
         "top_players": top_players,
+        "rows": top_players,
         "strategist": strategist,
         "finisher": finisher,
         "veteran": veteran,
@@ -1925,30 +1927,30 @@ def get_strands_stats(user_id: int) -> dict:
 def get_player_sexaginta_stats(user_id: int) -> dict:
     """
     Fetches basic Sexaginta-Quattuordle stats for a single player.
-    Returns a dictionary with total plays, and average percent solved.
     """
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # Query aggregate stats for this player
     cursor.execute("""
-        SELECT COUNT(*), AVG(percent_solved)
+        SELECT COUNT(*), AVG(percent_solved), AVG(game_score), AVG(CAST(guesses_used AS INTEGER))
         FROM sexaginta_scores
         WHERE user_id = ?
-    """, (user_id,))
+    """, (str(user_id),))
     result = cursor.fetchone()
     conn.close()
 
     if not result:
-        return {"total_plays": 0, "avg_pct": 0.0}
+        return {"total_plays": 0, "avg_pct": 0.0, "avg_score": 0.0, "avg_attempts": 0.0}
 
-    total_plays, avg_pct = result
+    total_plays, avg_pct, avg_score, avg_attempts = result
 
     return {
         "total_plays": total_plays or 0,
-        "avg_pct": avg_pct or 0.0
+        "avg_pct": avg_pct or 0.0,
+        "avg_score": avg_score or 0.0,
+        "avg_attempts": avg_attempts or 0.0
     }
-
+    
 def get_gisnep_puzzle_stats(game_number: int) -> dict:
     """Fetches the stats for a specific Gisnep puzzle."""
     conn = sqlite3.connect(DB_NAME)
