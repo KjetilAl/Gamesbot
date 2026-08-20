@@ -102,12 +102,24 @@ async def build_sexaginta_leaderboard_embed(title: str, leaderboard_data: dict, 
     top_players = leaderboard_data.get("top_players")
     medals = ["🥇", "🥈", "🥉"]
     player_list = []
-    for i, (player, avg_pct, avg_score, plays) in enumerate(top_players):
+    
+    for i, row in enumerate(top_players):
         medal = medals[i] if i < len(medals) else f"**#{i+1}**"
-        avg_pct_safe = _safe_float(avg_pct, 0.0)
-        avg_score_safe = _safe_float(avg_score, 0.0)
-        player_list.append(f"{medal} **{player}** - {avg_pct_safe:.2f}% solved, {avg_score_safe:,.0f} score")
-    embed.add_field(name="🏆 Top Players", value="\\n".join(player_list), inline=False)
+        # Håndterer både tuple- og dict-formater trygt
+        if isinstance(row, dict):
+            player = row.get("display_name", "Unknown")
+            total_score = _safe_float(row.get("total_score"), 0.0)
+            avg_score = _safe_float(row.get("avg_score"), 0.0)
+            avg_attempts = _safe_float(row.get("avg_attempts"), 70.0)
+        else:
+            player = row[0]
+            total_score = _safe_float(row[2] if len(row) > 2 else 0, 0.0)
+            avg_score = _safe_float(row[3] if len(row) > 3 else 0, 0.0)
+            avg_attempts = _safe_float(row[4] if len(row) > 4 else 70, 70.0)
+
+        player_list.append(f"{medal} **{player}** — **{total_score:,.0f} pts** (Avg: {avg_score:.1f} pts, ~{avg_attempts:.1f} guesses)")
+
+    embed.add_field(name="🏆 Top Players", value="\n".join(player_list), inline=False)
 
     # Superlatives
     superlatives = []
@@ -115,21 +127,21 @@ async def build_sexaginta_leaderboard_embed(title: str, leaderboard_data: dict, 
     if strategist:
         player, avg_score = strategist
         avg_score_safe = _safe_float(avg_score, 0.0)
-        superlatives.append(f"🧠 The Strategist to **{player}** for the highest average game score ({avg_score_safe:,.0f}).")
+        superlatives.append(f"🧠 **The Strategist:** **{player}** with the highest average score (**{avg_score_safe:.1f} pts**).")
 
     finisher = leaderboard_data.get("finisher")
     if finisher:
         player, avg_pct = finisher
         avg_pct_safe = _safe_float(avg_pct, 0.0)
-        superlatives.append(f"🏁 The Finisher to **{player}** for the highest average percent solved ({avg_pct_safe:.2f}%).")
+        superlatives.append(f"🏁 **The Finisher:** **{player}** with a **{avg_pct_safe:.1f}%** clear rate.")
 
     veteran = leaderboard_data.get("veteran")
     if veteran:
         player, plays = veteran
-        superlatives.append(f"🎖️ The Veteran to **{player}** for the most games played this period ({plays}).")
+        superlatives.append(f"🎖️ **The Veteran:** **{player}** with **{plays}** marathon runs.")
 
     if superlatives:
-        embed.add_field(name="✨ Superlatives", value="\\n".join(superlatives), inline=False)
+        embed.add_field(name="✨ Accolades", value="\n".join(superlatives), inline=False)
 
     emit_footer = f"Posted: {discord.utils.utcnow().strftime('%Y-%m-%d')}"
     embed.set_footer(text=emit_footer)
@@ -336,19 +348,25 @@ async def build_connections_leaderboard_embed(title: str, leaderboard_data: dict
     return embed
 
 def _format_sexaginta_fields(row: dict) -> list[str]:
-    """Helper function to format the fields for a Sexaginta-Quattuordle leaderboard row."""
-    avg_pct = row.get("avg_pct")
+    """Helper function to format the fields for a generic Sexaginta-Quattuordle row."""
+    total_score = row.get("total_score")
     avg_score = row.get("avg_score")
-    plays = row.get("plays")
-    
+    avg_attempts = row.get("avg_attempts")
+    solved_count = row.get("solved_count")
+    games_played = row.get("games_played")
+
     details = []
-    if avg_pct is not None:
-        details.append(f"📊 Avg % Solved: **{avg_pct:.2f}%**")
+    if total_score is not None:
+        details.append(f"⭐ Total Score: **{total_score:,.0f}**")
     if avg_score is not None:
-        details.append(f"⭐ Avg Score: **{avg_score:.2f}**")
-    if plays is not None:
-        details.append(f"🎮 Games Played: **{plays}**")
-    
+        details.append(f"📊 Avg Score: **{_safe_float(avg_score):.1f}**")
+    if avg_attempts is not None:
+        details.append(f"⏱️ Avg Guesses: **{_safe_float(avg_attempts):.1f}**")
+    if solved_count is not None and games_played is not None:
+        details.append(f"🎯 Cleared: **{solved_count}/{games_played}**")
+    elif games_played is not None:
+        details.append(f"🎮 Games Played: **{games_played}**")
+
     return details
 
 async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: dict, period: str, color: discord.Color) -> discord.Embed:
@@ -375,7 +393,7 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
         "Minute Cryptic": lambda x: x.get("avg_score", 0),
         "Word Salad": lambda x: (x.get("total_score", 0) if x.get("total_score") is not None else 0, x.get("avg_score", 0) if x.get("avg_score") is not None else 0),
         "Pips": lambda x: (x.get("total_score", 0), x.get("cookie_count", 0)),
-        "Sexaginta-Quattuordle": lambda x: (x.get("avg_pct", 0), x.get("avg_score", 0)),
+        "Sexaginta-Quattuordle": lambda x: (x.get("total_score", 0) if x.get("total_score") is not None else 0, x.get("avg_score", 0) if x.get("avg_score") is not None else 0),
         "Strands": lambda x: (x.get("total_score", 0), x.get("avg_score", 0)),
     }
 
