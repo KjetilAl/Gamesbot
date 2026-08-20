@@ -300,17 +300,20 @@ def save_wordle_score(user_id, display_name, game_number, attempts, skill=None, 
     conn.close()
 
 def save_sexaginta_score(user_id, display_name, game_info):
+    """Save a new Sexaginta-Quattuordle score with attempts and 100-to-10 point scaling."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO sexaginta_scores
-        (user_id, display_name, game_number, percent_solved, game_score, created_at)
-        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        (user_id, display_name, game_number, guesses_used, guesses_allowed, percent_solved, game_score, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     """, (
         str(user_id),
         display_name,
         game_info.get("game_number"),
-        game_info.get("performance_pct"),
+        str(game_info.get("guesses_used", 70)),
+        game_info.get("guesses_allowed", 70),
+        game_info.get("percent_solved", 100.0 if (game_info.get("words_unsolved", 0) == 0) else 0.0),
         game_info.get("game_score")
     ))
     conn.commit()
