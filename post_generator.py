@@ -320,33 +320,61 @@ def _generate_framed_post(display_name: str, game_info: dict, player_stats: dict
 
 def _generate_sexaginta_post(display_name: str, game_info: dict, player_stats: dict) -> str:
     """
-    Generates welcoming feedback for 64ordle that acknowledges the challenge.
+    Generates welcoming feedback for 64ordle that acknowledges the challenge
+    using the new 100-to-10 point scaling system and a wider array of phrases.
     """
     game_number = game_info.get("game_number", "?")
     guesses_used = game_info.get("guesses_used")
     words_unsolved = game_info.get("words_unsolved")
     score = game_info.get("game_score", "?")
-    percent_solved = game_info.get("percent_solved", 0)
 
-    # --- Welcome with performance context ---
+    # --- Welcome opening with performance context ---
     if words_unsolved is not None and words_unsolved > 0:
-        opening = f"Welcome **{display_name}**! Sexaginta-Quattuordle #{game_number} was a beast, and left you with **{words_unsolved}** words unsolved."
+        openings = [
+            f"Welcome **{display_name}**! Sexaginta-Quattuordle #{game_number} was a beast, leaving you with **{words_unsolved}** unsolved words (Score: **{score} pts**).",
+            f"Tough battle, **{display_name}**! You wrestled with #{game_number} and left **{words_unsolved}** words on the board (Score: **{score} pts**).",
+            f"Welcome **{display_name}**! Managing 64 grids is brutal — #{game_number} fought back with **{words_unsolved}** words remaining (Score: **{score} pts**)."
+        ]
+        opening = random.choice(openings)
     elif guesses_used is not None and guesses_used <= 70:
-        opening = f"Welcome **{display_name}**! You finished #{game_number} in **{guesses_used}** guesses."
+        openings = [
+            f"Welcome **{display_name}**! You crushed #{game_number} in **{guesses_used}** guesses for a solid **{score} pts**!",
+            f"Incredible run, **{display_name}**! Finished #{game_number} using **{guesses_used}/70** attempts (**{score} pts**).",
+            f"Welcome **{display_name}**! All 64 boards cleared in **{guesses_used}** guesses! (**{score} pts**)"
+        ]
+        opening = random.choice(openings)
     else:
-        opening = f"Welcome **{display_name}**! You tackled #{game_number} with a score of **{score}**."
+        opening = f"Welcome **{display_name}**! You logged #{game_number} with a score of **{score} pts**."
 
     # --- Discussion starters ---
-    starters = []
-    
-    if guesses_used is not None and guesses_used <= 70:
-        starters.append(f"That's a fantastic effort! What's your strategy for managing 64 boards?")
-    elif words_unsolved is not None and words_unsolved > 0:
-        starters.append("Which words gave you the most trouble?")
+    if words_unsolved is not None and words_unsolved > 0:
+        starters = [
+            "Which boards ended up tripping you up at the finish line?",
+            "Those obscure words cost you the solve.",
+            "Tricky words.",
+            "64 grids are relentless — what will your opening word be tomorrow?",
+            "Solid attempt!"
+        ]
+    elif guesses_used is not None and guesses_used <= 66:
+        # High performance / excellent scores (80-100 pts)
+        starters = [
+            "Juggling 64 boards at once? Your brain must be running at full capacity today!",
+            "Phenomenal pace! What starter words did you open with to clear them so fast?",
+            "Peak multitasking achieved — you made 64 grids look effortless!",
+            "That's near-perfect board control!",
+            "Masterclass in pattern recognition."
+        ]
     else:
-        # Generic prompt for solved puzzles
-        starters.append("How do you keep track of all 64 boards?")
-    
+        # Solved puzzles / general clears (40-70 pts)
+        starters = [
+            "Marathon session complete – brilliant stamina tackling all 64 grids!",
+            "Now that is extreme wordle endurance. Respect for seeing it through to the end!",
+            "64 words conquered! Take a deep breath, you survived the grid avalanche.",
+            "From board 1 to 64 without losing your cool – exceptional focus!",
+            "How do you decide which section of the grid to attack?",
+            "Did you have to burn a sacrifice guess near the end, or did the letters fall into place nicely?"
+        ]
+
     return f"{opening}\n{random.choice(starters)}"
 
 def _generate_minute_cryptic_post(display_name: str, game_info: dict, player_stats: dict) -> str:
