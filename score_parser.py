@@ -116,35 +116,41 @@ def parse_strands_score(message_content: str):
         "total_score": score_info["total_score"]
     }
 
-def parse_sexaginta_score(content: str) -> Optional[dict]:
-    match = SEXAGINTA_HEADER_REGEX.search(content)
-    if not match:
+def parse_sexaginta_score(text: str) -> dict | None:
+    """
+    Parses SexagintaQuattuordle / 64ordle score posts.
+    Calculates score based on attempts:
+      - 64 attempts: 100 points
+      - Each extra attempt: -10 points
+      - Minimum floor: 10 points (for all participants / unsolved)
+    """
+    header_match = re.search(r"#SexagintaQuattuordle\s+(\d+)", text, re.IGNORECASE)
+    if not header_match:
         return None
 
-    game_number = int(match.group(1))
-    guesses_made = int(match.group(2)) if match.group(2) else None
-    words_unsolved = int(match.group(3)) if match.group(3) else None
-    _score_raw = int(match.group(4).replace(",", "")) # kept for variables but unused in new score
-    percent_solved = float(match.group(5))
+    game_id = header_match.group(1)
 
-    calc_words_unsolved = words_unsolved if words_unsolved is not None else 0
-    calc_guesses_made = guesses_made if guesses_made is not None else 70
-
-    score = (64 - calc_words_unsolved) + (70 - calc_guesses_made)
-
-    # Extract seed from URL
-    seed_match = re.search(r"https://64ordle\.au/\?seed=(\d+)", content)
-    seed = int(seed_match.group(1)) if seed_match else None
+    # Check for success format: e.g. "68/70", "69/70 nice"
+    win_match = re.search(r"(\d+)/70", text)
+    if win_match:
+        attempts = int(win_match.group(1))
+        # Formula: 100 - 10 * (attempts - 64), minimum 10 points
+        score = max(10, 100 - (attempts - 64) * 10)
+        solved = True
+    else:
+        # Unsolved / failed game (e.g. "~ words unsolved: 7")
+        attempts = 70
+        score = 10
+        solved = False
 
     return {
-        "game_number": game_number,
-        "guesses_made": guesses_made,      # Will be None if not solved
-        "words_unsolved": words_unsolved,  # Will be None if fully solved
-        "game_score": score,
-        "performance_pct": percent_solved,
-        "seed": seed,
+        "game": "sexagintaquattuordle",
+        "game_id": game_id,
+        "attempts": attempts,
+        "score": score,
+        "solved": solved,
+        "raw_text": text
     }
-
 
 def parse_duration_to_seconds(duration: str) -> Optional[int]:
     """Parses m:ss or h:mm:ss into seconds."""
