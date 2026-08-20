@@ -32,8 +32,8 @@ WORD_SALAD_FULL_PATTERN = re.compile(
     re.IGNORECASE | re.DOTALL
 )
 
-SEXAGINTA_HEADER_REGEX = re.compile(
-    r"#SexagintaQuattuordle\s+(\d+)"                      # Game number
+TA_HEADER_REGEX = re.compile(
+    r"#taQuattuordle\s+(\d+)"                      # Game number
     r"(?:\s+(\d{1,3})/70(?:\s+\w+)?"                     # Optional guesses (x/70 [and optional "nice"])
     r"|\s+~\s*words unsolved:\s*(\d+))"                  # OR words unsolved count
     r".*?\(score\s*([\d,]+),\s*([0-9]{1,3})%\)",         # Score and percent
@@ -124,30 +124,41 @@ def parse_sexaginta_score(text: str) -> dict | None:
       - Each extra attempt: -10 points
       - Minimum floor: 10 points (for all participants / unsolved)
     """
+    # Header: #SexagintaQuattuordle <game_number>
     header_match = re.search(r"#SexagintaQuattuordle\s+(\d+)", text, re.IGNORECASE)
     if not header_match:
         return None
 
-    game_id = header_match.group(1)
+    game_number = int(header_match.group(1))
 
     # Check for success format: e.g. "68/70", "69/70 nice"
     win_match = re.search(r"(\d+)/70", text)
+    
+    # Check for unsolved count: e.g. "~ words unsolved: 7"
+    unsolved_match = re.search(r"words unsolved:\s*(\d+)", text, re.IGNORECASE)
+
     if win_match:
-        attempts = int(win_match.group(1))
-        # Formula: 100 - 10 * (attempts - 64), minimum 10 points
-        score = max(10, 100 - (attempts - 64) * 10)
+        guesses_used = int(win_match.group(1))
+        # Formel: 100 - 10 * (guesses - 64), minimum 10 poeng
+        game_score = max(10, 100 - (guesses_used - 64) * 10)
         solved = True
+        words_unsolved = 0
     else:
-        # Unsolved / failed game (e.g. "~ words unsolved: 7")
-        attempts = 70
-        score = 10
+        # Feilet / ufullført spill
+        guesses_used = 70
+        game_score = 10
         solved = False
+        words_unsolved = int(unsolved_match.group(1)) if unsolved_match else 1
 
     return {
-        "game": "sexagintaquattuordle",
-        "game_id": game_id,
-        "attempts": attempts,
-        "score": score,
+        "game_name": "Sexaginta-Quattuordle",
+        "game_number": game_number,
+        "guesses_used": guesses_used,
+        "guesses_allowed": 70,
+        "words_unsolved": words_unsolved,
+        "score": game_score,
+        "game_score": game_score,
+        "percent_solved": 100.0 if solved else 0.0,
         "solved": solved,
         "raw_text": text
     }
