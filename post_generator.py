@@ -488,6 +488,16 @@ def _build_personal_stat_spotlight(game_name: str, player_stats: dict, game_info
 
     return None
 
+
+def generate_waffle_post(display_name: str, game_info: dict, player_stats: dict) -> str:
+    stars = game_info.get('stars', 0)
+    streak = game_info.get('streak', 0)
+    if stars == 5:
+        return f"Flawless victory! {display_name} just solved Waffle with all 5 stars remaining! 🧇✨ Streak is at {streak}."
+    elif stars > 0:
+        return f"{display_name} scored {stars}/5 stars on Waffle! 🧇 Streak: {streak}."
+    else:
+        return f"Oof, {display_name} barely scraped by in Waffle with 0 stars remaining. Better luck tomorrow! 🧇"
 def generate_post(game_name: str, display_name: str, game_info: dict, player_stats: dict) -> str:
     """Routes the request to the appropriate sub-generator for the given game."""
 
@@ -502,6 +512,7 @@ def generate_post(game_name: str, display_name: str, game_info: dict, player_sta
         "minute_cryptic": _generate_minute_cryptic_post,
         "pips": _generate_pips_post,
         "strands": _generate_strands_post,
+        "waffle": generate_waffle_post,
     }
 
     generator_func = game_generators.get(game_name.lower())

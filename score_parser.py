@@ -46,6 +46,12 @@ STRANDS_PATTERN = re.compile(
     re.IGNORECASE | re.DOTALL
 )
 
+
+WAFFLE_PATTERN = re.compile(
+    r"#waffle(\d+)\s+([\dX])/5.*?(?:streak:\s*(\d+))",
+    re.IGNORECASE | re.DOTALL
+)
+
 def is_strands_message(message_content: str) -> bool:
     return (
         "strands #" in message_content.lower()
@@ -343,6 +349,40 @@ def calculate_connections_score(guesses, found_colors, first_successful, mistake
         "perfect_game": all_groups_found and no_mistakes
     }
     
+
+def parse_waffle_score(text: str) -> dict | None:
+    """Parses Waffle score posts."""
+    match = WAFFLE_PATTERN.search(text)
+    if not match:
+        return None
+
+    game_number = int(match.group(1))
+    score_str = match.group(2).upper()
+    if score_str == 'X':
+        stars = 0
+        solved = False
+    else:
+        stars = int(score_str)
+        solved = True
+
+    streak = int(match.group(3)) if match.group(3) else 0
+
+    return {
+        "game_name": "Waffle",
+        "game_number": game_number,
+        "stars": stars,
+        "streak": streak,
+        "solved": solved,
+        "raw_text": text
+    }
+
+def create_waffle_acknowledgement(user_name: str, game_info: dict) -> str:
+    stars = game_info['stars']
+    if stars > 0:
+        return f"Mmm, waffles. {user_name} got {stars}/5 stars on Waffle #{game_info['game_number']}!"
+    else:
+        return f"Oh no! {user_name} ran out of swaps on Waffle #{game_info['game_number']}."
+
 def parse_framed_score(message_content: str) -> Optional[Dict[str, Any]]:
     """Parses a Framed score from a message."""
     match = FRAMED_PATTERN.search(message_content)
@@ -622,6 +662,10 @@ def is_sexaginta_message(message_content: str) -> bool:
     """Checks if a message contains a Sexaginta-quattuordle score."""
     return "sexagintaquattuordle" in message_content.lower() and SEXAGINTA_HEADER_REGEX.search(message_content) is not None
     
+
+def is_waffle_message(message_content: str) -> bool:
+    return bool(WAFFLE_PATTERN.search(message_content))
+
 def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
 

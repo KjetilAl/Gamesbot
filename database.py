@@ -52,6 +52,9 @@ def initialize_db():
                 word_salad_personal_best_time INTEGER,
                 word_salad_avg_hints REAL DEFAULT 0.0,
                 word_salad_avg_score REAL DEFAULT 0.0,
+                waffle_total_plays INTEGER DEFAULT 0,
+                waffle_avg_stars REAL DEFAULT 0.0,
+                waffle_max_streak INTEGER DEFAULT 0,
                 minute_cryptic_total_plays INTEGER DEFAULT 0,
                 minute_cryptic_solved INTEGER DEFAULT 0,
                 minute_cryptic_avg_score REAL DEFAULT 0.0,
@@ -112,6 +115,14 @@ def initialize_db():
                 score INTEGER NOT NULL,
                 created_at DATETIME NOT NULL,
                 PRIMARY KEY (user_id, game_number)
+            )
+        """)
+        # Waffle
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS waffle_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
+                game_number INTEGER, stars INTEGER, streak INTEGER,
+                created_at DATETIME NOT NULL
             )
         """)
         # Framed
@@ -253,7 +264,7 @@ def initialize_db():
         initial_games = [
             ('Wordle', '0'), ('Connections', '0'), ('Framed', '0'),
             ('Gisnep', '0'), ('Bandle', '0'), ('Minute Cryptic', '2000-01-01'),
-            ('Pips', '0'), ('Sexaginta', '0'), ('Strands', '0')
+            ('Pips', '0'), ('Sexaginta', '0'), ('Strands', '0'), ('Waffle', '0')
         ]
         try:
             cursor.executemany(
@@ -2189,3 +2200,58 @@ def update_latest_game_number_in_db(game_name: str, latest_identifier: str):
         print(f"Database error in update_latest_game_number_in_db for {game_name}: {e}")
     finally:
         conn.close()
+
+def save_waffle_score(user_id: int, display_name: str, game_info: dict):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO waffle_scores (user_id, display_name, game_number, stars, streak, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (user_id, display_name, game_info['game_number'], game_info['stars'], game_info['streak'], datetime.datetime.now(timezone.utc)))
+    conn.commit()
+    conn.close()
+
+def update_waffle_player_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        INSERT INTO player_stats (user_id, display_name)
+        VALUES (?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name
+    ''', (user_id, user_name))
+
+    cursor.execute('''
+        UPDATE player_stats
+        SET waffle_total_plays = waffle_total_plays + 1,
+            waffle_avg_stars = ((waffle_avg_stars * waffle_total_plays) + ?) / (waffle_total_plays + 1),
+            waffle_max_streak = MAX(waffle_max_streak, ?)
+        WHERE user_id = ?
+    ''', (game_info['stars'], game_info['streak'], user_id))
+
+    cursor.execute('SELECT waffle_total_plays, waffle_avg_stars, waffle_max_streak FROM player_stats WHERE user_id = ?', (user_id,))
+    stats = cursor.fetchone()
+    conn.commit()
+    conn.close()
+
+    return {
+        'total_plays': stats[0],
+        'avg_stars': round(stats[1], 2),
+        'max_streak': stats[2]
+    }
+
+def get_waffle_leaderboard(period: str = 'weekly') -> dict:
+    return _get_generic_leaderboard(
+        game_name="Waffle",
+        table_name="waffle_scores",
+        score_column="stars",
+        period=period,
+        # Waffle is based on total stars over the period
+        agg_functions={
+            'games_played': 'COUNT(id)',
+            'total_stars': 'SUM(stars)',
+            'avg_stars': 'AVG(stars)',
+            'max_streak': 'MAX(streak)'
+        },
+        order_by='total_stars DESC'
+    )

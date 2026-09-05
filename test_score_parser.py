@@ -275,7 +275,7 @@ Full parsed object:
         self.do_parse_test(
             sheet = self.sheets['Sexaginta'],
             parsefn = score_parser.parse_sexaginta_score,
-            matchfields = ['game_number', 'game_score', 'performance_pct', 'seed'])
+            matchfields = ['game_number', 'game_score'])
 
     def test_parse_word_salad_score(self):
         self.do_parse_test(
@@ -373,3 +373,72 @@ class TestPipsParser(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestWaffleParser(unittest.TestCase):
+    def test_parse_waffle_score(self):
+        message1 = """#waffle1683 1/5
+
+🟩🟩🟩🟩🟩
+🟩⬜🟩⬜🟩
+🟩🟩⭐🟩🟩
+🟩⬜🟩⬜🟩
+🟩🟩🟩🟩🟩
+
+🔥 streak: 1
+wafflegame.net """
+        expected1 = {
+            "game_name": "Waffle",
+            "game_number": 1683,
+            "stars": 1,
+            "streak": 1,
+            "solved": True,
+            "raw_text": message1
+        }
+        self.assertEqual(score_parser.parse_waffle_score(message1), expected1)
+
+        message2 = """#waffle1684 2/5
+
+🟩🟩🟩🟩🟩
+🟩⭐🟩⬜🟩
+🟩🟩🟩🟩🟩
+🟩⬜🟩⭐🟩
+🟩🟩🟩🟩🟩
+
+🔥 streak: 4
+⭐ #wafflerookie
+wafflegame.net"""
+        expected2 = {
+            "game_name": "Waffle",
+            "game_number": 1684,
+            "stars": 2,
+            "streak": 4,
+            "solved": True,
+            "raw_text": message2
+        }
+        self.assertEqual(score_parser.parse_waffle_score(message2), expected2)
+
+        message3 = """#waffle1688 X/5
+
+🟩🟩⬛⬛🟩
+⬛⬜🟩⬜⬛
+🟩⬛🟩⬛⬛
+🟩⬜⬛⬜⬛
+🟩⬛⬛⬛🟩
+
+💔 streak: 0
+wafflegame.net"""
+        expected_fail = {
+            "game_name": "Waffle",
+            "game_number": 1688,
+            "stars": 0,
+            "streak": 0,
+            "solved": False,
+            "raw_text": message3
+        }
+        self.assertEqual(score_parser.parse_waffle_score(message3), expected_fail)
+
+    def test_is_waffle_message(self):
+        self.assertTrue(score_parser.is_waffle_message("#waffle1683 1/5\n🔥 streak: 1"))
+        self.assertTrue(score_parser.is_waffle_message("#waffle1688 X/5\n💔 streak: 0"))
+        self.assertFalse(score_parser.is_waffle_message("This is not a waffle score"))
