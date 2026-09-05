@@ -86,7 +86,12 @@ def get_strands_stats(user_id: int, user_name: str, game_info: dict) -> dict:
     """Gets Strands player stats."""
     return database.update_strands_player_stats(user_id, user_name, game_info)
 
+
+def get_waffle_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    return database.update_waffle_player_stats(user_id, user_name, game_info)
+
 PLAYER_STATS_HANDLERS = {
+    "waffle": get_waffle_stats,
     "wordle": get_wordle_stats,
     "connections": get_connections_stats,
     "gisnep": get_gisnep_stats,

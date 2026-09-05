@@ -394,6 +394,7 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
         "Word Salad": lambda x: (x.get("total_score", 0) if x.get("total_score") is not None else 0, x.get("avg_score", 0) if x.get("avg_score") is not None else 0),
         "Pips": lambda x: (x.get("total_score", 0), x.get("cookie_count", 0)),
         "Sexaginta-Quattuordle": lambda x: (x.get("total_score", 0) if x.get("total_score") is not None else 0, x.get("avg_score", 0) if x.get("avg_score") is not None else 0),
+        "Waffle": lambda x: (x.get("total_stars", 0), x.get("avg_stars", 0)),
         "Strands": lambda x: (x.get("total_score", 0), x.get("avg_score", 0)),
     }
 
@@ -403,6 +404,7 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
         "Word Salad": True,
         "Pips": True,
         "Sexaginta-Quattuordle": True,
+        "Waffle": True,
         "Strands": True,
     }
 

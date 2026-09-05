@@ -18,6 +18,7 @@ LEADERBOARD_KEY_MAPPINGS = {
     "Pips": ["display_name", "total_score", "games_played", "cookie_count"],
     "Sexaginta": ["display_name", "games_played", "total_score", "avg_score", "avg_attempts", "solved_count"],
     "Strands": ["display_name", "games_played", "total_score", "avg_score"],
+    "Waffle": ["display_name", "games_played", "total_stars", "avg_stars", "max_streak"],
 }
 
 # Game configurations dictionary
@@ -166,6 +167,26 @@ GAME_CONFIGS = {
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
         "create_acknowledgement": score_parser.create_strands_acknowledgement,
+        "game_number_key": "game_number",
+        "leaderboard_enabled": True,
+        "weekly_enabled": True,
+        "monthly_enabled": True
+    },
+    "waffle": {
+        "name": "Waffle",
+        "table_name": "waffle_scores",
+        "score_column": "stars",
+        "chat_channel_name": "waffle-chat",
+        "player_role_name": "waffle-player",
+        "parse_function": score_parser.parse_waffle_score,
+        "is_game_message": score_parser.is_waffle_message,
+        "save_score_function": database.save_waffle_score,
+        "get_leaderboard_function": database.get_waffle_leaderboard,
+        "leaderboard_keys": LEADERBOARD_KEY_MAPPINGS["Waffle"],
+        "embed_builder_function": embed_builder.build_leaderboard_embed,
+        "get_latest_game_number_function": database.get_latest_game_number_from_db,
+        "update_latest_game_number_function": database.update_latest_game_number_in_db,
+        "create_acknowledgement": score_parser.create_waffle_acknowledgement,
         "game_number_key": "game_number",
         "leaderboard_enabled": True,
         "weekly_enabled": True,
