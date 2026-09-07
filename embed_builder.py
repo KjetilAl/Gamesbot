@@ -586,9 +586,12 @@ async def build_embed_for_game(game_key, title, leaderboard_data, period, color)
         if not keys:
             raise ValueError(f"Missing leaderboard_keys for generic game {config['name']}")
 
-        rows_as_tuples = leaderboard_data.get("rows", [])
-        rows_as_dicts = [dict(zip(keys, row)) for row in rows_as_tuples]
-        leaderboard_data["rows"] = rows_as_dicts
+        rows_data = leaderboard_data.get("rows", [])
+
+        # Check if rows are tuples or dicts, and convert if needed.
+        if rows_data and isinstance(rows_data[0], tuple):
+            rows_as_dicts = [dict(zip(keys, row)) for row in rows_data]
+            leaderboard_data["rows"] = rows_as_dicts
 
         embed = await builder_func(
             game_name=config["name"],

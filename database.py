@@ -2241,17 +2241,36 @@ def update_waffle_player_stats(user_id: int, user_name: str, game_info: dict) ->
     }
 
 def get_waffle_leaderboard(period: str = 'weekly') -> dict:
-    return _get_generic_leaderboard(
-        game_name="Waffle",
-        table_name="waffle_scores",
-        score_column="stars",
-        period=period,
-        # Waffle is based on total stars over the period
-        agg_functions={
-            'games_played': 'COUNT(id)',
-            'total_stars': 'SUM(stars)',
-            'avg_stars': 'AVG(stars)',
-            'max_streak': 'MAX(streak)'
-        },
-        order_by='total_stars DESC'
-    )
+    """Fetch Waffle leaderboard data."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    where_clause, params = get_scores_by_period(period, 'created_at')
+
+    cursor.execute(f"""
+        SELECT display_name,
+               COUNT(*) AS games_played,
+               SUM(stars) AS total_stars,
+               AVG(stars) AS avg_stars,
+               MAX(streak) AS max_streak
+        FROM waffle_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        ORDER BY total_stars DESC, avg_stars DESC, games_played DESC
+        LIMIT 10
+    """, params)
+    leaderboard = cursor.fetchall()
+
+    # Get current period stats
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT user_id), AVG(stars)
+        FROM waffle_scores
+        {where_clause}
+    """, params)
+    current_stats_result = cursor.fetchone()
+    current_stats = {
+        "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
+        "avg_score": current_stats_result[1] if current_stats_result and current_stats_result[1] is not None else 0.0
+    }
+
+    conn.close()
+    return {"rows": leaderboard, "current_stats": current_stats}
