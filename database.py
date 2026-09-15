@@ -226,7 +226,8 @@ def initialize_db():
         leaderboard_tables = [
             "wordle_scores", "connections_scores", "framed_scores",
             "gisnep_scores", "bandle_scores", "minute_cryptic_scores",
-            "word_salad_scores", "sexaginta_scores", "pips_scores", "strands_scores"
+            "word_salad_scores", "sexaginta_scores", "pips_scores", "strands_scores",
+            "waffle_scores"
         ]
         for table in leaderboard_tables:
             # Index for weekly queries on DATE(created_at)
@@ -2207,7 +2208,7 @@ def save_waffle_score(user_id: int, display_name: str, game_info: dict):
     cursor.execute('''
         INSERT INTO waffle_scores (user_id, display_name, game_number, stars, streak, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
-    ''', (user_id, display_name, game_info['game_number'], game_info['stars'], game_info['streak'], datetime.datetime.now(timezone.utc)))
+    ''', (user_id, display_name, game_info['game_number'], game_info['stars'], game_info['streak'], datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')))
     conn.commit()
     conn.close()
 
@@ -2249,13 +2250,13 @@ def get_waffle_leaderboard(period: str = 'weekly') -> dict:
     cursor.execute(f"""
         SELECT display_name,
                COUNT(*) AS games_played,
-               SUM(stars) AS total_stars,
-               AVG(stars) AS avg_stars,
+               SUM(stars) AS total_score,
+               AVG(stars) AS avg_score,
                MAX(streak) AS max_streak
         FROM waffle_scores
         {where_clause}
         GROUP BY user_id, display_name
-        ORDER BY total_stars DESC, avg_stars DESC, games_played DESC
+        ORDER BY total_score DESC, avg_score DESC, games_played DESC
         LIMIT 10
     """, params)
     leaderboard = cursor.fetchall()
