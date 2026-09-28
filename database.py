@@ -1712,10 +1712,14 @@ def get_strands_leaderboard(period: str = 'overall'):
 def get_sexaginta_leaderboard(period="weekly"):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    where_clause, params = get_scores_by_period(period, "created_at")
+    start_date, end_date = _get_date_range_for_period(period, "current")
+    if start_date and end_date:
+        params = (1, start_date, end_date)
+    else:
+        params = (None, None, None)
 
     # Top players (Sorteres etter høyeste totalscore og gjennomsnittlig score)
-    cursor.execute(f"""
+    cursor.execute("""
         SELECT 
             display_name, 
             COUNT(*) as games_played,
@@ -1724,7 +1728,7 @@ def get_sexaginta_leaderboard(period="weekly"):
             AVG(CAST(guesses_used AS INTEGER)) as avg_attempts,
             SUM(CASE WHEN CAST(guesses_used AS INTEGER) <= 70 AND (percent_solved >= 100.0 OR percent_solved IS NULL) THEN 1 ELSE 0 END) as solved_count
         FROM sexaginta_scores
-        {where_clause}
+        WHERE ? IS NULL OR (DATE(created_at) >= DATE(?) AND DATE(created_at) < DATE(?))
         GROUP BY user_id, display_name
         ORDER BY total_score DESC, avg_score DESC
         LIMIT 10
@@ -1733,10 +1737,10 @@ def get_sexaginta_leaderboard(period="weekly"):
 
     # Superlatives
     # The Strategist: Player with the highest average game score
-    cursor.execute(f"""
+    cursor.execute("""
         SELECT display_name, AVG(game_score) as avg_score
         FROM sexaginta_scores
-        {where_clause}
+        WHERE ? IS NULL OR (DATE(created_at) >= DATE(?) AND DATE(created_at) < DATE(?))
         GROUP BY user_id, display_name
         HAVING COUNT(*) > 2
         ORDER BY avg_score DESC
@@ -1745,10 +1749,10 @@ def get_sexaginta_leaderboard(period="weekly"):
     strategist = cursor.fetchone()
 
     # The Finisher: Player with the highest solve rate / percent solved
-    cursor.execute(f"""
+    cursor.execute("""
         SELECT display_name, AVG(percent_solved) as avg_pct
         FROM sexaginta_scores
-        {where_clause}
+        WHERE ? IS NULL OR (DATE(created_at) >= DATE(?) AND DATE(created_at) < DATE(?))
         GROUP BY user_id, display_name
         HAVING COUNT(*) > 2
         ORDER BY avg_pct DESC
@@ -1757,10 +1761,10 @@ def get_sexaginta_leaderboard(period="weekly"):
     finisher = cursor.fetchone()
 
     # The Veteran: Player with the most plays
-    cursor.execute(f"""
+    cursor.execute("""
         SELECT display_name, COUNT(*) as plays
         FROM sexaginta_scores
-        {where_clause}
+        WHERE ? IS NULL OR (DATE(created_at) >= DATE(?) AND DATE(created_at) < DATE(?))
         GROUP BY user_id, display_name
         ORDER BY plays DESC
         LIMIT 1
@@ -1768,10 +1772,10 @@ def get_sexaginta_leaderboard(period="weekly"):
     veteran = cursor.fetchone()
 
     # Period stats
-    cursor.execute(f"""
+    cursor.execute("""
         SELECT COUNT(DISTINCT user_id), AVG(game_score)
         FROM sexaginta_scores
-        {where_clause}
+        WHERE ? IS NULL OR (DATE(created_at) >= DATE(?) AND DATE(created_at) < DATE(?))
     """, params)
     current_stats_result = cursor.fetchone()
     current_stats = {
