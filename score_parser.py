@@ -172,13 +172,19 @@ def parse_sexaginta_score(text: str) -> dict | None:
 
 def parse_duration_to_seconds(duration: str) -> Optional[int]:
     """Parses m:ss or h:mm:ss into seconds."""
+    if not duration:
+        return None
+
     parts = duration.split(":")
-    if len(parts) == 2:
-        minutes, seconds = map(int, parts)
-        return minutes * 60 + seconds
-    if len(parts) == 3:
-        hours, minutes, seconds = map(int, parts)
-        return hours * 3600 + minutes * 60 + seconds
+    try:
+        if len(parts) == 2:
+            minutes, seconds = map(int, parts)
+            return minutes * 60 + seconds
+        if len(parts) == 3:
+            hours, minutes, seconds = map(int, parts)
+            return hours * 3600 + minutes * 60 + seconds
+    except ValueError:
+        return None
     return None
 
 def parse_wordle_score(message_content: str) -> Optional[Dict[str, Any]]:

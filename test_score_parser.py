@@ -285,9 +285,25 @@ Full parsed object:
 
 class TestPipsParser(unittest.TestCase):
     def test_parse_duration_to_seconds(self):
+        # Valid inputs
         self.assertEqual(score_parser.parse_duration_to_seconds("1:40"), 100)
         self.assertEqual(score_parser.parse_duration_to_seconds("1:40:52"), 6052)
+        self.assertEqual(score_parser.parse_duration_to_seconds("0:00"), 0)
+        self.assertEqual(score_parser.parse_duration_to_seconds("0:0:0"), 0)
+
+        # Invalid format / missing components
         self.assertIsNone(score_parser.parse_duration_to_seconds("99"))
+        self.assertIsNone(score_parser.parse_duration_to_seconds(":40"))
+        self.assertIsNone(score_parser.parse_duration_to_seconds("1:"))
+        self.assertIsNone(score_parser.parse_duration_to_seconds("1:2:3:4"))
+
+        # Invalid types / non-integers
+        self.assertIsNone(score_parser.parse_duration_to_seconds("a:b"))
+        self.assertIsNone(score_parser.parse_duration_to_seconds("1:40.5"))
+
+        # Empty inputs
+        self.assertIsNone(score_parser.parse_duration_to_seconds(""))
+        self.assertIsNone(score_parser.parse_duration_to_seconds(None))
 
     def test_calculate_pips_score(self):
         # Test cases for easy difficulty
