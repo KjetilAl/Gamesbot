@@ -1682,24 +1682,32 @@ def get_strands_leaderboard(period: str = 'overall'):
     cursor = conn.cursor()
     where_clause, params = get_scores_by_period(period, 'created_at')
 
-    cursor.execute(f"""
+    query = """
         SELECT display_name,
                COUNT(*) AS games_played,
                SUM(total_score) AS total_score,
                AVG(total_score) AS avg_score
         FROM strands_scores
-        {where_clause}
+    """
+    if where_clause:
+        query += f"        {where_clause}\n"
+    query += """
         GROUP BY user_id, display_name
         ORDER BY total_score DESC, avg_score DESC, games_played DESC
         LIMIT 10
-    """, params)
+    """
+
+    cursor.execute(query, params)
     leaderboard = cursor.fetchall()
 
-    cursor.execute(f"""
+    stats_query = """
         SELECT COUNT(DISTINCT user_id), AVG(total_score)
         FROM strands_scores
-        {where_clause}
-    """, params)
+    """
+    if where_clause:
+        stats_query += f"        {where_clause}\n"
+
+    cursor.execute(stats_query, params)
     current_stats_result = cursor.fetchone()
     current_stats = {
         "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
