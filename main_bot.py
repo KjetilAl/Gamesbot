@@ -132,7 +132,6 @@ async def on_message(message):
         return
 
     for game_key, config in game_config.GAME_CONFIGS.items():
-        # FIX: Replace the underscore in game_key with a space for the name check
         game_name_for_check = game_key.replace('_', ' ')
         game_names_to_check = [game_name_for_check] + config.get("aliases", [])
         
