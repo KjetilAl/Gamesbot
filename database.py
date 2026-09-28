@@ -2247,26 +2247,35 @@ def get_waffle_leaderboard(period: str = 'weekly') -> dict:
     cursor = conn.cursor()
     where_clause, params = get_scores_by_period(period, 'created_at')
 
-    cursor.execute(f"""
-        SELECT display_name,
-               COUNT(*) AS games_played,
-               SUM(stars) AS total_score,
-               AVG(stars) AS avg_score,
-               MAX(streak) AS max_streak
-        FROM waffle_scores
-        {where_clause}
-        GROUP BY user_id, display_name
-        ORDER BY total_score DESC, avg_score DESC, games_played DESC
-        LIMIT 10
-    """, params)
+    query_parts = [
+        "SELECT display_name,",
+        "COUNT(*) AS games_played,",
+        "SUM(stars) AS total_score,",
+        "AVG(stars) AS avg_score,",
+        "MAX(streak) AS max_streak",
+        "FROM waffle_scores"
+    ]
+    if where_clause:
+        query_parts.append(where_clause)
+
+    query_parts.extend([
+        "GROUP BY user_id, display_name",
+        "ORDER BY total_score DESC, avg_score DESC, games_played DESC",
+        "LIMIT 10"
+    ])
+
+    cursor.execute(" ".join(query_parts), params)
     leaderboard = cursor.fetchall()
 
     # Get current period stats
-    cursor.execute(f"""
-        SELECT COUNT(DISTINCT user_id), AVG(stars)
-        FROM waffle_scores
-        {where_clause}
-    """, params)
+    stats_query_parts = [
+        "SELECT COUNT(DISTINCT user_id), AVG(stars)",
+        "FROM waffle_scores"
+    ]
+    if where_clause:
+        stats_query_parts.append(where_clause)
+
+    cursor.execute(" ".join(stats_query_parts), params)
     current_stats_result = cursor.fetchone()
     current_stats = {
         "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
