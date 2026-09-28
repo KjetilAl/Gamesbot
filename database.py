@@ -1511,23 +1511,39 @@ def get_bandle_leaderboard(period: str = 'weekly'):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    where_clause, params = get_scores_by_period(period, "created_at")
+    start_date, end_date = _get_date_range_for_period(period, 'current')
+    has_period = start_date and end_date
+    params = (start_date, end_date) if has_period else ()
 
     # 1. Get top 3 players by total score for the period
-    cursor.execute(f"""
-        SELECT
-            display_name,
-            SUM(total_score) as total_score
-        FROM bandle_scores
-        {where_clause}
-        GROUP BY user_id, display_name
-        ORDER BY total_score DESC
-        LIMIT 3
-    """, params)
+    if has_period:
+        cursor.execute("""
+            SELECT
+                display_name,
+                SUM(total_score) as total_score
+            FROM bandle_scores
+            WHERE created_at >= ? AND created_at < ?
+            GROUP BY user_id, display_name
+            ORDER BY total_score DESC
+            LIMIT 3
+        """, params)
+    else:
+        cursor.execute("""
+            SELECT
+                display_name,
+                SUM(total_score) as total_score
+            FROM bandle_scores
+            GROUP BY user_id, display_name
+            ORDER BY total_score DESC
+            LIMIT 3
+        """)
     top_players = cursor.fetchall()
 
     # 2. Get all scores for the period to calculate superlatives
-    cursor.execute(f"SELECT user_id, display_name, bonus_emojis FROM bandle_scores {where_clause}", params)
+    if has_period:
+        cursor.execute("SELECT user_id, display_name, bonus_emojis FROM bandle_scores WHERE created_at >= ? AND created_at < ?", params)
+    else:
+        cursor.execute("SELECT user_id, display_name, bonus_emojis FROM bandle_scores")
     scores = cursor.fetchall()
 
     # 3. Calculate superlatives
@@ -1579,11 +1595,17 @@ def get_bandle_leaderboard(period: str = 'weekly'):
     rock_god = cursor.fetchone()
 
     # Get current period stats
-    cursor.execute(f"""
-        SELECT COUNT(DISTINCT user_id), AVG(total_score)
-        FROM bandle_scores
-        {where_clause}
-    """, params)
+    if has_period:
+        cursor.execute("""
+            SELECT COUNT(DISTINCT user_id), AVG(total_score)
+            FROM bandle_scores
+            WHERE created_at >= ? AND created_at < ?
+        """, params)
+    else:
+        cursor.execute("""
+            SELECT COUNT(DISTINCT user_id), AVG(total_score)
+            FROM bandle_scores
+        """)
     current_stats_result = cursor.fetchone()
     current_stats = {
         "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
