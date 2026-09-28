@@ -414,12 +414,9 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
         # Fallback for unexpected game names, sorting by a default key like 'games_played'
         rows.sort(key=lambda x: x.get("games_played", 0), reverse=True)
 
+    max_cookies = 0
     if game_name == "Pips" and rows:
         max_cookies = max((row.get("cookie_count", 0) for row in rows), default=0)
-        if max_cookies > 0:
-            for row in rows:
-                if row.get("cookie_count") == max_cookies:
-                    row["is_cookie_monster"] = True
     
     for i, row in enumerate(rows, start=1):
         medal = medals[i-1] if i <= len(medals) else f"#{i}"
@@ -514,7 +511,7 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
             cookie_count = row.get("cookie_count", 0)
             details.append(f"⭐ Total Score: **{total_score}**")
             details.append(f"🍪 Cookies: **{cookie_count}**")
-            if row.get("is_cookie_monster"):
+            if max_cookies > 0 and cookie_count == max_cookies:
                 name = name.replace(" 🍪", "")
                 name = f"{name} 🍪 (Cookie Monster)"
         
