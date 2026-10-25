@@ -506,11 +506,11 @@ def generate_timeguessr_post(display_name: str, game_info: dict, player_stats: d
     score = game_info.get('total_score', 0)
     attempts = game_info.get('attempts', 0)
     if score >= 45000:
-        return f"Incredible! {display_name} scored {score:,}/50,000 on TimeGuessr in {attempts} attempt(s)! 🌍⏱️"
+        return f"Incredible! {display_name} scored {score:,}/50,000 on TimeGuessr! 🌍⏱️"
     elif score >= 30000:
-        return f"Great job! {display_name} scored {score:,}/50,000 on TimeGuessr in {attempts} attempt(s)! 🌍⏱️"
+        return f"Great job! {display_name} scored {score:,}/50,000 on TimeGuessr! 🌍⏱️"
     else:
-        return f"{display_name} scored {score:,}/50,000 on TimeGuessr in {attempts} attempt(s). 🌍⏱️"
+        return f"{display_name} scored {score:,}/50,000 on TimeGuessr. 🌍⏱️"
 
 def generate_post(game_name: str, display_name: str, game_info: dict, player_stats: dict) -> str:
     """Routes the request to the appropriate sub-generator for the given game."""
