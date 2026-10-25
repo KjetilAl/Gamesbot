@@ -55,6 +55,8 @@ def initialize_db():
                 waffle_total_plays INTEGER DEFAULT 0,
                 waffle_avg_stars REAL DEFAULT 0.0,
                 waffle_max_streak INTEGER DEFAULT 0,
+                timeguessr_total_plays INTEGER DEFAULT 0,
+                timeguessr_avg_score REAL DEFAULT 0.0,
                 minute_cryptic_total_plays INTEGER DEFAULT 0,
                 minute_cryptic_solved INTEGER DEFAULT 0,
                 minute_cryptic_avg_score REAL DEFAULT 0.0,
@@ -581,6 +583,33 @@ def save_timeguessr_score(user_id: int, display_name: str, game_info: dict):
     """, (str(user_id), display_name, game_info['game_number'], game_info['total_score'], game_info['attempts'], created_at))
     conn.commit()
     conn.close()
+
+def update_timeguessr_player_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        INSERT INTO player_stats (user_id, display_name)
+        VALUES (?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name
+    ''', (str(user_id), user_name))
+
+    cursor.execute('''
+        UPDATE player_stats
+        SET timeguessr_total_plays = IFNULL(timeguessr_total_plays, 0) + 1,
+            timeguessr_avg_score = ((IFNULL(timeguessr_avg_score, 0) * IFNULL(timeguessr_total_plays, 0)) + ?) / (IFNULL(timeguessr_total_plays, 0) + 1)
+        WHERE user_id = ?
+    ''', (game_info['total_score'], str(user_id)))
+
+    cursor.execute('SELECT timeguessr_total_plays, timeguessr_avg_score FROM player_stats WHERE user_id = ?', (str(user_id),))
+    stats = cursor.fetchone()
+    conn.commit()
+    conn.close()
+
+    return {
+        'total_plays': stats[0],
+        'avg_score': round(stats[1], 2)
+    }
 
 def get_timeguessr_leaderboard(period: str = 'weekly') -> dict:
     """Fetch TimeGuessr leaderboard data."""

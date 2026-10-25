@@ -462,6 +462,9 @@ def _generate_pips_post(display_name: str, game_info: dict, player_stats: dict) 
 
 
 def _build_personal_stat_spotlight(game_name: str, player_stats: dict, game_info: dict) -> str | None:
+    if not player_stats:
+        return None
+
     """Build one extra personal stat line for chat engagement."""
     if not player_stats:
         return None
@@ -498,6 +501,17 @@ def generate_waffle_post(display_name: str, game_info: dict, player_stats: dict)
         return f"{display_name} scored {stars}/5 stars on Waffle! 🧇 Streak: {streak}."
     else:
         return f"Oof, {display_name} barely scraped by in Waffle with 0 stars remaining. Better luck tomorrow! 🧇"
+
+def generate_timeguessr_post(display_name: str, game_info: dict, player_stats: dict) -> str:
+    score = game_info.get('total_score', 0)
+    attempts = game_info.get('attempts', 0)
+    if score >= 45000:
+        return f"Incredible! {display_name} scored {score:,}/50,000 on TimeGuessr in {attempts} attempt(s)! 🌍⏱️"
+    elif score >= 30000:
+        return f"Great job! {display_name} scored {score:,}/50,000 on TimeGuessr in {attempts} attempt(s)! 🌍⏱️"
+    else:
+        return f"{display_name} scored {score:,}/50,000 on TimeGuessr in {attempts} attempt(s). 🌍⏱️"
+
 def generate_post(game_name: str, display_name: str, game_info: dict, player_stats: dict) -> str:
     """Routes the request to the appropriate sub-generator for the given game."""
 
@@ -513,6 +527,7 @@ def generate_post(game_name: str, display_name: str, game_info: dict, player_sta
         "pips": _generate_pips_post,
         "strands": _generate_strands_post,
         "waffle": generate_waffle_post,
+        "timeguessr": generate_timeguessr_post,
     }
 
     generator_func = game_generators.get(game_name.lower())
