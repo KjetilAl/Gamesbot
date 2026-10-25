@@ -378,11 +378,15 @@ def parse_waffle_score(text: str) -> dict | None:
     }
 
 def create_waffle_acknowledgement(user_name: str, game_info: dict) -> str:
-    stars = game_info['stars']
+    stars = game_info.get('stars', 0)
     if stars > 0:
         return f"Mmm, waffles. {user_name} got {stars}/5 stars on Waffle #{game_info['game_number']}!"
     else:
         return f"Oh no! {user_name} ran out of swaps on Waffle #{game_info['game_number']}."
+
+def create_timeguessr_acknowledgement(user_name: str, game_info: dict) -> str:
+    return "🤖"
+
 
 def parse_framed_score(message_content: str) -> Optional[Dict[str, Any]]:
     """Parses a Framed score from a message."""

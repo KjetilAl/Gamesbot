@@ -19,6 +19,7 @@ LEADERBOARD_KEY_MAPPINGS = {
     "Sexaginta": ["display_name", "games_played", "total_score", "avg_score", "avg_attempts", "solved_count"],
     "Strands": ["display_name", "games_played", "total_score", "avg_score"],
     "Waffle": ["display_name", "games_played", "total_stars", "avg_stars", "max_streak"],
+    "TimeGuessr": ["display_name", "games_played", "total_score", "avg_score"],
 }
 
 # Game configurations dictionary
@@ -181,7 +182,10 @@ GAME_CONFIGS = {
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
         "game_number_key": "game_number",
-        "chat_channel_name": "waffle",  # <-- ENDRE TIL DET FAKTISKE NAVNET PÅ DISCORD-KANALEN DIN
+        "chat_channel_name": "waffle-chat",
+        "player_role_name": "waffle-player",
+        "leaderboard_keys": LEADERBOARD_KEY_MAPPINGS["Waffle"],
+        "embed_builder_function": embed_builder.build_leaderboard_embed,
         "create_acknowledgement": score_parser.create_waffle_acknowledgement,
         "get_leaderboard_function": database.get_waffle_leaderboard,
         "table_name": "waffle_scores",
@@ -196,7 +200,11 @@ GAME_CONFIGS = {
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
         "game_number_key": "game_number",
-        "chat_channel_name": "timeguessr",  # <-- ENDRE TIL DET FAKTISKE NAVNET PÅ DISCORD-KANALEN DIN
+        "chat_channel_name": "timeguessr-chat",
+        "player_role_name": "timeguessr-player",
+        "leaderboard_keys": LEADERBOARD_KEY_MAPPINGS["TimeGuessr"],
+        "embed_builder_function": embed_builder.build_leaderboard_embed,
+        "create_acknowledgement": score_parser.create_timeguessr_acknowledgement,
         "get_leaderboard_function": database.get_timeguessr_leaderboard,
         "table_name": "timeguessr_scores",
         "score_column": "total_score"
