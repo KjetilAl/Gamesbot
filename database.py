@@ -278,7 +278,7 @@ def initialize_db():
         initial_games = [
             ('Wordle', '0'), ('Connections', '0'), ('Framed', '0'),
             ('Gisnep', '0'), ('Bandle', '0'), ('Minute Cryptic', '2000-01-01'),
-            ('Pips', '0'), ('Sexaginta', '0'), ('Strands', '0'), ('Waffle', '0')
+            ('Pips', '0'), ('Sexaginta', '0'), ('Strands', '0'), ('Waffle', '0'), ('TimeGuessr', '0')
         ]
         try:
             cursor.executemany(
@@ -569,6 +569,52 @@ def save_framed_score(user_id, display_name, game_number, attempts, total_score)
     """, (user_id, display_name, game_number, attempts, total_score, created_at))
     conn.commit()
     conn.close()
+
+def save_timeguessr_score(user_id: int, display_name: str, game_info: dict):
+    """Save a new TimeGuessr score."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    created_at = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    cursor.execute("""
+        INSERT INTO timeguessr_scores (user_id, display_name, game_number, total_score, attempts, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (str(user_id), display_name, game_info['game_number'], game_info['total_score'], game_info['attempts'], created_at))
+    conn.commit()
+    conn.close()
+
+def get_timeguessr_leaderboard(period: str = 'weekly') -> dict:
+    """Fetch TimeGuessr leaderboard data."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    where_clause, params = get_scores_by_period(period, 'created_at')
+
+    cursor.execute(f"""
+        SELECT display_name,
+               COUNT(*) AS games_played,
+               SUM(total_score) AS total_score,
+               AVG(total_score) AS avg_score
+        FROM timeguessr_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        ORDER BY total_score DESC, avg_score DESC, games_played DESC
+        LIMIT 10
+    """, params)
+    leaderboard = cursor.fetchall()
+
+    # Get current period stats
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT user_id), AVG(total_score)
+        FROM timeguessr_scores
+        {where_clause}
+    """, params)
+    current_stats_result = cursor.fetchone()
+    current_stats = {
+        "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
+        "avg_score": current_stats_result[1] if current_stats_result and current_stats_result[1] is not None else 0.0
+    }
+
+    conn.close()
+    return {"rows": leaderboard, "current_stats": current_stats}
 
 def save_gisnep_score(user_id, display_name, game_number, completion_time):
     """Save a new Gisnep score (only stores time)."""
