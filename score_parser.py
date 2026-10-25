@@ -487,6 +487,28 @@ def parse_bandle_score(message_content: str) -> Optional[Dict[str, Any]]:
         "solved": solved,
         "total_score": total_score
     }
+
+def parse_timeguessr_score(message_content: str) -> Optional[Dict[str, Any]]:
+    """Parses a TimeGuessr score post."""
+    header_match = TIMEGUESSR_HEADER_PATTERN.search(message_content)
+    if not header_match:
+        return None
+
+    game_number = int(header_match.group(1))
+    # Fjern komma fra totalpoengsummen (f.eks. "38,674" -> 38674)
+    total_score = int(header_match.group(2).replace(",", ""))
+    
+    # Tell antall forsøk basert på antall linjer som matcher forsøksmønsteret
+    attempts = len(TIMEGUESSR_ATTEMPT_PATTERN.findall(message_content))
+
+    return {
+        "game_name": "TimeGuessr",
+        "game_number": game_number,
+        "total_score": total_score,
+        "attempts": attempts,
+        "is_perfect": total_score == 50000,
+        "raw_text": message_content
+    }
     
 def parse_minute_cryptic_score(message_content: str) -> Optional[Dict[str, Any]]:
     """Parse a Minute Cryptic result message."""
