@@ -14,6 +14,8 @@ BONUS_PATTERN = re.compile(r'Bonus Rounds: (\d+)/(\d+)(?:\s+(.+))?', re.IGNORECA
 MINUTE_CRYPTIC_HEADER_PATTERN = re.compile(r"Minute Cryptic - (\d+ \w+ \d+)")
 MINUTE_CRYPTIC_CLUE_PATTERN = re.compile(r'"(.*?)" \((\d+)\)')
 MINUTE_CRYPTIC_SCORE_PATTERN = re.compile(r"I scored: (.*)")
+TIMEGUESSR_HEADER_PATTERN = re.compile(r"TimeGuessr\s*#(\d+)\s*—\s*([\d,]+)/50,000", re.IGNORECASE)
+TIMEGUESSR_ATTEMPT_PATTERN = re.compile(r"^\d+️⃣\s*🏆([\d,]+)", re.MULTILINE)
 SEXAGINTA_HEADER_REGEX = re.compile(r"#SexagintaQuattuordle\s+\d+", re.IGNORECASE)
 PIPS_PATTERN = re.compile(
     r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|🔴)\s*\n((?:\d{1,2}:)?\d{1,2}:\d{2})\s*(🍪)?",
