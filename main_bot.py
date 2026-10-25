@@ -176,6 +176,10 @@ async def on_message(message):
                     config["save_score_function"](message.author.id, message.author.display_name, game_info)
                 elif game_key == "sexaginta":
                     config["save_score_function"](message.author.id, message.author.display_name, game_info)
+                elif game_key == "waffle":
+                    config["save_score_function"](message.author.id, message.author.display_name, game_info)
+                elif game_key == "timeguessr":
+                    config["save_score_function"](message.author.id, message.author.display_name, game_info)
 
                 if stats_handler := PLAYER_STATS_HANDLERS.get(game_key):
                     player_stats = stats_handler(message.author.id, message.author.display_name, game_info)
@@ -290,12 +294,18 @@ async def get_leaderboard_embed(game_key: str, period: str) -> Optional[discord.
         leaderboard_data = {} # Ensure leaderboard_data is a dict
 
     game_colors = {
-        "Wordle": discord.Color.green(), "Connections": discord.Color.purple(),
-        "Framed": discord.Color.red(), "Gisnep": discord.Color.blue(),
-        "Bandle": discord.Color.gold(), "Minute Cryptic": discord.Color.dark_teal(),
-        "Word Salad": discord.Color.green(), "Pips": discord.Color.orange(),
+        "Wordle": discord.Color.green(), 
+        "Connections": discord.Color.purple(),
+        "Framed": discord.Color.red(), 
+        "Gisnep": discord.Color.blue(),
+        "Bandle": discord.Color.gold(), 
+        "Minute Cryptic": discord.Color.dark_teal(),
+        "Word Salad": discord.Color.green(), 
+        "Pips": discord.Color.orange(),
         "Sexaginta-Quattuordle": discord.Color.dark_gold(),
         "Strands": discord.Color.teal(),
+        "Waffle": discord.Color.gold(),
+        "TimeGuessr": discord.Color.blue(),
     }
     color = game_colors.get(game_name, discord.Color.from_rgb(128, 128, 128))
     title = f"🏆 The {game_name} {period.capitalize()} Leaderboard 🏆"
