@@ -4,6 +4,7 @@ Game Configuration Module - Defines settings and constants for different games.
 import score_parser
 import database
 import embed_builder
+import re
 
 # --- Data Mappings for Generic Leaderboard ---
 # Maps database columns to the keys expected by the generic embed builder
