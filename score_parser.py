@@ -46,9 +46,8 @@ STRANDS_PATTERN = re.compile(
     re.IGNORECASE | re.DOTALL
 )
 
-
 WAFFLE_PATTERN = re.compile(
-    r"#waffle(\d+)\s+([\dX])/5.*?(?:streak:\s*(\d+))",
+    r"#waffle\s*(\d+)\s+([\dX])/5(?:.*?streak:\s*(\d+))?",
     re.IGNORECASE | re.DOTALL
 )
 
