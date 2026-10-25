@@ -200,7 +200,7 @@ GAME_CONFIGS = {
         "get_leaderboard_function": database.get_timeguessr_leaderboard,
         "table_name": "timeguessr_scores",
         "score_column": "total_score"
-    }
+    },
     "sexaginta": {
         "name": "Sexaginta-Quattuordle",
         "table_name": "sexaginta_scores",
