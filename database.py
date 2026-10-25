@@ -180,6 +180,19 @@ def initialize_db():
             )
         """)
 
+        # TimeGuessr
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS timeguessr_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                display_name TEXT,
+                game_number INTEGER NOT NULL,
+                total_score INTEGER NOT NULL,
+                attempts INTEGER NOT NULL,
+                created_at TIMESTAMP NOT NULL
+            )
+        """)
+        
         # Pips
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS pips_scores (
