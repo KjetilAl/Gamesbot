@@ -174,24 +174,33 @@ GAME_CONFIGS = {
     },
     "waffle": {
         "name": "Waffle",
-        "table_name": "waffle_scores",
-        "score_column": "stars",
-        "chat_channel_name": "waffle-chat",
-        "player_role_name": "waffle-player",
+        "aliases": ["waffle"],
+        "is_game_message": lambda content: bool(re.search(r"#waffle\s*\d+\s+[\dX]/5", content, re.IGNORECASE)),
         "parse_function": score_parser.parse_waffle_score,
-        "is_game_message": score_parser.is_waffle_message,
         "save_score_function": database.save_waffle_score,
-        "get_leaderboard_function": database.get_waffle_leaderboard,
-        "leaderboard_keys": LEADERBOARD_KEY_MAPPINGS["Waffle"],
-        "embed_builder_function": embed_builder.build_leaderboard_embed,
         "get_latest_game_number_function": database.get_latest_game_number_from_db,
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
-        "create_acknowledgement": score_parser.create_waffle_acknowledgement,
         "game_number_key": "game_number",
-        "leaderboard_enabled": True,
-        "weekly_enabled": True,
-        "monthly_enabled": True
+        "chat_channel_name": "waffle",  # <-- ENDRE TIL DET FAKTISKE NAVNET PÅ DISCORD-KANALEN DIN
+        "create_acknowledgement": score_parser.create_waffle_acknowledgement,
+        "get_leaderboard_function": database.get_waffle_leaderboard,
+        "table_name": "waffle_scores",
+        "score_column": "stars"
     },
+    "timeguessr": {
+        "name": "TimeGuessr",
+        "aliases": ["timeguessr", "time guessr"],
+        "is_game_message": lambda content: bool(re.search(r"TimeGuessr\s*#\d+\s*—\s*[\d,]+/50,000", content, re.IGNORECASE)),
+        "parse_function": score_parser.parse_timeguessr_score,
+        "save_score_function": database.save_timeguessr_score,
+        "get_latest_game_number_function": database.get_latest_game_number_from_db,
+        "update_latest_game_number_function": database.update_latest_game_number_in_db,
+        "game_number_key": "game_number",
+        "chat_channel_name": "timeguessr",  # <-- ENDRE TIL DET FAKTISKE NAVNET PÅ DISCORD-KANALEN DIN
+        "get_leaderboard_function": database.get_timeguessr_leaderboard,
+        "table_name": "timeguessr_scores",
+        "score_column": "total_score"
+    }
     "sexaginta": {
         "name": "Sexaginta-Quattuordle",
         "table_name": "sexaginta_scores",
