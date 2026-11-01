@@ -391,6 +391,7 @@ wafflegame.net """
             "game_name": "Waffle",
             "game_number": 1683,
             "stars": 1,
+            "total_score": 20,
             "streak": 1,
             "solved": True,
             "raw_text": message1
@@ -412,6 +413,7 @@ wafflegame.net"""
             "game_name": "Waffle",
             "game_number": 1684,
             "stars": 2,
+            "total_score": 40,
             "streak": 4,
             "solved": True,
             "raw_text": message2
@@ -432,6 +434,7 @@ wafflegame.net"""
             "game_name": "Waffle",
             "game_number": 1688,
             "stars": 0,
+            "total_score": 10,
             "streak": 0,
             "solved": False,
             "raw_text": message3
@@ -442,3 +445,27 @@ wafflegame.net"""
         self.assertTrue(score_parser.is_waffle_message("#waffle1683 1/5\n🔥 streak: 1"))
         self.assertTrue(score_parser.is_waffle_message("#waffle1688 X/5\n💔 streak: 0"))
         self.assertFalse(score_parser.is_waffle_message("This is not a waffle score"))
+
+class TestTimeGuessrParser(unittest.TestCase):
+    def test_parse_timeguessr_score(self):
+        message = """TimeGuessr #1243 — 35,815/50,000
+
+1️⃣ 🏆5 837 · 📅 26y · 🌍 2.7km
+2️⃣ 🏆3 493 · 📅 8y · 🌍 7490.2km
+3️⃣ 🏆7 523 · 📅 2y · 🌍 1219.8km
+4️⃣ 🏆9 773 · 📅 2y · 🌍 9.6km
+5️⃣ 🏆9 189 · 📅 5y · 🌍 6.3km"""
+        expected = {
+            "game_name": "TimeGuessr",
+            "game_number": 1243,
+            "total_score": 35815,
+            "attempts": 5,
+            "total_years_off": 43.0,
+            "total_distance_km_off": 8728.6,
+            "is_perfect": False,
+            "raw_text": message
+        }
+        res = score_parser.parse_timeguessr_score(message)
+        # Handle floating point inaccuracies
+        res['total_distance_km_off'] = round(res['total_distance_km_off'], 1)
+        self.assertEqual(res, expected)

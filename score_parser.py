@@ -359,12 +359,17 @@ def parse_waffle_score(text: str) -> dict | None:
 
     game_number = int(match.group(1))
     score_str = match.group(2).upper()
+
+    score_mapping = {5: 100, 4: 80, 3: 60, 2: 40, 1: 20}
+
     if score_str == 'X':
         stars = 0
         solved = False
+        total_score = 10
     else:
         stars = int(score_str)
         solved = True
+        total_score = score_mapping.get(stars, 10) # 0 stars remaining is 10 points
 
     streak = int(match.group(3)) if match.group(3) else 0
 
@@ -372,6 +377,7 @@ def parse_waffle_score(text: str) -> dict | None:
         "game_name": "Waffle",
         "game_number": game_number,
         "stars": stars,
+        "total_score": total_score,
         "streak": streak,
         "solved": solved,
         "raw_text": text
@@ -505,11 +511,28 @@ def parse_timeguessr_score(message_content: str) -> Optional[Dict[str, Any]]:
     # Tell antall forsøk basert på antall linjer som matcher forsøksmønsteret
     attempts = len(TIMEGUESSR_ATTEMPT_PATTERN.findall(message_content))
 
+    # Calculate discrepancies
+    TIMEGUESSR_DISCREPANCY_PATTERN = re.compile(r"📅\s*([\d,.]+)y\s*·\s*🌍\s*([\d,.]+)(km|m)", re.IGNORECASE)
+    discrepancies = TIMEGUESSR_DISCREPANCY_PATTERN.findall(message_content)
+    total_years_off = 0.0
+    total_distance_km_off = 0.0
+    for year_str, dist_str, unit in discrepancies:
+        try:
+            total_years_off += float(year_str.replace(',', ''))
+            dist = float(dist_str.replace(',', ''))
+            if unit.lower() == 'm':
+                dist /= 1000.0
+            total_distance_km_off += dist
+        except ValueError:
+            pass
+
     return {
         "game_name": "TimeGuessr",
         "game_number": game_number,
         "total_score": total_score,
         "attempts": attempts,
+        "total_years_off": total_years_off,
+        "total_distance_km_off": total_distance_km_off,
         "is_perfect": total_score == 50000,
         "raw_text": message_content
     }
