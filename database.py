@@ -54,9 +54,12 @@ def initialize_db():
                 word_salad_avg_score REAL DEFAULT 0.0,
                 waffle_total_plays INTEGER DEFAULT 0,
                 waffle_avg_stars REAL DEFAULT 0.0,
+                waffle_avg_score REAL DEFAULT 0.0,
                 waffle_max_streak INTEGER DEFAULT 0,
                 timeguessr_total_plays INTEGER DEFAULT 0,
                 timeguessr_avg_score REAL DEFAULT 0.0,
+                timeguessr_avg_years_off REAL DEFAULT 0.0,
+                timeguessr_avg_distance_km_off REAL DEFAULT 0.0,
                 minute_cryptic_total_plays INTEGER DEFAULT 0,
                 minute_cryptic_solved INTEGER DEFAULT 0,
                 minute_cryptic_avg_score REAL DEFAULT 0.0,
@@ -123,7 +126,7 @@ def initialize_db():
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS waffle_scores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, display_name TEXT,
-                game_number INTEGER, stars INTEGER, streak INTEGER,
+                game_number INTEGER, stars INTEGER, total_score INTEGER, streak INTEGER,
                 created_at DATETIME NOT NULL
             )
         """)
@@ -191,6 +194,8 @@ def initialize_db():
                 game_number INTEGER NOT NULL,
                 total_score INTEGER NOT NULL,
                 attempts INTEGER NOT NULL,
+                total_years_off REAL,
+                total_distance_km_off REAL,
                 created_at TIMESTAMP NOT NULL
             )
         """)
@@ -275,6 +280,34 @@ def initialize_db():
                         print(f"DB: created_at column already exists in {table}.")
                     else:
                         raise e
+
+
+        # Specific migrations for missing columns
+        tables_to_check = {
+            "player_stats": [
+                ("waffle_avg_score", "REAL DEFAULT 0.0"),
+                ("timeguessr_avg_years_off", "REAL DEFAULT 0.0"),
+                ("timeguessr_avg_distance_km_off", "REAL DEFAULT 0.0")
+            ],
+            "waffle_scores": [("total_score", "INTEGER")],
+            "timeguessr_scores": [
+                ("total_years_off", "REAL"),
+                ("total_distance_km_off", "REAL")
+            ]
+        }
+
+        for table, columns in tables_to_check.items():
+            cursor.execute(f"PRAGMA table_info({table})")
+            existing_columns = [row[1] for row in cursor.fetchall()]
+            for column, col_type in columns:
+                if column not in existing_columns:
+                    try:
+                        cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type};")
+                        conn.commit()
+                        print(f"DB: Added {column} column to {table}.")
+                    except sqlite3.OperationalError as e:
+                        if "duplicate column name" not in str(e).lower():
+                            raise e
 
         # --- Initialize latest_game_numbers Data ---
         initial_games = [
@@ -578,9 +611,9 @@ def save_timeguessr_score(user_id: int, display_name: str, game_info: dict):
     cursor = conn.cursor()
     created_at = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute("""
-        INSERT INTO timeguessr_scores (user_id, display_name, game_number, total_score, attempts, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (str(user_id), display_name, game_info['game_number'], game_info['total_score'], game_info['attempts'], created_at))
+        INSERT INTO timeguessr_scores (user_id, display_name, game_number, total_score, attempts, total_years_off, total_distance_km_off, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (str(user_id), display_name, game_info['game_number'], game_info['total_score'], game_info['attempts'], game_info['total_years_off'], game_info['total_distance_km_off'], created_at))
     conn.commit()
     conn.close()
 
@@ -597,18 +630,22 @@ def update_timeguessr_player_stats(user_id: int, user_name: str, game_info: dict
     cursor.execute('''
         UPDATE player_stats
         SET timeguessr_total_plays = IFNULL(timeguessr_total_plays, 0) + 1,
-            timeguessr_avg_score = ((IFNULL(timeguessr_avg_score, 0) * IFNULL(timeguessr_total_plays, 0)) + ?) / (IFNULL(timeguessr_total_plays, 0) + 1)
+            timeguessr_avg_score = ((IFNULL(timeguessr_avg_score, 0) * IFNULL(timeguessr_total_plays, 0)) + ?) / (IFNULL(timeguessr_total_plays, 0) + 1),
+            timeguessr_avg_years_off = ((IFNULL(timeguessr_avg_years_off, 0) * IFNULL(timeguessr_total_plays, 0)) + ?) / (IFNULL(timeguessr_total_plays, 0) + 1),
+            timeguessr_avg_distance_km_off = ((IFNULL(timeguessr_avg_distance_km_off, 0) * IFNULL(timeguessr_total_plays, 0)) + ?) / (IFNULL(timeguessr_total_plays, 0) + 1)
         WHERE user_id = ?
-    ''', (game_info['total_score'], str(user_id)))
+    ''', (game_info['total_score'], game_info['total_years_off'], game_info['total_distance_km_off'], str(user_id)))
 
-    cursor.execute('SELECT timeguessr_total_plays, timeguessr_avg_score FROM player_stats WHERE user_id = ?', (str(user_id),))
+    cursor.execute('SELECT timeguessr_total_plays, timeguessr_avg_score, timeguessr_avg_years_off, timeguessr_avg_distance_km_off FROM player_stats WHERE user_id = ?', (str(user_id),))
     stats = cursor.fetchone()
     conn.commit()
     conn.close()
 
     return {
         'total_plays': stats[0],
-        'avg_score': round(stats[1], 2)
+        'avg_score': round(stats[1], 2),
+        'avg_years_off': round(stats[2], 2) if stats[2] is not None else 0.0,
+        'avg_distance_km_off': round(stats[3], 2) if stats[3] is not None else 0.0
     }
 
 def get_timeguessr_leaderboard(period: str = 'weekly') -> dict:
@@ -621,11 +658,15 @@ def get_timeguessr_leaderboard(period: str = 'weekly') -> dict:
         SELECT display_name,
                COUNT(*) AS games_played,
                SUM(total_score) AS total_score,
-               AVG(total_score) AS avg_score
+               AVG(total_score) AS avg_score,
+               SUM(total_years_off) AS total_years_off,
+               AVG(total_years_off) AS avg_years_off,
+               SUM(total_distance_km_off) AS total_distance_km_off,
+               AVG(total_distance_km_off) AS avg_distance_km_off
         FROM timeguessr_scores
         {where_clause}
         GROUP BY user_id, display_name
-        ORDER BY total_score DESC, avg_score DESC, games_played DESC
+        ORDER BY total_score DESC, avg_score DESC, avg_years_off ASC, avg_distance_km_off ASC
         LIMIT 10
     """, params)
     leaderboard = cursor.fetchall()
@@ -2294,9 +2335,9 @@ def save_waffle_score(user_id: int, display_name: str, game_info: dict):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO waffle_scores (user_id, display_name, game_number, stars, streak, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (user_id, display_name, game_info['game_number'], game_info['stars'], game_info['streak'], datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')))
+        INSERT INTO waffle_scores (user_id, display_name, game_number, stars, total_score, streak, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (user_id, display_name, game_info['game_number'], game_info['stars'], game_info['total_score'], game_info['streak'], datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')))
     conn.commit()
     conn.close()
 
@@ -2314,11 +2355,12 @@ def update_waffle_player_stats(user_id: int, user_name: str, game_info: dict) ->
         UPDATE player_stats
         SET waffle_total_plays = waffle_total_plays + 1,
             waffle_avg_stars = ((waffle_avg_stars * waffle_total_plays) + ?) / (waffle_total_plays + 1),
+            waffle_avg_score = ((IFNULL(waffle_avg_score, 0) * waffle_total_plays) + ?) / (waffle_total_plays + 1),
             waffle_max_streak = MAX(waffle_max_streak, ?)
         WHERE user_id = ?
-    ''', (game_info['stars'], game_info['streak'], user_id))
+    ''', (game_info['stars'], game_info['total_score'], game_info['streak'], user_id))
 
-    cursor.execute('SELECT waffle_total_plays, waffle_avg_stars, waffle_max_streak FROM player_stats WHERE user_id = ?', (user_id,))
+    cursor.execute('SELECT waffle_total_plays, waffle_avg_stars, waffle_avg_score, waffle_max_streak FROM player_stats WHERE user_id = ?', (user_id,))
     stats = cursor.fetchone()
     conn.commit()
     conn.close()
@@ -2326,7 +2368,8 @@ def update_waffle_player_stats(user_id: int, user_name: str, game_info: dict) ->
     return {
         'total_plays': stats[0],
         'avg_stars': round(stats[1], 2),
-        'max_streak': stats[2]
+        'avg_score': round(stats[2], 2) if stats[2] is not None else 0.0,
+        'max_streak': stats[3]
     }
 
 def get_waffle_leaderboard(period: str = 'weekly') -> dict:
@@ -2338,8 +2381,10 @@ def get_waffle_leaderboard(period: str = 'weekly') -> dict:
     cursor.execute(f"""
         SELECT display_name,
                COUNT(*) AS games_played,
-               SUM(stars) AS total_score,
-               AVG(stars) AS avg_score,
+               SUM(total_score) AS total_score,
+               AVG(total_score) AS avg_score,
+               SUM(stars) AS total_stars,
+               AVG(stars) AS avg_stars,
                MAX(streak) AS max_streak
         FROM waffle_scores
         {where_clause}
@@ -2351,7 +2396,7 @@ def get_waffle_leaderboard(period: str = 'weekly') -> dict:
 
     # Get current period stats
     cursor.execute(f"""
-        SELECT COUNT(DISTINCT user_id), AVG(stars)
+        SELECT COUNT(DISTINCT user_id), AVG(total_score)
         FROM waffle_scores
         {where_clause}
     """, params)

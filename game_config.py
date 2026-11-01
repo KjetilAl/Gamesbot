@@ -19,8 +19,8 @@ LEADERBOARD_KEY_MAPPINGS = {
     "Pips": ["display_name", "total_score", "games_played", "cookie_count"],
     "Sexaginta": ["display_name", "games_played", "total_score", "avg_score", "avg_attempts", "solved_count"],
     "Strands": ["display_name", "games_played", "total_score", "avg_score"],
-    "Waffle": ["display_name", "games_played", "total_stars", "avg_stars", "max_streak"],
-    "TimeGuessr": ["display_name", "games_played", "total_score", "avg_score"],
+    "Waffle": ["display_name", "games_played", "total_score", "avg_score", "total_stars", "avg_stars", "max_streak"],
+    "TimeGuessr": ["display_name", "games_played", "total_score", "avg_score", "total_years_off", "avg_years_off", "total_distance_km_off", "avg_distance_km_off"],
 }
 
 # Game configurations dictionary
@@ -190,7 +190,7 @@ GAME_CONFIGS = {
         "create_acknowledgement": score_parser.create_waffle_acknowledgement,
         "get_leaderboard_function": database.get_waffle_leaderboard,
         "table_name": "waffle_scores",
-        "score_column": "stars"
+        "score_column": "total_score"
     },
     "timeguessr": {
         "name": "TimeGuessr",

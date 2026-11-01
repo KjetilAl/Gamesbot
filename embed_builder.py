@@ -394,8 +394,8 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
         "Word Salad": lambda x: (x.get("total_score", 0) if x.get("total_score") is not None else 0, x.get("avg_score", 0) if x.get("avg_score") is not None else 0),
         "Pips": lambda x: (x.get("total_score", 0), x.get("cookie_count", 0)),
         "Sexaginta-Quattuordle": lambda x: (x.get("total_score", 0) if x.get("total_score") is not None else 0, x.get("avg_score", 0) if x.get("avg_score") is not None else 0),
-        "Waffle": lambda x: (x.get("total_stars", 0), x.get("avg_stars", 0)),
-        "TimeGuessr": lambda x: (x.get("total_score", 0), x.get("avg_score", 0)),
+        "Waffle": lambda x: (x.get("total_score", 0) if x.get("total_score") is not None else 0, x.get("avg_score", 0) if x.get("avg_score") is not None else 0, x.get("total_stars", 0) if x.get("total_stars") is not None else 0),
+        "TimeGuessr": lambda x: (x.get("total_score", 0) if x.get("total_score") is not None else 0, x.get("avg_score", 0) if x.get("avg_score") is not None else 0, -(x.get("avg_years_off") if x.get("avg_years_off") is not None else float('inf')), -(x.get("avg_distance_km_off") if x.get("avg_distance_km_off") is not None else float('inf'))),
         "Strands": lambda x: (x.get("total_score", 0), x.get("avg_score", 0)),
     }
 
@@ -530,6 +530,31 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
             details.append(f"⭐ Total Score: **{total_score}**")
             details.append(f"📊 Avg Score: {avg_score_display}")
             
+        elif game_name == "Waffle":
+            total_score = row.get("total_score", 0)
+            avg_score = row.get("avg_score")
+            avg_score_display = f"**{avg_score:.2f}**" if avg_score is not None else "N/A"
+            total_stars = row.get("total_stars", 0)
+            avg_stars = row.get("avg_stars")
+            avg_stars_display = f"**{avg_stars:.2f}**" if avg_stars is not None else "N/A"
+            details.append(f"⭐ Total Score: **{total_score}**")
+            details.append(f"📊 Avg Score: {avg_score_display}")
+            details.append(f"🧇 Total Stars: **{total_stars}**")
+            details.append(f"⭐ Avg Stars: {avg_stars_display}")
+
+        elif game_name == "TimeGuessr":
+            total_score = row.get("total_score", 0)
+            avg_score = row.get("avg_score")
+            avg_score_display = f"**{avg_score:.2f}**" if avg_score is not None else "N/A"
+            avg_years_off = row.get("avg_years_off")
+            avg_years_display = f"**{avg_years_off:.2f}y**" if avg_years_off is not None else "N/A"
+            avg_distance_km_off = row.get("avg_distance_km_off")
+            avg_distance_display = f"**{avg_distance_km_off:.2f}km**" if avg_distance_km_off is not None else "N/A"
+            details.append(f"⭐ Total Score: **{total_score}**")
+            details.append(f"📊 Avg Score: {avg_score_display}")
+            details.append(f"📅 Avg Years Off: {avg_years_display}")
+            details.append(f"🌍 Avg Distance Off: {avg_distance_display}")
+
         field_value = "\n".join(details)
         embed.add_field(
             name=f"{medal} {name}",

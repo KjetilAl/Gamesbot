@@ -4,3 +4,4 @@ __pycache__
 
 # Non-flattened ODF documents
 *.ods
+wordle.db
