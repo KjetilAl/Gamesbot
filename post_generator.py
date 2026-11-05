@@ -441,19 +441,25 @@ def _generate_pips_post(display_name: str, game_info: dict, player_stats: dict) 
     if not scores:
         return f"🏆 **{display_name}** is making progress on Pips #{game_number}!"
 
-    total_score = sum(s['score'] for s in scores)
-    cookie_count = sum(s['cookie'] for s in scores)
-
-    message = f"🏆 **{display_name}** has completed all Pips difficulties for game #{game_number} with a total score of **{total_score}**!\n\n"
+    total_score = 0
+    cookie_count = 0
+    details = []
 
     for score in scores:
+        total_score += score['score']
+        cookie_count += score['cookie']
+
         time_min = score['completion_time'] // 60
         time_sec = score['completion_time'] % 60
         time_str = f"{time_min}:{time_sec:02d}"
-        message += f"**{score['difficulty'].capitalize()}**: {time_str} ({score['score']} pts)"
+
+        line = f"**{score['difficulty'].capitalize()}**: {time_str} ({score['score']} pts)"
         if score.get('cookie'):
-            message += " 🍪"
-        message += "\n"
+            line += " 🍪"
+        details.append(line)
+
+    message = f"🏆 **{display_name}** has completed all Pips difficulties for game #{game_number} with a total score of **{total_score}**!\n\n"
+    message += "\n".join(details) + "\n"
 
     if cookie_count > 0:
         message += f"\nWow, {cookie_count} cookie{'s' if cookie_count > 1 else ''}! You're a top performer! 🍪"
