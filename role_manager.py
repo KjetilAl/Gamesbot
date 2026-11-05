@@ -1,6 +1,6 @@
 import discord
 from typing import List, Dict, Any, Union
-from datetime import datetime, date
+from datetime import date
 import database
 
 async def get_members_with_role(guild: discord.Guild, role_name: str) -> List[discord.Member]:
