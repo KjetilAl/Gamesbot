@@ -1,5 +1,5 @@
 import discord
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any
 from datetime import datetime, date
 import database
 
