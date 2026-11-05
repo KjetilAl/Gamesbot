@@ -6,7 +6,6 @@ import odf.table
 import odf.text
 import os
 import os.path
-import pprint
 import subprocess
 import unittest
 
@@ -193,7 +192,6 @@ class TestExamplesSheet(unittest.TestCase):
 
         cls.doc = odf.opendocument.load(in_memory_zip)
         cls.sheets = spreadsheet_xml_to_dict(cls.doc)
-        # log.debug(pprint.pformat(cls.sheets))
 
     @classmethod
     def findSheet(cls, sheet_name):
