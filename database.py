@@ -194,6 +194,7 @@ def initialize_db():
                 game_number INTEGER NOT NULL,
                 total_score INTEGER NOT NULL,
                 attempts INTEGER NOT NULL,
+                rounds INTEGER DEFAULT 5,
                 total_years_off REAL,
                 total_distance_km_off REAL,
                 created_at TIMESTAMP NOT NULL
@@ -292,7 +293,8 @@ def initialize_db():
             "waffle_scores": [("total_score", "INTEGER")],
             "timeguessr_scores": [
                 ("total_years_off", "REAL"),
-                ("total_distance_km_off", "REAL")
+                ("total_distance_km_off", "REAL"),
+                ("rounds", "INTEGER DEFAULT 5")
             ]
         }
 
@@ -308,6 +310,9 @@ def initialize_db():
                     except sqlite3.OperationalError as e:
                         if "duplicate column name" not in str(e).lower():
                             raise e
+
+        cursor.execute("UPDATE timeguessr_scores SET rounds = 5 WHERE rounds IS NULL;")
+        conn.commit()
 
         # --- Initialize latest_game_numbers Data ---
         initial_games = [
@@ -610,10 +615,11 @@ def save_timeguessr_score(user_id: int, display_name: str, game_info: dict):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     created_at = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    rounds = game_info.get('rounds', game_info.get('attempts', 5)) or 5
     cursor.execute("""
-        INSERT INTO timeguessr_scores (user_id, display_name, game_number, total_score, attempts, total_years_off, total_distance_km_off, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (str(user_id), display_name, game_info['game_number'], game_info['total_score'], game_info['attempts'], game_info['total_years_off'], game_info['total_distance_km_off'], created_at))
+        INSERT INTO timeguessr_scores (user_id, display_name, game_number, total_score, attempts, rounds, total_years_off, total_distance_km_off, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (str(user_id), display_name, game_info['game_number'], game_info['total_score'], game_info['attempts'], rounds, game_info['total_years_off'], game_info['total_distance_km_off'], created_at))
     conn.commit()
     conn.close()
 
@@ -627,6 +633,10 @@ def update_timeguessr_player_stats(user_id: int, user_name: str, game_info: dict
         ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name
     ''', (str(user_id), user_name))
 
+    rounds = game_info.get('rounds', game_info.get('attempts', 5)) or 5
+    avg_years_off_game = game_info['total_years_off'] / rounds
+    avg_distance_km_off_game = game_info['total_distance_km_off'] / rounds
+
     cursor.execute('''
         UPDATE player_stats
         SET timeguessr_total_plays = IFNULL(timeguessr_total_plays, 0) + 1,
@@ -634,7 +644,7 @@ def update_timeguessr_player_stats(user_id: int, user_name: str, game_info: dict
             timeguessr_avg_years_off = ((IFNULL(timeguessr_avg_years_off, 0) * IFNULL(timeguessr_total_plays, 0)) + ?) / (IFNULL(timeguessr_total_plays, 0) + 1),
             timeguessr_avg_distance_km_off = ((IFNULL(timeguessr_avg_distance_km_off, 0) * IFNULL(timeguessr_total_plays, 0)) + ?) / (IFNULL(timeguessr_total_plays, 0) + 1)
         WHERE user_id = ?
-    ''', (game_info['total_score'], game_info['total_years_off'], game_info['total_distance_km_off'], str(user_id)))
+    ''', (game_info['total_score'], avg_years_off_game, avg_distance_km_off_game, str(user_id)))
 
     cursor.execute('SELECT timeguessr_total_plays, timeguessr_avg_score, timeguessr_avg_years_off, timeguessr_avg_distance_km_off FROM player_stats WHERE user_id = ?', (str(user_id),))
     stats = cursor.fetchone()
@@ -660,9 +670,9 @@ def get_timeguessr_leaderboard(period: str = 'weekly') -> dict:
                SUM(total_score) AS total_score,
                AVG(total_score) AS avg_score,
                SUM(total_years_off) AS total_years_off,
-               AVG(total_years_off) AS avg_years_off,
+               AVG(total_years_off * 1.0 / rounds) AS avg_years_off,
                SUM(total_distance_km_off) AS total_distance_km_off,
-               AVG(total_distance_km_off) AS avg_distance_km_off
+               AVG(total_distance_km_off * 1.0 / rounds) AS avg_distance_km_off
         FROM timeguessr_scores
         {where_clause}
         GROUP BY user_id, display_name

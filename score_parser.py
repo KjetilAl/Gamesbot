@@ -15,7 +15,7 @@ MINUTE_CRYPTIC_HEADER_PATTERN = re.compile(r"Minute Cryptic - (\d+ \w+ \d+)")
 MINUTE_CRYPTIC_CLUE_PATTERN = re.compile(r'"(.*?)" \((\d+)\)')
 MINUTE_CRYPTIC_SCORE_PATTERN = re.compile(r"I scored: (.*)")
 TIMEGUESSR_HEADER_PATTERN = re.compile(r"TimeGuessr\s*#(\d+)\s*—\s*([\d,]+)/50,000", re.IGNORECASE)
-TIMEGUESSR_ATTEMPT_PATTERN = re.compile(r"^\d+️⃣\s*🏆([\d,]+)", re.MULTILINE)
+TIMEGUESSR_ATTEMPT_PATTERN = re.compile(r"^\d+️⃣\s*🏆\s*([\d,\s]+?)(?=\s*·|\s*$)", re.MULTILINE)
 SEXAGINTA_HEADER_REGEX = re.compile(r"#SexagintaQuattuordle\s+\d+", re.IGNORECASE)
 PIPS_PATTERN = re.compile(
     r"Pips\s+#(\d+)\s+(Easy|Medium|Hard)\s+(?:🟢|🟡|🔴)\s*\n((?:\d{1,2}:)?\d{1,2}:\d{2})\s*(🍪)?",
@@ -508,8 +508,10 @@ def parse_timeguessr_score(message_content: str) -> Optional[Dict[str, Any]]:
     # Fjern komma fra totalpoengsummen (f.eks. "38,674" -> 38674)
     total_score = int(header_match.group(2).replace(",", ""))
     
-    # Tell antall forsøk basert på antall linjer som matcher forsøksmønsteret
-    attempts = len(TIMEGUESSR_ATTEMPT_PATTERN.findall(message_content))
+    # Tell antall forsøk/runder basert på antall linjer som matcher forsøksmønsteret
+    attempt_matches = TIMEGUESSR_ATTEMPT_PATTERN.findall(message_content)
+    attempts = len(attempt_matches)
+    rounds = attempts if attempts > 0 else 5
 
     # Calculate discrepancies
     TIMEGUESSR_DISCREPANCY_PATTERN = re.compile(r"📅\s*([\d,.]+)y\s*·\s*🌍\s*([\d,.]+)(km|m)", re.IGNORECASE)
@@ -531,6 +533,7 @@ def parse_timeguessr_score(message_content: str) -> Optional[Dict[str, Any]]:
         "game_number": game_number,
         "total_score": total_score,
         "attempts": attempts,
+        "rounds": rounds,
         "total_years_off": total_years_off,
         "total_distance_km_off": total_distance_km_off,
         "is_perfect": total_score == 50000,
