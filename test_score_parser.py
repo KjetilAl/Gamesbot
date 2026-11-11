@@ -460,6 +460,7 @@ class TestTimeGuessrParser(unittest.TestCase):
             "game_number": 1243,
             "total_score": 35815,
             "attempts": 5,
+            "rounds": 5,
             "total_years_off": 43.0,
             "total_distance_km_off": 8728.6,
             "is_perfect": False,
@@ -469,3 +470,83 @@ class TestTimeGuessrParser(unittest.TestCase):
         # Handle floating point inaccuracies
         res['total_distance_km_off'] = round(res['total_distance_km_off'], 1)
         self.assertEqual(res, expected)
+
+    def test_timeguessr_attempt_pattern_and_leaderboard_averages(self):
+        import re
+        import tempfile
+        import sqlite3
+        import database
+
+        message = """TimeGuessr #1258 — 36,925/50,000
+
+1️⃣ 🏆9 830 · 📅 2y · 🌍 2.1km
+2️⃣ 🏆2 224 · 📅 26y · 🌍 2450.9km
+3️⃣ 🏆9 940 · 📅 0y · 🌍 4.9km
+4️⃣ 🏆5 070 · 📅 3y · 🌍 4426.4km
+5️⃣ 🏆9 861 · 📅 2y · 🌍 102m"""
+
+        res = score_parser.parse_timeguessr_score(message)
+        self.assertIsNotNone(res)
+        self.assertEqual(res["attempts"], 5)
+        self.assertEqual(res["rounds"], 5)
+        self.assertEqual(res["total_years_off"], 33.0)
+        self.assertAlmostEqual(res["total_distance_km_off"], 6884.402, places=3)
+
+        # Verify per-round scores captured by TIMEGUESSR_ATTEMPT_PATTERN
+        raw_round_scores = score_parser.TIMEGUESSR_ATTEMPT_PATTERN.findall(message)
+        round_scores = [int(re.sub(r"[\s,]", "", s)) for s in raw_round_scores]
+        self.assertEqual(round_scores, [9830, 2224, 9940, 5070, 9861])
+
+        # Verify DB migration, saving, and leaderboard averages per round
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+            tmp_db = tmp.name
+
+        orig_db = database.DB_NAME
+        try:
+            database.DB_NAME = tmp_db
+            # Simulate legacy table without rounds column
+            conn = sqlite3.connect(tmp_db)
+            conn.execute("""
+                CREATE TABLE timeguessr_scores (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    display_name TEXT,
+                    game_number INTEGER NOT NULL,
+                    total_score INTEGER NOT NULL,
+                    attempts INTEGER NOT NULL,
+                    total_years_off REAL,
+                    total_distance_km_off REAL,
+                    created_at TIMESTAMP NOT NULL
+                )
+            """)
+            conn.execute("""
+                INSERT INTO timeguessr_scores (user_id, display_name, game_number, total_score, attempts, total_years_off, total_distance_km_off, created_at)
+                VALUES ('999', 'LegacyPlayer', 1200, 40000, 5, 25.0, 500.0, '2020-01-01 12:00:00')
+            """)
+            conn.commit()
+            conn.close()
+
+            # Run initialize_db to test migration
+            database.initialize_db()
+
+            # Save new score and check weekly leaderboard
+            database.save_timeguessr_score(123, "TestPlayer", res)
+            lb = database.get_timeguessr_leaderboard("weekly")
+            self.assertEqual(len(lb["rows"]), 1)
+            row = lb["rows"][0]
+            # (display_name, games_played, total_score, avg_score, total_years_off, avg_years_off, total_distance_km_off, avg_distance_km_off)
+            self.assertEqual(row[0], "TestPlayer")
+            self.assertAlmostEqual(row[5], 6.6, places=2)
+            self.assertAlmostEqual(row[7], 1376.8804, places=2)
+
+            # Check overall leaderboard includes migrated legacy row with rounds=5
+            lb_overall = database.get_timeguessr_leaderboard("overall")
+            self.assertEqual(len(lb_overall["rows"]), 2)
+            legacy_row = [r for r in lb_overall["rows"] if r[0] == "LegacyPlayer"][0]
+            self.assertAlmostEqual(legacy_row[5], 5.0, places=2)
+            self.assertAlmostEqual(legacy_row[7], 100.0, places=2)
+        finally:
+            database.DB_NAME = orig_db
+            if os.path.exists(tmp_db):
+                os.remove(tmp_db)
+
