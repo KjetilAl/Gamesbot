@@ -53,6 +53,21 @@ WAFFLE_PATTERN = re.compile(
     re.IGNORECASE | re.DOTALL
 )
 
+KRILLION_PATTERN = re.compile(
+    r"Krillion\s*#(\d+)[^\n]*\n\s*([\d,]+)\s*\n+((?:[⬛🫧🤡🐟🦑🏮🌟\s]+\n?)+)",
+    re.IGNORECASE
+)
+
+KRILLION_TIER_POINTS = {
+    "⬛": 0,
+    "🫧": 10,
+    "🤡": 15,
+    "🐟": 30,
+    "🦑": 60,
+    "🏮": 85,
+    "🌟": 100,
+}
+
 def is_strands_message(message_content: str) -> bool:
     return (
         "strands #" in message_content.lower()
@@ -719,6 +734,59 @@ def is_sexaginta_message(message_content: str) -> bool:
 def is_waffle_message(message_content: str) -> bool:
     return bool(WAFFLE_PATTERN.search(message_content))
 
+def is_krillion_message(message_content: str) -> bool:
+    """Checks if a message contains a Krillion score."""
+    if "krillion" not in message_content.lower():
+        return False
+    match = KRILLION_PATTERN.search(message_content)
+    if not match:
+        return False
+    emoji_block = match.group(3)
+    return any(char in KRILLION_TIER_POINTS for char in emoji_block)
+
+def parse_krillion_score(message_content: str) -> Optional[Dict[str, Any]]:
+    """Parses a Krillion score post, extracting total score and counts of each rarity tier."""
+    match = KRILLION_PATTERN.search(message_content)
+    if not match:
+        return None
+
+    game_number = int(match.group(1))
+    try:
+        total_score = int(match.group(2).replace(",", ""))
+    except ValueError:
+        return None
+
+    emoji_block = match.group(3)
+    emojis = [char for char in emoji_block if char in KRILLION_TIER_POINTS]
+    if not emojis:
+        return None
+
+    no_answer_count = emojis.count("⬛")
+    plankton_count = emojis.count("🫧")
+    too_clever_count = emojis.count("🤡")
+    schooler_count = emojis.count("🐟")
+    rare_count = emojis.count("🦑")
+    deep_cut_count = emojis.count("🏮")
+    one_in_a_krillion_count = emojis.count("🌟")
+
+    return {
+        "game_name": "Krillion",
+        "game_number": game_number,
+        "total_score": total_score,
+        "diving_depth": total_score * 10,
+        "no_answer_count": no_answer_count,
+        "plankton_count": plankton_count,
+        "too_clever_count": too_clever_count,
+        "schooler_count": schooler_count,
+        "rare_count": rare_count,
+        "deep_cut_count": deep_cut_count,
+        "one_in_a_krillion_count": one_in_a_krillion_count,
+        "emojis": "".join(emojis),
+        "solved": total_score > 0,
+        "is_perfect": total_score == 700,
+        "raw_text": message_content,
+    }
+
 def create_wordle_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
 
@@ -745,3 +813,7 @@ def create_pips_acknowledgement(display_name: str, game_info: Dict[str, Any]) ->
 
 def create_strands_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
     return "🤖"
+
+def create_krillion_acknowledgement(display_name: str, game_info: Dict[str, Any]) -> str:
+    return "🤖"
+

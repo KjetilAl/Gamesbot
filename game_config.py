@@ -21,6 +21,11 @@ LEADERBOARD_KEY_MAPPINGS = {
     "Strands": ["display_name", "games_played", "total_score", "avg_score"],
     "Waffle": ["display_name", "games_played", "total_score", "avg_score", "total_stars", "avg_stars", "max_streak"],
     "TimeGuessr": ["display_name", "games_played", "total_score", "avg_score", "total_years_off", "avg_years_off", "total_distance_km_off", "avg_distance_km_off"],
+    "Krillion": [
+        "display_name", "games_played", "total_score", "avg_score",
+        "one_in_a_krillion_count", "deep_cut_count", "rare_count",
+        "schooler_count", "too_clever_count", "plankton_count", "no_answer_count"
+    ],
 }
 
 # Game configurations dictionary
@@ -225,6 +230,27 @@ GAME_CONFIGS = {
         "update_latest_game_number_function": database.update_latest_game_number_in_db,
         "chat_channel_name": "64ordle-chat",
         "player_role_name": "64ordle-player",
+        "game_number_key": "game_number",
+        "leaderboard_enabled": True,
+        "weekly_enabled": True,
+        "monthly_enabled": True
+    },
+    "krillion": {
+        "name": "Krillion",
+        "aliases": ["krillion"],
+        "table_name": "krillion_scores",
+        "score_column": "total_score",
+        "chat_channel_name": "krillion-chat",
+        "player_role_name": "krillion-player",
+        "parse_function": score_parser.parse_krillion_score,
+        "is_game_message": score_parser.is_krillion_message,
+        "save_score_function": database.save_krillion_score,
+        "get_leaderboard_function": database.get_krillion_leaderboard,
+        "leaderboard_keys": LEADERBOARD_KEY_MAPPINGS["Krillion"],
+        "embed_builder_function": embed_builder.build_leaderboard_embed,
+        "get_latest_game_number_function": database.get_latest_game_number_from_db,
+        "update_latest_game_number_function": database.update_latest_game_number_in_db,
+        "create_acknowledgement": score_parser.create_krillion_acknowledgement,
         "game_number_key": "game_number",
         "leaderboard_enabled": True,
         "weekly_enabled": True,

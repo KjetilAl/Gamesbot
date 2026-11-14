@@ -397,6 +397,12 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
         "Waffle": lambda x: (x.get("total_score", 0) if x.get("total_score") is not None else 0, x.get("avg_score", 0) if x.get("avg_score") is not None else 0, x.get("total_stars", 0) if x.get("total_stars") is not None else 0),
         "TimeGuessr": lambda x: (x.get("total_score", 0) if x.get("total_score") is not None else 0, x.get("avg_score", 0) if x.get("avg_score") is not None else 0, -(x.get("avg_years_off") if x.get("avg_years_off") is not None else float('inf')), -(x.get("avg_distance_km_off") if x.get("avg_distance_km_off") is not None else float('inf'))),
         "Strands": lambda x: (x.get("total_score", 0), x.get("avg_score", 0)),
+        "Krillion": lambda x: (
+            x.get("total_score", 0) if x.get("total_score") is not None else 0,
+            x.get("avg_score", 0) if x.get("avg_score") is not None else 0,
+            x.get("one_in_a_krillion_count", 0) if x.get("one_in_a_krillion_count") is not None else 0,
+            x.get("deep_cut_count", 0) if x.get("deep_cut_count") is not None else 0,
+        ),
     }
 
     reverse_flags = {
@@ -408,6 +414,7 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
         "Waffle": True,
         "TimeGuessr": True,
         "Strands": True,
+        "Krillion": True,
     }
 
     if game_name in SORT_KEYS:
@@ -555,12 +562,77 @@ async def build_leaderboard_embed(game_name: str, title: str, leaderboard_data: 
             details.append(f"📅 Avg Years Off: {avg_years_display}")
             details.append(f"🌍 Avg Distance Off: {avg_distance_display}")
 
+        elif game_name == "Krillion":
+            total_score = row.get("total_score", 0)
+            avg_score = row.get("avg_score")
+            avg_score_display = f"**{avg_score:.2f}**" if avg_score is not None else "N/A"
+            one_in_a_krillion_count = row.get("one_in_a_krillion_count") or 0
+            deep_cut_count = row.get("deep_cut_count") or 0
+            rare_count = row.get("rare_count") or 0
+            schooler_count = row.get("schooler_count") or 0
+            too_clever_count = row.get("too_clever_count") or 0
+            plankton_count = row.get("plankton_count") or 0
+            no_answer_count = row.get("no_answer_count") or 0
+
+            details.append(f"⭐ Total Score: **{total_score}**")
+            details.append(f"📊 Avg Score: {avg_score_display}")
+            details.append(f"🏮 Deep Cuts: **{deep_cut_count}**")
+            if one_in_a_krillion_count > 0:
+                details.append(f"🌟 One in a Krillion: **{one_in_a_krillion_count}**")
+
+            tier_pairs = [
+                ("🌟", one_in_a_krillion_count),
+                ("🏮", deep_cut_count),
+                ("🦑", rare_count),
+                ("🐟", schooler_count),
+                ("🤡", too_clever_count),
+                ("🫧", plankton_count),
+                ("⬛", no_answer_count),
+            ]
+            tier_parts = [f"{emoji} {cnt}" for emoji, cnt in tier_pairs if cnt > 0]
+            if tier_parts:
+                details.append(" ".join(tier_parts))
+
         field_value = "\n".join(details)
         embed.add_field(
             name=f"{medal} {name}",
             value=field_value,
             inline=True
         )
+
+    if game_name == "Krillion" and rows:
+        superlatives = []
+        period_label = {"weekly": "this week", "monthly": "this month"}.get(period.lower(), "overall")
+        most_deep_cuts = leaderboard_data.get("most_deep_cuts")
+        if most_deep_cuts and most_deep_cuts[1] and most_deep_cuts[1] > 0:
+            dc_player, dc_count = most_deep_cuts
+            superlatives.append(
+                f"🏮 **Deep Cut Diver:** Kudos to **{dc_player}** for landing the most Deep Cuts {period_label} with **{dc_count}**!"
+            )
+        else:
+            max_dc = max((r.get("deep_cut_count") or 0 for r in rows), default=0)
+            if max_dc > 0:
+                dc_leaders = ", ".join(r.get("display_name", "Unknown") for r in rows if (r.get("deep_cut_count") or 0) == max_dc)
+                superlatives.append(
+                    f"🏮 **Deep Cut Diver:** Kudos to **{dc_leaders}** for landing the most Deep Cuts {period_label} with **{max_dc}**!"
+                )
+
+        most_krillions = leaderboard_data.get("most_krillions")
+        if most_krillions and most_krillions[1] and most_krillions[1] > 0:
+            k_player, k_count = most_krillions
+            superlatives.append(
+                f"🌟 **One in a Krillion:** Hail to **{k_player}** for hitting the coveted One in a Krillion tier **{k_count}** time{'s' if k_count > 1 else ''} {period_label}!"
+            )
+        else:
+            max_k = max((r.get("one_in_a_krillion_count") or 0 for r in rows), default=0)
+            if max_k > 0:
+                k_leaders = ", ".join(r.get("display_name", "Unknown") for r in rows if (r.get("one_in_a_krillion_count") or 0) == max_k)
+                superlatives.append(
+                    f"🌟 **One in a Krillion:** Hail to **{k_leaders}** for hitting the coveted One in a Krillion tier **{max_k}** time{'s' if max_k > 1 else ''} {period_label}!"
+                )
+
+        if superlatives:
+            embed.add_field(name="✨ Superlatives", value="\n".join(superlatives), inline=False)
 
     # Add historical stats comparison
     historical_stats = leaderboard_data.get("historical_stats")

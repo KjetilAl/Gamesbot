@@ -512,6 +512,81 @@ def generate_timeguessr_post(display_name: str, game_info: dict, player_stats: d
     else:
         return f"{display_name} scored {score:,}/50,000 on TimeGuessr. 🌍⏱️"
 
+
+def _generate_krillion_post(display_name: str, game_info: dict, player_stats: dict) -> str:
+    """Generates dynamic feedback for Krillion based on total score and rarity tiers hit."""
+    game_number = game_info.get("game_number", "?")
+    total_score = game_info.get("total_score", 0)
+    depth = game_info.get("diving_depth", total_score * 10)
+    one_in_a_krillion_count = game_info.get("one_in_a_krillion_count", 0)
+    deep_cut_count = game_info.get("deep_cut_count", 0)
+    rare_count = game_info.get("rare_count", 0)
+    too_clever_count = game_info.get("too_clever_count", 0)
+    plankton_count = game_info.get("plankton_count", 0)
+    no_answer_count = game_info.get("no_answer_count", 0)
+
+    # --- Part 1: The Opening Line ---
+    if total_score >= 700:
+        opening_line = (
+            f"🌟🦐 All hail **{display_name}**! A perfect **700** points (**7,000m** depth) "
+            f"with 7 **One in a Krillion** answers on Krillion #{game_number}!"
+        )
+    elif one_in_a_krillion_count > 1:
+        opening_line = (
+            f"🌟 All hail **{display_name}**! They hit the coveted **One in a Krillion** tier "
+            f"**{one_in_a_krillion_count} times** on Krillion #{game_number} for **{total_score}** points!"
+        )
+    elif one_in_a_krillion_count == 1:
+        opening_line = (
+            f"🌟 All hail **{display_name}** for hitting the coveted **One in a Krillion** tier "
+            f"on Krillion #{game_number}, scoring **{total_score}** points!"
+        )
+    elif deep_cut_count >= 2:
+        opening_line = (
+            f"🏮 Kudos to **{display_name}** for landing **{deep_cut_count} Deep Cuts** "
+            f"on Krillion #{game_number} and racking up **{total_score}** points!"
+        )
+    elif total_score >= 400:
+        opening_line = f"🦐 Deep dive! **{display_name}** scored **{total_score}** points ({depth:,}m) on Krillion #{game_number}!"
+    elif total_score == 0:
+        opening_line = f"⬛ Rough waters! **{display_name}** came up empty with **0** points on Krillion #{game_number}."
+    else:
+        opening_line = f"🦐 **{display_name}** scored **{total_score}** points ({depth:,}m) on Krillion #{game_number}."
+
+    # --- Part 2: The Tier & Stat Spotlight ---
+    spotlights = []
+
+    if one_in_a_krillion_count > 0 and deep_cut_count >= 2:
+        spotlights.append(f"🏮 Huge kudos as well for pulling **{deep_cut_count} Deep Cuts** on the same dive!")
+    elif deep_cut_count == 1:
+        spotlights.append("🏮 They also snagged a **Deep Cut** (85 pts) on the way down!")
+
+    if rare_count >= 3:
+        spotlights.append(f"🦑 Swimming in uncommon waters with **{rare_count} Rare** answers!")
+
+    if too_clever_count >= 2:
+        spotlights.append(f"🤡 Caught being **Too Clever** {too_clever_count} times!")
+
+    if plankton_count >= 5:
+        spotlights.append(f"🫧 Kept it safe in the shallows with **{plankton_count} Plankton** answers.")
+
+    if no_answer_count >= 2 and total_score > 0:
+        spotlights.append(f"⬛ Survived {no_answer_count} misses in the deep.")
+
+    avg_score = player_stats.get("avg_score", 0) if player_stats else 0
+    total_plays = player_stats.get("total_plays", 0) if player_stats else 0
+    if total_plays > 1 and avg_score > 0 and total_score > avg_score:
+        spotlights.append(f"📈 That beats their average score of **{avg_score:.1f}** points!")
+
+    if not spotlights:
+        spotlights.append(f"🌊 Final diving depth: **{depth:,}m** / 7,000m.")
+
+    return f"{opening_line}\n{random.choice(spotlights)}"
+
+
+generate_krillion_post = _generate_krillion_post
+
+
 def generate_post(game_name: str, display_name: str, game_info: dict, player_stats: dict) -> str:
     """Routes the request to the appropriate sub-generator for the given game."""
 
@@ -528,6 +603,7 @@ def generate_post(game_name: str, display_name: str, game_info: dict, player_sta
         "strands": _generate_strands_post,
         "waffle": generate_waffle_post,
         "timeguessr": generate_timeguessr_post,
+        "krillion": _generate_krillion_post,
     }
 
     generator_func = game_generators.get(game_name.lower())
@@ -541,3 +617,4 @@ def generate_post(game_name: str, display_name: str, game_info: dict, player_sta
     else:
         # Return None instead of an error message to be handled by the bot
         return None
+
