@@ -66,7 +66,17 @@ def initialize_db():
                 pips_total_score INTEGER DEFAULT 0,
                 pips_total_cookies INTEGER DEFAULT 0,
                 strands_total_plays INTEGER DEFAULT 0,
-                strands_avg_score REAL DEFAULT 0.0
+                strands_avg_score REAL DEFAULT 0.0,
+                krillion_total_plays INTEGER DEFAULT 0,
+                krillion_avg_score REAL DEFAULT 0.0,
+                krillion_personal_best INTEGER DEFAULT 0,
+                krillion_no_answer_count INTEGER DEFAULT 0,
+                krillion_plankton_count INTEGER DEFAULT 0,
+                krillion_too_clever_count INTEGER DEFAULT 0,
+                krillion_schooler_count INTEGER DEFAULT 0,
+                krillion_rare_count INTEGER DEFAULT 0,
+                krillion_deep_cut_count INTEGER DEFAULT 0,
+                krillion_one_in_a_krillion_count INTEGER DEFAULT 0
             )
         """)
         # Strands
@@ -243,12 +253,32 @@ def initialize_db():
             );
         """)
 
+        # Krillion
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS krillion_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                display_name TEXT,
+                game_number INTEGER NOT NULL,
+                total_score INTEGER NOT NULL,
+                no_answer_count INTEGER DEFAULT 0,
+                plankton_count INTEGER DEFAULT 0,
+                too_clever_count INTEGER DEFAULT 0,
+                schooler_count INTEGER DEFAULT 0,
+                rare_count INTEGER DEFAULT 0,
+                deep_cut_count INTEGER DEFAULT 0,
+                one_in_a_krillion_count INTEGER DEFAULT 0,
+                emojis TEXT,
+                created_at TIMESTAMP NOT NULL
+            )
+        """)
+
         # --- Create Indexes for Leaderboard Performance ---
         leaderboard_tables = [
             "wordle_scores", "connections_scores", "framed_scores",
             "gisnep_scores", "bandle_scores", "minute_cryptic_scores",
             "word_salad_scores", "sexaginta_scores", "pips_scores", "strands_scores",
-            "waffle_scores"
+            "waffle_scores", "timeguessr_scores", "krillion_scores"
         ]
         for table in leaderboard_tables:
             # Index for weekly queries on DATE(created_at)
@@ -288,7 +318,17 @@ def initialize_db():
             "player_stats": [
                 ("waffle_avg_score", "REAL DEFAULT 0.0"),
                 ("timeguessr_avg_years_off", "REAL DEFAULT 0.0"),
-                ("timeguessr_avg_distance_km_off", "REAL DEFAULT 0.0")
+                ("timeguessr_avg_distance_km_off", "REAL DEFAULT 0.0"),
+                ("krillion_total_plays", "INTEGER DEFAULT 0"),
+                ("krillion_avg_score", "REAL DEFAULT 0.0"),
+                ("krillion_personal_best", "INTEGER DEFAULT 0"),
+                ("krillion_no_answer_count", "INTEGER DEFAULT 0"),
+                ("krillion_plankton_count", "INTEGER DEFAULT 0"),
+                ("krillion_too_clever_count", "INTEGER DEFAULT 0"),
+                ("krillion_schooler_count", "INTEGER DEFAULT 0"),
+                ("krillion_rare_count", "INTEGER DEFAULT 0"),
+                ("krillion_deep_cut_count", "INTEGER DEFAULT 0"),
+                ("krillion_one_in_a_krillion_count", "INTEGER DEFAULT 0"),
             ],
             "waffle_scores": [("total_score", "INTEGER")],
             "timeguessr_scores": [
@@ -318,7 +358,8 @@ def initialize_db():
         initial_games = [
             ('Wordle', '0'), ('Connections', '0'), ('Framed', '0'),
             ('Gisnep', '0'), ('Bandle', '0'), ('Minute Cryptic', '2000-01-01'),
-            ('Pips', '0'), ('Sexaginta', '0'), ('Strands', '0'), ('Waffle', '0'), ('TimeGuessr', '0')
+            ('Pips', '0'), ('Sexaginta', '0'), ('Strands', '0'), ('Waffle', '0'),
+            ('TimeGuessr', '0'), ('Krillion', '0'), ('krillion', '0')
         ]
         try:
             cursor.executemany(
@@ -2418,3 +2459,219 @@ def get_waffle_leaderboard(period: str = 'weekly') -> dict:
 
     conn.close()
     return {"rows": leaderboard, "current_stats": current_stats}
+
+
+def save_krillion_score(user_id: int, display_name: str, game_info: dict):
+    """Save a new Krillion score."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    created_at = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    cursor.execute("""
+        INSERT INTO krillion_scores (
+            user_id, display_name, game_number, total_score,
+            no_answer_count, plankton_count, too_clever_count,
+            schooler_count, rare_count, deep_cut_count,
+            one_in_a_krillion_count, emojis, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        str(user_id),
+        display_name,
+        game_info["game_number"],
+        game_info["total_score"],
+        game_info.get("no_answer_count", 0),
+        game_info.get("plankton_count", 0),
+        game_info.get("too_clever_count", 0),
+        game_info.get("schooler_count", 0),
+        game_info.get("rare_count", 0),
+        game_info.get("deep_cut_count", 0),
+        game_info.get("one_in_a_krillion_count", 0),
+        game_info.get("emojis", ""),
+        created_at
+    ))
+    conn.commit()
+    conn.close()
+
+
+def update_krillion_player_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    """Update player stats for Krillion after a new score is submitted."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        INSERT INTO player_stats (user_id, display_name)
+        VALUES (?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name
+    ''', (str(user_id), user_name))
+
+    cursor.execute('''
+        SELECT krillion_total_plays, krillion_avg_score, krillion_personal_best,
+               krillion_no_answer_count, krillion_plankton_count, krillion_too_clever_count,
+               krillion_schooler_count, krillion_rare_count, krillion_deep_cut_count,
+               krillion_one_in_a_krillion_count
+        FROM player_stats
+        WHERE user_id = ?
+    ''', (str(user_id),))
+    row = cursor.fetchone()
+
+    total_plays = (row[0] or 0) if row else 0
+    avg_score = (row[1] or 0.0) if row else 0.0
+    personal_best = (row[2] or 0) if row else 0
+    no_answer = (row[3] or 0) if row else 0
+    plankton = (row[4] or 0) if row else 0
+    too_clever = (row[5] or 0) if row else 0
+    schooler = (row[6] or 0) if row else 0
+    rare = (row[7] or 0) if row else 0
+    deep_cut = (row[8] or 0) if row else 0
+    one_in_a_krillion = (row[9] or 0) if row else 0
+
+    score = game_info.get("total_score", 0)
+    new_total_plays = total_plays + 1
+    new_avg_score = ((avg_score * total_plays) + score) / new_total_plays
+    is_new_pb = total_plays > 0 and score > personal_best
+    new_personal_best = max(personal_best, score)
+
+    new_no_answer = no_answer + game_info.get("no_answer_count", 0)
+    new_plankton = plankton + game_info.get("plankton_count", 0)
+    new_too_clever = too_clever + game_info.get("too_clever_count", 0)
+    new_schooler = schooler + game_info.get("schooler_count", 0)
+    new_rare = rare + game_info.get("rare_count", 0)
+    new_deep_cut = deep_cut + game_info.get("deep_cut_count", 0)
+    new_one_in_a_krillion = one_in_a_krillion + game_info.get("one_in_a_krillion_count", 0)
+
+    cursor.execute('''
+        UPDATE player_stats
+        SET display_name = ?,
+            krillion_total_plays = ?,
+            krillion_avg_score = ?,
+            krillion_personal_best = ?,
+            krillion_no_answer_count = ?,
+            krillion_plankton_count = ?,
+            krillion_too_clever_count = ?,
+            krillion_schooler_count = ?,
+            krillion_rare_count = ?,
+            krillion_deep_cut_count = ?,
+            krillion_one_in_a_krillion_count = ?
+        WHERE user_id = ?
+    ''', (
+        user_name,
+        new_total_plays,
+        new_avg_score,
+        new_personal_best,
+        new_no_answer,
+        new_plankton,
+        new_too_clever,
+        new_schooler,
+        new_rare,
+        new_deep_cut,
+        new_one_in_a_krillion,
+        str(user_id)
+    ))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "total_plays": new_total_plays,
+        "avg_score": round(new_avg_score, 2),
+        "personal_best": new_personal_best,
+        "is_new_pb": is_new_pb,
+        "no_answer_count": new_no_answer,
+        "plankton_count": new_plankton,
+        "too_clever_count": new_too_clever,
+        "schooler_count": new_schooler,
+        "rare_count": new_rare,
+        "deep_cut_count": new_deep_cut,
+        "one_in_a_krillion_count": new_one_in_a_krillion,
+    }
+
+
+def get_krillion_leaderboard(period: str = 'weekly') -> dict:
+    """Fetch Krillion leaderboard data, including tier counts and Deep Cut superlatives."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    where_clause, params = get_scores_by_period(period, 'created_at')
+
+    cursor.execute(f"""
+        SELECT display_name,
+               COUNT(*) AS games_played,
+               SUM(total_score) AS total_score,
+               AVG(total_score) AS avg_score,
+               SUM(one_in_a_krillion_count) AS one_in_a_krillion_count,
+               SUM(deep_cut_count) AS deep_cut_count,
+               SUM(rare_count) AS rare_count,
+               SUM(schooler_count) AS schooler_count,
+               SUM(too_clever_count) AS too_clever_count,
+               SUM(plankton_count) AS plankton_count,
+               SUM(no_answer_count) AS no_answer_count
+        FROM krillion_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        ORDER BY total_score DESC, avg_score DESC, one_in_a_krillion_count DESC, deep_cut_count DESC
+        LIMIT 10
+    """, params)
+    leaderboard = cursor.fetchall()
+
+    # Player with the most Deep Cuts during the period
+    cursor.execute(f"""
+        SELECT display_name, SUM(deep_cut_count) AS total_deep_cuts
+        FROM krillion_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        HAVING total_deep_cuts > 0
+        ORDER BY total_deep_cuts DESC, SUM(total_score) DESC
+        LIMIT 1
+    """, params)
+    most_deep_cuts = cursor.fetchone()
+
+    # Player with the most One in a Krillion answers during the period
+    cursor.execute(f"""
+        SELECT display_name, SUM(one_in_a_krillion_count) AS total_krillions
+        FROM krillion_scores
+        {where_clause}
+        GROUP BY user_id, display_name
+        HAVING total_krillions > 0
+        ORDER BY total_krillions DESC, SUM(total_score) DESC
+        LIMIT 1
+    """, params)
+    most_krillions = cursor.fetchone()
+
+    # Get current period stats
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT user_id), AVG(total_score)
+        FROM krillion_scores
+        {where_clause}
+    """, params)
+    current_stats_result = cursor.fetchone()
+    current_stats = {
+        "player_count": current_stats_result[0] if current_stats_result and current_stats_result[0] is not None else 0,
+        "avg_score": current_stats_result[1] if current_stats_result and current_stats_result[1] is not None else 0.0
+    }
+
+    conn.close()
+    return {
+        "rows": leaderboard,
+        "most_deep_cuts": most_deep_cuts,
+        "most_krillions": most_krillions,
+        "current_stats": current_stats
+    }
+
+
+def get_krillion_stats(user_id: int) -> dict:
+    """Fetches Krillion statistics for a given user."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*), AVG(total_score), SUM(deep_cut_count), SUM(one_in_a_krillion_count)
+        FROM krillion_scores
+        WHERE user_id = ?
+    """, (str(user_id),))
+    stats = cursor.fetchone()
+    conn.close()
+    return {
+        "games_played": stats[0] or 0 if stats else 0,
+        "avg_score": stats[1] or 0.0 if stats else 0.0,
+        "deep_cut_count": stats[2] or 0 if stats else 0,
+        "one_in_a_krillion_count": stats[3] or 0 if stats else 0,
+    }
+

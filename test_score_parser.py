@@ -550,3 +550,153 @@ class TestTimeGuessrParser(unittest.TestCase):
             if os.path.exists(tmp_db):
                 os.remove(tmp_db)
 
+
+class TestKrillionParser(unittest.TestCase):
+    def test_parse_krillion_examples(self):
+        examples = [
+            (
+                "Krillion #118 🦐\n460\n\n🏮🏮🦑🏮🐟🐟🏮",
+                {
+                    "game_name": "Krillion",
+                    "game_number": 118,
+                    "total_score": 460,
+                    "diving_depth": 4600,
+                    "no_answer_count": 0,
+                    "plankton_count": 0,
+                    "too_clever_count": 0,
+                    "schooler_count": 2,
+                    "rare_count": 1,
+                    "deep_cut_count": 4,
+                    "one_in_a_krillion_count": 0,
+                    "emojis": "🏮🏮🦑🏮🐟🐟🏮",
+                    "solved": True,
+                    "is_perfect": False,
+                },
+            ),
+            (
+                "Krillion #118 🦐\n375\n\n🌟🦑🐟🏮🐟🫧🦑",
+                {
+                    "game_name": "Krillion",
+                    "game_number": 118,
+                    "total_score": 375,
+                    "diving_depth": 3750,
+                    "no_answer_count": 0,
+                    "plankton_count": 1,
+                    "too_clever_count": 0,
+                    "schooler_count": 2,
+                    "rare_count": 2,
+                    "deep_cut_count": 1,
+                    "one_in_a_krillion_count": 1,
+                    "emojis": "🌟🦑🐟🏮🐟🫧🦑",
+                    "solved": True,
+                    "is_perfect": False,
+                },
+            ),
+            (
+                "Krillion #118 🦐\n225\n\n🦑🐟⬛🏮🫧🫧🐟",
+                {
+                    "game_name": "Krillion",
+                    "game_number": 118,
+                    "total_score": 225,
+                    "diving_depth": 2250,
+                    "no_answer_count": 1,
+                    "plankton_count": 2,
+                    "too_clever_count": 0,
+                    "schooler_count": 2,
+                    "rare_count": 1,
+                    "deep_cut_count": 1,
+                    "one_in_a_krillion_count": 0,
+                    "emojis": "🦑🐟⬛🏮🫧🫧🐟",
+                    "solved": True,
+                    "is_perfect": False,
+                },
+            ),
+            (
+                "Krillion #121 🦐\n250\n\n🫧🦑🐟🐟🦑🐟🐟",
+                {
+                    "game_name": "Krillion",
+                    "game_number": 121,
+                    "total_score": 250,
+                    "diving_depth": 2500,
+                    "no_answer_count": 0,
+                    "plankton_count": 1,
+                    "too_clever_count": 0,
+                    "schooler_count": 4,
+                    "rare_count": 2,
+                    "deep_cut_count": 0,
+                    "one_in_a_krillion_count": 0,
+                    "emojis": "🫧🦑🐟🐟🦑🐟🐟",
+                    "solved": True,
+                    "is_perfect": False,
+                },
+            ),
+            (
+                "Krillion #122 🦐\n250\n\n🤡🫧🫧🫧🏮🦑🦑",
+                {
+                    "game_name": "Krillion",
+                    "game_number": 122,
+                    "total_score": 250,
+                    "diving_depth": 2500,
+                    "no_answer_count": 0,
+                    "plankton_count": 3,
+                    "too_clever_count": 1,
+                    "schooler_count": 0,
+                    "rare_count": 2,
+                    "deep_cut_count": 1,
+                    "one_in_a_krillion_count": 0,
+                    "emojis": "🤡🫧🫧🫧🏮🦑🦑",
+                    "solved": True,
+                    "is_perfect": False,
+                },
+            ),
+        ]
+
+        for msg, expected in examples:
+            self.assertTrue(score_parser.is_krillion_message(msg))
+            parsed = score_parser.parse_krillion_score(msg)
+            self.assertIsNotNone(parsed)
+            for k, v in expected.items():
+                self.assertEqual(parsed[k], v, f"Mismatch for {k} in:\n{msg}")
+
+        self.assertFalse(score_parser.is_krillion_message("Not a Krillion post"))
+        self.assertIsNone(score_parser.parse_krillion_score("Not a Krillion post"))
+
+    def test_krillion_database_and_leaderboard(self):
+        import tempfile
+        import database
+
+        msg1 = "Krillion #118 🦐\n460\n\n🏮🏮🦑🏮🐟🐟🏮"
+        msg2 = "Krillion #118 🦐\n375\n\n🌟🦑🐟🏮🐟🫧🦑"
+        res1 = score_parser.parse_krillion_score(msg1)
+        res2 = score_parser.parse_krillion_score(msg2)
+
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+            tmp_db = tmp.name
+
+        orig_db = database.DB_NAME
+        try:
+            database.DB_NAME = tmp_db
+            database.initialize_db()
+
+            database.save_krillion_score(1, "DeepDiver", res1)
+            stats1 = database.update_krillion_player_stats(1, "DeepDiver", res1)
+            self.assertEqual(stats1["deep_cut_count"], 4)
+            self.assertEqual(stats1["total_plays"], 1)
+
+            database.save_krillion_score(2, "StarHunter", res2)
+            stats2 = database.update_krillion_player_stats(2, "StarHunter", res2)
+            self.assertEqual(stats2["one_in_a_krillion_count"], 1)
+            self.assertEqual(stats2["deep_cut_count"], 1)
+
+            lb = database.get_krillion_leaderboard("weekly")
+            self.assertEqual(len(lb["rows"]), 2)
+            self.assertEqual(lb["rows"][0][0], "DeepDiver")
+            self.assertEqual(lb["rows"][0][2], 460)
+            self.assertEqual(lb["most_deep_cuts"], ("DeepDiver", 4))
+            self.assertEqual(lb["most_krillions"], ("StarHunter", 1))
+        finally:
+            database.DB_NAME = orig_db
+            if os.path.exists(tmp_db):
+                os.remove(tmp_db)
+
+

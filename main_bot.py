@@ -93,9 +93,14 @@ def get_waffle_stats(user_id: int, user_name: str, game_info: dict) -> dict:
 def get_timeguessr_stats(user_id: int, user_name: str, game_info: dict) -> dict:
     return database.update_timeguessr_player_stats(user_id, user_name, game_info)
 
+def get_krillion_stats(user_id: int, user_name: str, game_info: dict) -> dict:
+    """Gets Krillion player stats."""
+    return database.update_krillion_player_stats(user_id, user_name, game_info)
+
 PLAYER_STATS_HANDLERS = {
     "waffle": get_waffle_stats,
     "timeguessr": get_timeguessr_stats,
+    "krillion": get_krillion_stats,
     "wordle": get_wordle_stats,
     "connections": get_connections_stats,
     "gisnep": get_gisnep_stats,
@@ -183,6 +188,8 @@ async def on_message(message):
                 elif game_key == "waffle":
                     config["save_score_function"](message.author.id, message.author.display_name, game_info)
                 elif game_key == "timeguessr":
+                    config["save_score_function"](message.author.id, message.author.display_name, game_info)
+                elif game_key == "krillion":
                     config["save_score_function"](message.author.id, message.author.display_name, game_info)
 
                 if stats_handler := PLAYER_STATS_HANDLERS.get(game_key):
@@ -310,6 +317,7 @@ async def get_leaderboard_embed(game_key: str, period: str) -> Optional[discord.
         "Strands": discord.Color.teal(),
         "Waffle": discord.Color.gold(),
         "TimeGuessr": discord.Color.blue(),
+        "Krillion": discord.Color.dark_blue(),
     }
     color = game_colors.get(game_name, discord.Color.from_rgb(128, 128, 128))
     title = f"🏆 The {game_name} {period.capitalize()} Leaderboard 🏆"
